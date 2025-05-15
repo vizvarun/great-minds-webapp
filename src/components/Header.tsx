@@ -18,10 +18,14 @@ const Header = ({ schoolName, username }: HeaderProps) => {
 
   return (
     <AppBar
-      position="sticky"
-      color="default"
+      position="fixed"
+      color="inherit" // Using "inherit" instead of "default"
       elevation={1}
-      sx={{ zIndex: (theme) => theme.zIndex.drawer + 1 }}
+      sx={{
+        zIndex: (theme) => theme.zIndex.drawer + 1,
+        transition: "none", // Disable any transitions
+        bgcolor: "white", // Explicitly set background color to white
+      }}
     >
       <Toolbar sx={{ justifyContent: "space-between" }}>
         <Typography

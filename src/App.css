@@ -5,10 +5,14 @@ html,
   margin: 0;
   padding: 0;
   width: 100%;
+  scroll-behavior: auto; /* Disable smooth scrolling */
+  overflow-x: hidden; /* Prevent horizontal scrolling */
 }
 
 #root {
   max-width: 100%;
+  position: relative; /* For proper positioning of fixed elements */
+  padding-bottom: 56px; /* Add padding for fixed footer */
 }
 
 .auth-container {
@@ -104,4 +108,28 @@ html,
 .hover-lift:hover {
   transform: translateY(-4px);
   box-shadow: 0 12px 20px rgba(0, 0, 0, 0.1);
+}
+
+/* Specific styles for the fixed footer */
+.footer-spacer {
+  height: 56px; /* Match the footer height */
+  width: 100%;
+}
+
+/* Disable all transitions on scroll */
+* {
+  transition-duration: 0s !important;
+  transform: none !important;
+  animation-duration: 0s !important;
+  animation-delay: 0s !important;
+}
+
+/* Remove animations on scroll */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
 }

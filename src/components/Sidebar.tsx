@@ -81,16 +81,9 @@ const sidebarItems: SidebarItem[] = [
     icon: <PaymentsIcon />,
   },
   {
-    title: "Settings",
-    path: "/settings",
-    icon: <SettingsIcon />,
-    children: [
-      {
-        title: "School Profile",
-        path: "/settings/school-profile",
-        icon: <AccountBalanceIcon />,
-      },
-    ],
+    title: "School Profile",
+    path: "/settings/school-profile",
+    icon: <AccountBalanceIcon />,
   },
 ];
 
@@ -125,6 +118,11 @@ const Sidebar = () => {
           mt: "64px", // Height of AppBar
           height: "calc(100% - 64px)",
           borderRight: "1px solid rgba(0, 0, 0, 0.12)",
+          position: "fixed", // Ensure it stays fixed
+          transition: "none", // Disable transitions
+          overflowY: "auto", // Allow scrolling within sidebar if needed
+          overflowX: "hidden", // Prevent horizontal scrolling
+          borderRadius: 0, // Remove any border radius
         },
       }}
     >
@@ -139,17 +137,18 @@ const Sidebar = () => {
                 sx={{
                   mb: 0.5,
                   py: 1,
-                  borderRadius: 1,
+                  borderRadius: 0, // Remove border radius
+                  transition: "none", // Remove transition animations
                   "&.Mui-selected": {
-                    backgroundColor: "rgba(25, 118, 210, 0.08)", // Very subtle background
-                    borderLeft: "3px solid", // Thin left border indicator
+                    backgroundColor: "rgba(25, 118, 210, 0.08)",
+                    borderLeft: "3px solid",
                     borderColor: "primary.main",
                     "&:hover": {
-                      backgroundColor: "rgba(25, 118, 210, 0.12)", // Slightly stronger on hover
+                      backgroundColor: "rgba(25, 118, 210, 0.08)", // Same as non-hover
                     },
                   },
                   "&:hover": {
-                    backgroundColor: "rgba(0, 0, 0, 0.04)", // Very subtle hover
+                    backgroundColor: "transparent", // No background change on hover
                   },
                 }}
               >
@@ -158,6 +157,18 @@ const Sidebar = () => {
                     color: location.pathname.startsWith(item.path)
                       ? "primary.main"
                       : "inherit",
+                    transition: "none", // Remove any transition effect
+                    "& .MuiSvgIcon-root": {
+                      transition: "none", // Remove transitions on the actual icon
+                      "&:hover": {
+                        color: "inherit", // Ensure hover doesn't change color
+                      },
+                    },
+                    "&:hover": {
+                      color: location.pathname.startsWith(item.path)
+                        ? "primary.main"
+                        : "inherit", // Keep the same color on hover
+                    },
                   }}
                 >
                   {item.icon}
@@ -192,7 +203,19 @@ const Sidebar = () => {
                   {item.children.map((child) => (
                     <ListItemButton
                       key={child.path}
-                      sx={{ pl: 4 }}
+                      sx={{
+                        pl: 4,
+                        borderRadius: 0, // Remove border radius
+                        transition: "none", // Remove transition animations
+                        "&:hover": {
+                          backgroundColor: "transparent", // No background change on hover
+                        },
+                        "&.Mui-selected": {
+                          "&:hover": {
+                            backgroundColor: "rgba(25, 118, 210, 0.08)", // Same as non-hover
+                          },
+                        },
+                      }}
                       selected={isSelected(child.path)}
                       onClick={() => navigate(child.path)}
                     >
@@ -201,6 +224,18 @@ const Sidebar = () => {
                           color: isSelected(child.path)
                             ? "primary.main"
                             : "inherit",
+                          transition: "none", // Remove any transition effect
+                          "& .MuiSvgIcon-root": {
+                            transition: "none", // Remove transitions on the actual icon
+                            "&:hover": {
+                              color: "inherit", // Ensure hover doesn't change color
+                            },
+                          },
+                          "&:hover": {
+                            color: isSelected(child.path)
+                              ? "primary.main"
+                              : "inherit", // Keep the same color on hover
+                          },
                         }}
                       >
                         {child.icon}
