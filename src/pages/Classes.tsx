@@ -309,44 +309,40 @@ const Classes = () => {
                       >
                         <MenuBookIcon fontSize="small" />
                       </IconButton>
-                      <Tooltip title="Edit">
-                        <IconButton
-                          size="small"
-                          onClick={() => handleEditClass(cls.id)}
-                          color="primary"
-                          sx={{
-                            transition: "none",
+                      <IconButton
+                        size="small"
+                        onClick={() => handleEditClass(cls.id)}
+                        color="primary"
+                        sx={{
+                          transition: "none",
+                          outline: "none",
+                          "&:hover": {
+                            bgcolor: "rgba(25, 118, 210, 0.04)",
+                          },
+                          "&:focus": {
                             outline: "none",
-                            "&:hover": {
-                              bgcolor: "rgba(25, 118, 210, 0.04)",
-                            },
-                            "&:focus": {
-                              outline: "none",
-                            },
-                          }}
-                        >
-                          <EditIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                      <Tooltip title="Delete">
-                        <IconButton
-                          size="small"
-                          onClick={() => handleDeleteClass(cls.id)}
-                          color="error"
-                          sx={{
-                            transition: "none",
+                          },
+                        }}
+                      >
+                        <EditIcon fontSize="small" />
+                      </IconButton>
+                      <IconButton
+                        size="small"
+                        onClick={() => handleDeleteClass(cls.id)}
+                        color="error"
+                        sx={{
+                          transition: "none",
+                          outline: "none",
+                          "&:hover": {
+                            bgcolor: "rgba(211, 47, 47, 0.04)",
+                          },
+                          "&:focus": {
                             outline: "none",
-                            "&:hover": {
-                              bgcolor: "rgba(211, 47, 47, 0.04)",
-                            },
-                            "&:focus": {
-                              outline: "none",
-                            },
-                          }}
-                        >
-                          <DeleteIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
+                          },
+                        }}
+                      >
+                        <DeleteIcon fontSize="small" />
+                      </IconButton>
                     </Box>
                   </TableCell>
                 </TableRow>

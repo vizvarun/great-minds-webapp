@@ -14,7 +14,6 @@ import {
   TablePagination,
   InputAdornment,
   IconButton,
-  Tooltip,
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import AddIcon from "@mui/icons-material/Add";
@@ -436,44 +435,40 @@ const Students = () => {
                   </TableCell>
                   <TableCell align="center">
                     <Box sx={{ display: "flex", justifyContent: "center" }}>
-                      <Tooltip title="Edit">
-                        <IconButton
-                          size="small"
-                          onClick={() => handleEditStudent(student.id)}
-                          color="primary"
-                          sx={{
-                            transition: "none",
-                            outline: "none", // Remove outline
-                            "&:hover": {
-                              bgcolor: "rgba(25, 118, 210, 0.04)",
-                            },
-                            "&:focus": {
-                              outline: "none", // Remove focus outline
-                            },
-                          }}
-                        >
-                          <EditIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                      <Tooltip title="Delete">
-                        <IconButton
-                          size="small"
-                          onClick={() => handleDeleteStudent(student.id)}
-                          color="error"
-                          sx={{
-                            transition: "none",
-                            outline: "none", // Remove outline
-                            "&:hover": {
-                              bgcolor: "rgba(211, 47, 47, 0.04)",
-                            },
-                            "&:focus": {
-                              outline: "none", // Remove focus outline
-                            },
-                          }}
-                        >
-                          <DeleteIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
+                      <IconButton
+                        size="small"
+                        onClick={() => handleEditStudent(student.id)}
+                        color="primary"
+                        sx={{
+                          transition: "none",
+                          outline: "none", // Remove outline
+                          "&:hover": {
+                            bgcolor: "rgba(25, 118, 210, 0.04)",
+                          },
+                          "&:focus": {
+                            outline: "none", // Remove focus outline
+                          },
+                        }}
+                      >
+                        <EditIcon fontSize="small" />
+                      </IconButton>
+                      <IconButton
+                        size="small"
+                        onClick={() => handleDeleteStudent(student.id)}
+                        color="error"
+                        sx={{
+                          transition: "none",
+                          outline: "none", // Remove outline
+                          "&:hover": {
+                            bgcolor: "rgba(211, 47, 47, 0.04)",
+                          },
+                          "&:focus": {
+                            outline: "none", // Remove focus outline
+                          },
+                        }}
+                      >
+                        <DeleteIcon fontSize="small" />
+                      </IconButton>
                     </Box>
                   </TableCell>
                 </TableRow>
