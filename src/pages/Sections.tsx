@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import {
   Typography,
   Paper,
@@ -16,6 +16,14 @@ import {
   IconButton,
   Tooltip,
   Switch,
+  Modal,
+  List,
+  ListItem,
+  ListItemText,
+  ListItemAvatar,
+  Avatar,
+  Divider,
+  Chip,
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import AddIcon from "@mui/icons-material/Add";
@@ -23,6 +31,7 @@ import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import PersonIcon from "@mui/icons-material/Person";
 import PeopleIcon from "@mui/icons-material/People";
+import CloseIcon from "@mui/icons-material/Close";
 
 // Mock data for sections
 interface Section {
@@ -30,6 +39,20 @@ interface Section {
   className: string;
   sectionName: string;
   isActive: boolean;
+}
+
+interface Teacher {
+  id: number;
+  name: string;
+  subject: string;
+  contactNumber: string;
+}
+
+interface Student {
+  id: number;
+  name: string;
+  rollNumber: string;
+  contactNumber: string;
 }
 
 const mockSections: Section[] = [
@@ -65,10 +88,125 @@ const mockSections: Section[] = [
   },
 ];
 
+const mockTeachers: Record<number, Teacher[]> = {
+  1: [
+    {
+      id: 1,
+      name: "John Smith",
+      subject: "Mathematics",
+      contactNumber: "9876543210",
+    },
+    {
+      id: 2,
+      name: "Sarah Johnson",
+      subject: "English",
+      contactNumber: "9876543211",
+    },
+  ],
+  2: [
+    {
+      id: 3,
+      name: "Robert Williams",
+      subject: "Science",
+      contactNumber: "9876543212",
+    },
+  ],
+  3: [
+    {
+      id: 4,
+      name: "Lisa Brown",
+      subject: "Hindi",
+      contactNumber: "9876543213",
+    },
+    {
+      id: 5,
+      name: "Michael Davis",
+      subject: "Social Studies",
+      contactNumber: "9876543214",
+    },
+  ],
+  5: [
+    {
+      id: 6,
+      name: "James Wilson",
+      subject: "Computer Science",
+      contactNumber: "9876543215",
+    },
+  ],
+  8: [
+    {
+      id: 7,
+      name: "Emily Taylor",
+      subject: "Art",
+      contactNumber: "9876543216",
+    },
+  ],
+};
+
+const mockStudents: Record<number, Student[]> = {
+  1: [
+    {
+      id: 1,
+      name: "Alice Green",
+      rollNumber: "101",
+      contactNumber: "9876543301",
+    },
+    {
+      id: 2,
+      name: "Bob Wilson",
+      rollNumber: "102",
+      contactNumber: "9876543302",
+    },
+    {
+      id: 3,
+      name: "Charlie Evans",
+      rollNumber: "103",
+      contactNumber: "9876543303",
+    },
+  ],
+  2: [
+    {
+      id: 4,
+      name: "Diana Foster",
+      rollNumber: "104",
+      contactNumber: "9876543304",
+    },
+    {
+      id: 5,
+      name: "Edward Gardner",
+      rollNumber: "105",
+      contactNumber: "9876543305",
+    },
+  ],
+  3: [
+    {
+      id: 6,
+      name: "Fiona Harrison",
+      rollNumber: "106",
+      contactNumber: "9876543306",
+    },
+    {
+      id: 7,
+      name: "George Irving",
+      rollNumber: "107",
+      contactNumber: "9876543307",
+    },
+    {
+      id: 8,
+      name: "Hannah Jackson",
+      rollNumber: "108",
+      contactNumber: "9876543308",
+    },
+  ],
+};
+
 const Sections = () => {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(5);
   const [searchQuery, setSearchQuery] = useState("");
+  const [teacherModalOpen, setTeacherModalOpen] = useState(false);
+  const [studentModalOpen, setStudentModalOpen] = useState(false);
+  const [selectedSection, setSelectedSection] = useState<Section | null>(null);
 
   // Filter sections based on search query
   const filteredSections = mockSections.filter(
@@ -109,13 +247,29 @@ const Sections = () => {
   };
 
   const handleViewTeacher = (id: number) => {
-    console.log("View teacher for section", id);
-    // Implement view teacher functionality
+    const section = mockSections.find((s) => s.id === id);
+    if (section) {
+      setSelectedSection(section);
+      setTeacherModalOpen(true);
+    }
+  };
+
+  const handleCloseTeacherModal = () => {
+    setTeacherModalOpen(false);
+    setSelectedSection(null);
   };
 
   const handleViewStudents = (id: number) => {
-    console.log("View students for section", id);
-    // Implement view students functionality
+    const section = mockSections.find((s) => s.id === id);
+    if (section) {
+      setSelectedSection(section);
+      setStudentModalOpen(true);
+    }
+  };
+
+  const handleCloseStudentModal = () => {
+    setStudentModalOpen(false);
+    setSelectedSection(null);
   };
 
   const handleToggleStatus = (id: number, currentStatus: boolean) => {
@@ -124,6 +278,18 @@ const Sections = () => {
     );
     // Implement toggle status functionality
   };
+
+  // Get the teachers for the selected section
+  const sectionTeachers =
+    selectedSection && mockTeachers[selectedSection.id]
+      ? mockTeachers[selectedSection.id]
+      : [];
+
+  // Get the students for the selected section
+  const sectionStudents =
+    selectedSection && mockStudents[selectedSection.id]
+      ? mockStudents[selectedSection.id]
+      : [];
 
   return (
     <Paper
@@ -382,6 +548,206 @@ const Sections = () => {
           },
         }}
       />
+
+      {/* Teacher Modal */}
+      <Modal
+        open={teacherModalOpen}
+        onClose={handleCloseTeacherModal}
+        aria-labelledby="teacher-modal-title"
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <Paper
+          elevation={0}
+          sx={{
+            width: 500,
+            maxWidth: "90%",
+            bgcolor: "background.paper",
+            borderRadius: 0.5,
+            boxShadow: 24,
+            p: 3,
+            outline: "none",
+          }}
+        >
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              mb: 2,
+            }}
+          >
+            <Typography
+              variant="h6"
+              id="teacher-modal-title"
+              sx={{ fontWeight: 500 }}
+            >
+              Teachers - {selectedSection?.className}{" "}
+              {selectedSection?.sectionName}
+            </Typography>
+            <IconButton
+              onClick={handleCloseTeacherModal}
+              sx={{
+                transition: "none",
+                "&:hover": { bgcolor: "transparent", opacity: 0.9 },
+              }}
+            >
+              <CloseIcon />
+            </IconButton>
+          </Box>
+          <Divider sx={{ mb: 2 }} />
+
+          <List sx={{ maxHeight: 400, overflow: "auto" }}>
+            {sectionTeachers.length > 0 ? (
+              sectionTeachers.map((teacher) => (
+                <React.Fragment key={teacher.id}>
+                  <ListItem alignItems="flex-start">
+                    <ListItemAvatar>
+                      <Avatar sx={{ bgcolor: "primary.main" }}>
+                        {teacher.name.charAt(0)}
+                      </Avatar>
+                    </ListItemAvatar>
+                    <ListItemText
+                      primary={teacher.name}
+                      secondary={
+                        <>
+                          <Typography
+                            component="span"
+                            variant="body2"
+                            color="text.primary"
+                            display="block"
+                          >
+                            {teacher.subject}
+                          </Typography>
+                          {teacher.contactNumber}
+                        </>
+                      }
+                    />
+                  </ListItem>
+                  {teacher.id !==
+                    sectionTeachers[sectionTeachers.length - 1].id && (
+                    <Divider variant="inset" component="li" />
+                  )}
+                </React.Fragment>
+              ))
+            ) : (
+              <ListItem>
+                <ListItemText primary="No teachers assigned to this section." />
+              </ListItem>
+            )}
+          </List>
+        </Paper>
+      </Modal>
+
+      {/* Student Modal */}
+      <Modal
+        open={studentModalOpen}
+        onClose={handleCloseStudentModal}
+        aria-labelledby="student-modal-title"
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <Paper
+          elevation={0}
+          sx={{
+            width: 500,
+            maxWidth: "90%",
+            bgcolor: "background.paper",
+            borderRadius: 0.5,
+            boxShadow: 24,
+            p: 3,
+            outline: "none",
+          }}
+        >
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              mb: 2,
+            }}
+          >
+            <Typography
+              variant="h6"
+              id="student-modal-title"
+              sx={{ fontWeight: 500 }}
+            >
+              Students - {selectedSection?.className}{" "}
+              {selectedSection?.sectionName}
+            </Typography>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+              <Chip
+                label={`Total: ${sectionStudents.length}`}
+                size="small"
+                color="primary"
+                sx={{
+                  height: 24,
+                  "& .MuiChip-label": { px: 1 },
+                }}
+              />
+              <IconButton
+                onClick={handleCloseStudentModal}
+                sx={{
+                  transition: "none",
+                  "&:hover": { bgcolor: "transparent", opacity: 0.9 },
+                }}
+              >
+                <CloseIcon />
+              </IconButton>
+            </Box>
+          </Box>
+          <Divider sx={{ mb: 2 }} />
+
+          <List sx={{ maxHeight: 400, overflow: "auto" }}>
+            {sectionStudents.length > 0 ? (
+              sectionStudents.map((student) => (
+                <React.Fragment key={student.id}>
+                  <ListItem alignItems="flex-start">
+                    <ListItemAvatar>
+                      <Avatar sx={{ bgcolor: "primary.light" }}>
+                        {student.name.charAt(0)}
+                      </Avatar>
+                    </ListItemAvatar>
+                    <ListItemText
+                      primary={
+                        <Box sx={{ display: "flex", alignItems: "center" }}>
+                          {student.name}
+                          <Chip
+                            label={`Roll #${student.rollNumber}`}
+                            size="small"
+                            variant="outlined"
+                            sx={{
+                              ml: 1,
+                              height: 20,
+                              fontSize: "0.7rem",
+                              "& .MuiChip-label": { px: 1 },
+                            }}
+                          />
+                        </Box>
+                      }
+                      secondary={student.contactNumber}
+                    />
+                  </ListItem>
+                  {student.id !==
+                    sectionStudents[sectionStudents.length - 1].id && (
+                    <Divider variant="inset" component="li" />
+                  )}
+                </React.Fragment>
+              ))
+            ) : (
+              <ListItem>
+                <ListItemText primary="No students enrolled in this section." />
+              </ListItem>
+            )}
+          </List>
+        </Paper>
+      </Modal>
     </Paper>
   );
 };
