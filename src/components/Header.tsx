@@ -11,7 +11,6 @@ const Header = ({ schoolName, username }: HeaderProps) => {
   const navigate = useNavigate();
 
   const handleLogout = () => {
-    // Clear the authentication flag from localStorage
     localStorage.removeItem("isAuthenticated");
     navigate("/login");
   };
@@ -19,12 +18,12 @@ const Header = ({ schoolName, username }: HeaderProps) => {
   return (
     <AppBar
       position="fixed"
-      color="inherit" // Using "inherit" instead of "default"
+      color="inherit"
       elevation={1}
       sx={{
         zIndex: (theme) => theme.zIndex.drawer + 1,
-        transition: "none", // Disable any transitions
-        bgcolor: "white", // Explicitly set background color to white
+        transition: "none",
+        bgcolor: "white",
       }}
     >
       <Toolbar sx={{ justifyContent: "space-between" }}>

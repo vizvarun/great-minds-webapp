@@ -1,4 +1,15 @@
-import { useState } from "react";
+import AccountBalanceIcon from "@mui/icons-material/AccountBalance";
+import AssessmentIcon from "@mui/icons-material/Assessment";
+import ClassIcon from "@mui/icons-material/Class";
+import DashboardIcon from "@mui/icons-material/Dashboard";
+import EventIcon from "@mui/icons-material/Event";
+import ExpandLess from "@mui/icons-material/ExpandLess";
+import ExpandMore from "@mui/icons-material/ExpandMore";
+import GroupWorkIcon from "@mui/icons-material/GroupWork";
+import MenuBookIcon from "@mui/icons-material/MenuBook";
+import PaymentsIcon from "@mui/icons-material/Payments";
+import PeopleIcon from "@mui/icons-material/People";
+import SchoolIcon from "@mui/icons-material/School";
 import {
   Box,
   Collapse,
@@ -10,20 +21,8 @@ import {
   ListItemText,
   Typography,
 } from "@mui/material";
-import { useNavigate, useLocation, Link } from "react-router-dom";
-import DashboardIcon from "@mui/icons-material/Dashboard";
-import PeopleIcon from "@mui/icons-material/People";
-import SchoolIcon from "@mui/icons-material/School";
-import ClassIcon from "@mui/icons-material/Class";
-import GroupWorkIcon from "@mui/icons-material/GroupWork";
-import MenuBookIcon from "@mui/icons-material/MenuBook";
-import EventIcon from "@mui/icons-material/Event";
-import AssessmentIcon from "@mui/icons-material/Assessment";
-import PaymentsIcon from "@mui/icons-material/Payments";
-import SettingsIcon from "@mui/icons-material/Settings";
-import AccountBalanceIcon from "@mui/icons-material/AccountBalance";
-import ExpandLess from "@mui/icons-material/ExpandLess";
-import ExpandMore from "@mui/icons-material/ExpandMore";
+import { useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 
 const drawerWidth = 250;
 
@@ -94,14 +93,6 @@ const Sidebar = () => {
     "/settings": false,
   });
 
-  const handleClick = (path: string) => {
-    if (sidebarItems.find((item) => item.path === path)?.children) {
-      setOpen((prev) => ({ ...prev, [path]: !prev[path] }));
-    } else {
-      navigate(path);
-    }
-  };
-
   const isSelected = (path: string) => {
     return location.pathname === path;
   };
@@ -137,8 +128,8 @@ const Sidebar = () => {
                 sx={{
                   mb: 0.5,
                   py: 1,
-                  borderRadius: 0, // Remove border radius
-                  transition: "none", // Remove transition animations
+                  borderRadius: 0,
+                  transition: "none",
                 }}
               >
                 <ListItemIcon
@@ -146,18 +137,7 @@ const Sidebar = () => {
                     color: location.pathname.startsWith(item.path)
                       ? "primary.main"
                       : "inherit",
-                    transition: "none", // Remove any transition effect
-                    "& .MuiSvgIcon-root": {
-                      transition: "none", // Remove transitions on the actual icon
-                      "&:hover": {
-                        color: "inherit", // Ensure hover doesn't change color
-                      },
-                    },
-                    "&:hover": {
-                      color: location.pathname.startsWith(item.path)
-                        ? "primary.main"
-                        : "inherit", // Keep the same color on hover
-                    },
+                    transition: "none",
                   }}
                 >
                   {item.icon}

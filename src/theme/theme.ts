@@ -13,7 +13,7 @@ let theme = createTheme({
     primary: {
       main: primaryMain,
       light: alpha(primaryMain, 0.85),
-      dark: "#2463cc",
+      dark: "#0e9384",
       contrastText: "#ffffff",
     },
     secondary: {
@@ -49,10 +49,13 @@ let theme = createTheme({
       main: "#f59e0b",
     },
     info: {
-      main: "#3b82f6",
+      main: "#0e9384",
     },
     success: {
       main: "#10b981",
+    },
+    action: {
+      active: "#0e9384",
     },
   },
 
@@ -139,6 +142,14 @@ let theme = createTheme({
           },
           "&::-webkit-scrollbar-thumb:hover": {
             background: "#a8a8a8",
+          },
+        },
+        a: {
+          color: "#0e9384",
+          textDecoration: "none",
+          "&:hover": {
+            opacity: 0.8,
+            textDecoration: "underline",
           },
         },
       },
@@ -293,6 +304,19 @@ let theme = createTheme({
       styleOverrides: {
         root: {
           margin: "16px 0",
+        },
+      },
+    },
+    MuiLink: {
+      styleOverrides: {
+        root: {
+          color: "#0e9384",
+          textDecoration: "none",
+          "&:hover": {
+            color: "#0e9384",
+            opacity: 0.8,
+            textDecoration: "underline",
+          },
         },
       },
     },
