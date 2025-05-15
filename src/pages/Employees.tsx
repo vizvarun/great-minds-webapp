@@ -14,7 +14,7 @@ import {
   TablePagination,
   InputAdornment,
   IconButton,
-  Tooltip
+  Tooltip,
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import AddIcon from "@mui/icons-material/Add";
@@ -255,137 +255,164 @@ const Employees = () => {
   };
 
   return (
-    <Paper 
-      elevation={0} 
-      sx={{ 
-        p: 3, 
-        borderRadius: 0.5, 
-        border: 1, 
+    <Paper
+      elevation={0}
+      sx={{
+        p: 3,
+        borderRadius: 0.5,
+        border: 1,
         borderColor: "grey.200",
-        height: "100%",
+        height: "calc(100% - 16px)", // Account for the parent padding
         display: "flex",
         flexDirection: "column",
-        overflow: "hidden", // Prevent container overflow
+        overflow: "hidden", // Prevent the Paper component from scrolling
       }}
     >
-      <Typography variant="h5" gutterBottom sx={{ fontWeight: 500, color: "text.primary" }}>
-        Employees
-      </Typography>
-      
-      {/* Top block with search and action buttons */}
-      <Box sx={{ 
-        display: "flex", 
-        justifyContent: "space-between", 
-        alignItems: "center", 
-        mb: 3,
-        flexWrap: "wrap",
-        gap: 2
-      }}>
-        <TextField
-          placeholder="Search employees..."
-          variant="outlined"
-          size="small"
-          value={searchQuery}
-          onChange={handleSearchChange}
-          sx={{ 
-            minWidth: 250, 
-            flex: 1, 
-            maxWidth: 500,
-            "& .MuiOutlinedInput-root": {
-              transition: "none",
-              "&:hover .MuiOutlinedInput-notchedOutline": {
-                borderColor: "rgba(0, 0, 0, 0.23)" // Keep border color consistent on hover
-              }
-            }
+      {/* Fixed Header Section */}
+      <Box sx={{ mb: 3, flexShrink: 0 }}>
+        <Typography
+          variant="h5"
+          gutterBottom
+          mb={2}
+          sx={{ fontWeight: 500, color: "text.primary" }}
+        >
+          Employees
+        </Typography>
+
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            flexWrap: "wrap",
+            gap: 2,
           }}
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <SearchIcon color="action" />
-              </InputAdornment>
-            ),
-          }}
-        />
-        <Box sx={{ display: "flex", gap: 1 }}>
-          <Button
-            variant="contained"
-            disableElevation
-            startIcon={<AddIcon />}
-            onClick={handleAddEmployee}
-            sx={{ 
-              textTransform: "none",
-              borderRadius: 0.5,
-              transition: "none",
-              backgroundImage: "none", // Explicitly remove gradient
-              background: "primary.main", // Use solid background color
-              boxShadow: "none", // Remove shadow
-              "&:hover": {
-                backgroundImage: "none", // Ensure no gradient on hover
-                background: "primary.main",
-                opacity: 0.9
-              }
-            }}
-          >
-            Add Employee
-          </Button>
-          <Button
+        >
+          <TextField
+            placeholder="Search employees..."
             variant="outlined"
-            startIcon={<FileUploadIcon />}
-            onClick={handleBulkUpload}
-            sx={{ 
-              textTransform: "none",
-              borderRadius: 0.5,
-              transition: "none",
+            size="medium"
+            value={searchQuery}
+            onChange={handleSearchChange}
+            sx={{
+              minWidth: 250,
+              flex: 1,
+              maxWidth: 400,
               outline: "none",
-              "&:hover": {
-                bgcolor: "transparent",
-                borderColor: "primary.main",
-                outline: "none"
-              },
               "&:focus": {
-                outline: "none"
-              }
+                outline: "none",
+              },
             }}
-          >
-            Bulk Upload
-          </Button>
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon color="action" />
+                </InputAdornment>
+              ),
+            }}
+          />
+          <Box sx={{ display: "flex", gap: 1 }}>
+            <Button
+              variant="contained"
+              disableElevation
+              startIcon={<AddIcon />}
+              onClick={handleAddEmployee}
+              sx={{
+                textTransform: "none",
+                borderRadius: 0.5,
+                transition: "none",
+                backgroundImage: "none",
+                background: "primary.main",
+                boxShadow: "none",
+                "&:hover": {
+                  backgroundImage: "none",
+                  background: "primary.main",
+                  opacity: 0.9,
+                },
+                "&:focus": {
+                  outline: "none",
+                },
+              }}
+            >
+              Add Employee
+            </Button>
+            <Button
+              variant="outlined"
+              startIcon={<FileUploadIcon />}
+              onClick={handleBulkUpload}
+              sx={{
+                textTransform: "none",
+                borderRadius: 0.5,
+                transition: "none",
+                outline: "none",
+                "&:hover": {
+                  bgcolor: "transparent",
+                  borderColor: "primary.main",
+                  outline: "none",
+                },
+                "&:focus": {
+                  outline: "none",
+                },
+              }}
+            >
+              Bulk Upload
+            </Button>
+          </Box>
         </Box>
       </Box>
-      
-      {/* Employee Table - Make this section scrollable */}
-      <TableContainer 
-        component={Paper} 
-        elevation={0} 
-        variant="outlined" 
-        sx={{ 
+
+      {/* Scrollable Table Container - ONLY this should scroll */}
+      <TableContainer
+        component={Paper}
+        elevation={0}
+        variant="outlined"
+        mt={2}
+        sx={{
           borderRadius: 0.5,
-          flexGrow: 1,
-          overflow: "auto", // Make this scrollable
-          maxHeight: "calc(100% - 140px)" // Reserve space for header and pagination
+          flex: 1,
+          overflow: "auto", // This element should scroll
+          height: "100%", // Take full height of parent
+          maxHeight: "calc(100% - 120px)", // Account for header and pagination
         }}
       >
-        <Table sx={{ minWidth: 650 }}>
+        <Table stickyHeader sx={{ minWidth: 650 }}>
           <TableHead>
             <TableRow sx={{ backgroundColor: "grey.50" }}>
-              <TableCell sx={{ fontWeight: 600 }}>Employee No.</TableCell>
-              <TableCell sx={{ fontWeight: 600 }}>First Name</TableCell>
-              <TableCell sx={{ fontWeight: 600 }}>Last Name</TableCell>
-              <TableCell sx={{ fontWeight: 600 }}>Designation</TableCell>
-              <TableCell sx={{ fontWeight: 600 }}>Mobile Number</TableCell>
-              <TableCell sx={{ fontWeight: 600 }} align="center">Actions</TableCell>
+              <TableCell sx={{ fontWeight: 600, bgcolor: "grey.50" }}>
+                Employee No.
+              </TableCell>
+              <TableCell sx={{ fontWeight: 600, bgcolor: "grey.50" }}>
+                First Name
+              </TableCell>
+              <TableCell sx={{ fontWeight: 600, bgcolor: "grey.50" }}>
+                Last Name
+              </TableCell>
+              <TableCell sx={{ fontWeight: 600, bgcolor: "grey.50" }}>
+                Designation
+              </TableCell>
+              <TableCell sx={{ fontWeight: 600, bgcolor: "grey.50" }}>
+                Mobile Number
+              </TableCell>
+              <TableCell
+                sx={{ fontWeight: 600, bgcolor: "grey.50" }}
+                align="center"
+              >
+                Actions
+              </TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {filteredEmployees
               .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
               .map((employee) => (
-                <TableRow key={employee.id} 
-                  hover 
+                <TableRow
+                  key={employee.id}
+                  hover
                   sx={{
                     "&:hover": {
-                      backgroundColor: "rgba(0, 0, 0, 0.02)" // Very subtle hover
+                      backgroundColor: "rgba(0, 0, 0, 0.02)", // Very subtle hover
                     },
-                    transition: "none"
+                    transition: "none",
                   }}
                 >
                   <TableCell>{employee.employeeNo}</TableCell>
@@ -396,38 +423,38 @@ const Employees = () => {
                   <TableCell align="center">
                     <Box sx={{ display: "flex", justifyContent: "center" }}>
                       <Tooltip title="Edit">
-                        <IconButton 
-                          size="small" 
+                        <IconButton
+                          size="small"
                           onClick={() => handleEditEmployee(employee.id)}
                           color="primary"
-                          sx={{ 
+                          sx={{
                             transition: "none",
                             outline: "none", // Remove outline
-                            "&:hover": { 
+                            "&:hover": {
                               bgcolor: "rgba(25, 118, 210, 0.04)",
                             },
                             "&:focus": {
-                              outline: "none" // Remove focus outline
-                            }
+                              outline: "none", // Remove focus outline
+                            },
                           }}
                         >
                           <EditIcon fontSize="small" />
                         </IconButton>
                       </Tooltip>
                       <Tooltip title="Delete">
-                        <IconButton 
-                          size="small" 
+                        <IconButton
+                          size="small"
                           onClick={() => handleDeleteEmployee(employee.id)}
                           color="error"
-                          sx={{ 
+                          sx={{
                             transition: "none",
                             outline: "none", // Remove outline
-                            "&:hover": { 
+                            "&:hover": {
                               bgcolor: "rgba(211, 47, 47, 0.04)",
                             },
                             "&:focus": {
-                              outline: "none" // Remove focus outline
-                            }
+                              outline: "none", // Remove focus outline
+                            },
                           }}
                         >
                           <DeleteIcon fontSize="small" />
@@ -447,24 +474,28 @@ const Employees = () => {
           </TableBody>
         </Table>
       </TableContainer>
-      
-      {/* Pagination */}
+
+      {/* Fixed Pagination Section */}
       <TablePagination
-        rowsPerPageOptions={[5, 10, 25]}
         component="div"
+        rowsPerPageOptions={[5, 10, 25]}
         count={filteredEmployees.length}
         rowsPerPage={rowsPerPage}
         page={page}
         onPageChange={handleChangePage}
         onRowsPerPageChange={handleChangeRowsPerPage}
         sx={{
+          flexShrink: 0,
+          borderTop: 1,
+          borderColor: "grey.200",
+          mt: 1, // Add margin-top for spacing
           "& .MuiButtonBase-root": {
             transition: "none",
             "&:hover": {
               bgcolor: "transparent",
-              opacity: 0.8
-            }
-          }
+              opacity: 0.8,
+            },
+          },
         }}
       />
     </Paper>

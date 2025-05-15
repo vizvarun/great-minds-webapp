@@ -6,7 +6,7 @@ html,
   padding: 0;
   width: 100%;
   scroll-behavior: auto; /* Disable smooth scrolling */
-  overflow-x: hidden; /* Prevent horizontal scrolling */
+  overflow: hidden; /* Prevent any scrolling at the root level */
 }
 
 #root {
@@ -132,4 +132,24 @@ html,
     transition-duration: 0.001ms !important;
     scroll-behavior: auto !important;
   }
+}
+
+/* Force all scrollable elements to use hardware acceleration */
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+*::-webkit-scrollbar-track {
+  background-color: #f1f1f1;
+  border-radius: 4px;
+}
+
+*::-webkit-scrollbar-thumb {
+  background-color: #c1c1c1;
+  border-radius: 4px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background-color: #a8a8a8;
 }

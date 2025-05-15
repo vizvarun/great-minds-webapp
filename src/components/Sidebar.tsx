@@ -139,17 +139,6 @@ const Sidebar = () => {
                   py: 1,
                   borderRadius: 0, // Remove border radius
                   transition: "none", // Remove transition animations
-                  "&.Mui-selected": {
-                    backgroundColor: "rgba(25, 118, 210, 0.08)",
-                    borderLeft: "3px solid",
-                    borderColor: "primary.main",
-                    "&:hover": {
-                      backgroundColor: "rgba(25, 118, 210, 0.08)", // Same as non-hover
-                    },
-                  },
-                  "&:hover": {
-                    backgroundColor: "transparent", // No background change on hover
-                  },
                 }}
               >
                 <ListItemIcon
@@ -207,14 +196,6 @@ const Sidebar = () => {
                         pl: 4,
                         borderRadius: 0, // Remove border radius
                         transition: "none", // Remove transition animations
-                        "&:hover": {
-                          backgroundColor: "transparent", // No background change on hover
-                        },
-                        "&.Mui-selected": {
-                          "&:hover": {
-                            backgroundColor: "rgba(25, 118, 210, 0.08)", // Same as non-hover
-                          },
-                        },
                       }}
                       selected={isSelected(child.path)}
                       onClick={() => navigate(child.path)}
