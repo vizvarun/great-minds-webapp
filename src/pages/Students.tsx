@@ -1,14 +1,18 @@
 import AddIcon from "@mui/icons-material/Add";
 import DeleteIcon from "@mui/icons-material/Delete";
+import DownloadIcon from "@mui/icons-material/Download";
 import EditIcon from "@mui/icons-material/Edit";
 import FileUploadIcon from "@mui/icons-material/FileUpload";
 import SearchIcon from "@mui/icons-material/Search";
 import {
+  Alert,
   Box,
   Button,
+  Chip,
   IconButton,
   InputAdornment,
   Paper,
+  Snackbar,
   Table,
   TableBody,
   TableCell,
@@ -20,215 +24,119 @@ import {
   Typography,
 } from "@mui/material";
 import { useState } from "react";
+import StudentFormModal from "../components/StudentFormModal";
 
-// Mock data for students
+// Student interface matching the form data structure
 interface Student {
   id: number;
-  studentId: string;
+  enrollmentNo: string;
   firstName: string;
   lastName: string;
-  gender: "male" | "female" | "other"; // Add gender field
-  status: "active" | "inactive";
-  contactNumber: string;
+  phoneNumber: string;
+  dateOfBirth: string;
+  city: string;
+  state: string;
+  pincode: string;
+  addressLine1: string;
+  addressLine2?: string;
+  profilePhoto?: string;
+  // Father details
+  fatherFirstName: string;
+  fatherLastName: string;
+  fatherPhoneNumber: string;
+  fatherEmail?: string;
+  // Mother details
+  motherFirstName: string;
+  motherLastName: string;
+  motherPhoneNumber: string;
+  motherEmail?: string;
+  // Guardian details
+  guardianFirstName: string;
+  guardianLastName: string;
+  guardianPhoneNumber: string;
+  guardianEmail?: string;
 }
 
+// Mock data for students
 const mockStudents: Student[] = [
   {
     id: 1,
-    studentId: "STD001",
-    firstName: "Alice",
-    lastName: "Johnson",
-    gender: "female",
-    status: "active",
-    contactNumber: "9876543101",
+    enrollmentNo: "2023001",
+    firstName: "Aarav",
+    lastName: "Sharma",
+    phoneNumber: "9876543210",
+    dateOfBirth: "2010-05-15",
+    city: "Bengaluru",
+    state: "Karnataka",
+    pincode: "560001",
+    addressLine1: "123 Main St",
+    fatherFirstName: "Raj",
+    fatherLastName: "Sharma",
+    fatherPhoneNumber: "9876543211",
+    fatherEmail: "raj@example.com",
+    motherFirstName: "Priya",
+    motherLastName: "Sharma",
+    motherPhoneNumber: "9876543212",
+    motherEmail: "priya@example.com",
+    guardianFirstName: "",
+    guardianLastName: "",
+    guardianPhoneNumber: "",
+    guardianEmail: "",
   },
   {
     id: 2,
-    studentId: "STD002",
-    firstName: "Bob",
-    lastName: "Smith",
-    gender: "male",
-    status: "active",
-    contactNumber: "9876543102",
+    enrollmentNo: "2023002",
+    firstName: "Aisha",
+    lastName: "Patel",
+    phoneNumber: "9876543220",
+    dateOfBirth: "2011-07-22",
+    city: "Mumbai",
+    state: "Maharashtra",
+    pincode: "400001",
+    addressLine1: "456 Park Ave",
+    fatherFirstName: "Kunal",
+    fatherLastName: "Patel",
+    fatherPhoneNumber: "9876543221",
+    fatherEmail: "kunal@example.com",
+    motherFirstName: "Neha",
+    motherLastName: "Patel",
+    motherPhoneNumber: "9876543222",
+    motherEmail: "neha@example.com",
+    guardianFirstName: "",
+    guardianLastName: "",
+    guardianPhoneNumber: "",
+    guardianEmail: "",
   },
-  {
-    id: 3,
-    studentId: "STD003",
-    firstName: "Charlie",
-    lastName: "Williams",
-    gender: "male",
-    status: "active",
-    contactNumber: "9876543103",
-  },
-  {
-    id: 4,
-    studentId: "STD004",
-    firstName: "Diana",
-    lastName: "Brown",
-    gender: "female",
-    status: "inactive",
-    contactNumber: "9876543104",
-  },
-  {
-    id: 5,
-    studentId: "STD005",
-    firstName: "Edward",
-    lastName: "Jones",
-    gender: "male",
-    status: "active",
-    contactNumber: "9876543105",
-  },
-  {
-    id: 6,
-    studentId: "STD006",
-    firstName: "Fiona",
-    lastName: "Miller",
-    gender: "female",
-    status: "inactive",
-    contactNumber: "9876543106",
-  },
-  {
-    id: 7,
-    studentId: "STD007",
-    firstName: "George",
-    lastName: "Davis",
-    gender: "male",
-    status: "active",
-    contactNumber: "9876543107",
-  },
-  {
-    id: 8,
-    studentId: "STD008",
-    firstName: "Helen",
-    lastName: "Wilson",
-    gender: "female",
-    status: "active",
-    contactNumber: "9876543108",
-  },
-  {
-    id: 9,
-    studentId: "STD009",
-    firstName: "Ian",
-    lastName: "Taylor",
-    gender: "male",
-    status: "inactive",
-    contactNumber: "9876543109",
-  },
-  {
-    id: 10,
-    studentId: "STD010",
-    firstName: "Jessica",
-    lastName: "Anderson",
-    gender: "female",
-    status: "active",
-    contactNumber: "9876543110",
-  },
-  {
-    id: 11,
-    studentId: "STD011",
-    firstName: "Kevin",
-    lastName: "Thomas",
-    gender: "male",
-    status: "active",
-    contactNumber: "9876543111",
-  },
-  {
-    id: 12,
-    studentId: "STD012",
-    firstName: "Laura",
-    lastName: "Jackson",
-    gender: "female",
-    status: "inactive",
-    contactNumber: "9876543112",
-  },
-  {
-    id: 13,
-    studentId: "STD013",
-    firstName: "Mike",
-    lastName: "White",
-    gender: "male",
-    status: "active",
-    contactNumber: "9876543113",
-  },
-  {
-    id: 14,
-    studentId: "STD014",
-    firstName: "Nancy",
-    lastName: "Harris",
-    gender: "female",
-    status: "inactive",
-    contactNumber: "9876543114",
-  },
-  {
-    id: 15,
-    studentId: "STD015",
-    firstName: "Oscar",
-    lastName: "Martin",
-    gender: "male",
-    status: "active",
-    contactNumber: "9876543115",
-  },
-  {
-    id: 16,
-    studentId: "STD016",
-    firstName: "Patricia",
-    lastName: "Thompson",
-    gender: "female",
-    status: "active",
-    contactNumber: "9876543116",
-  },
-  {
-    id: 17,
-    studentId: "STD017",
-    firstName: "Quentin",
-    lastName: "Garcia",
-    gender: "male",
-    status: "inactive",
-    contactNumber: "9876543117",
-  },
-  {
-    id: 18,
-    studentId: "STD018",
-    firstName: "Rachel",
-    lastName: "Martinez",
-    gender: "female",
-    status: "active",
-    contactNumber: "9876543118",
-  },
-  {
-    id: 19,
-    studentId: "STD019",
-    firstName: "Steve",
-    lastName: "Robinson",
-    gender: "male",
-    status: "inactive",
-    contactNumber: "9876543119",
-  },
-  {
-    id: 20,
-    studentId: "STD020",
-    firstName: "Tina",
-    lastName: "Clark",
-    gender: "female",
-    status: "active",
-    contactNumber: "9876543120",
-  },
+  // Add more mock students as needed
 ];
 
 const Students = () => {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(5);
   const [searchQuery, setSearchQuery] = useState("");
+  const [students, setStudents] = useState<Student[]>(mockStudents);
+
+  // Modal state
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [currentStudent, setCurrentStudent] = useState<Student | undefined>(
+    undefined
+  );
+
+  // Notification state
+  const [notification, setNotification] = useState({
+    open: false,
+    message: "",
+    severity: "success" as "success" | "error",
+  });
 
   // Filter students based on search query
-  const filteredStudents = mockStudents.filter(
+  const filteredStudents = students.filter(
     (student) =>
       student.firstName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       student.lastName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      student.studentId.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      student.gender.toLowerCase().includes(searchQuery.toLowerCase()) || // Add gender to search
-      student.status.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      student.contactNumber.includes(searchQuery)
+      student.enrollmentNo.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      student.phoneNumber.includes(searchQuery)
   );
 
   const handleChangePage = (event: unknown, newPage: number) => {
@@ -248,23 +156,75 @@ const Students = () => {
   };
 
   const handleAddStudent = () => {
-    console.log("Add student clicked");
-    // Implement add student functionality
-  };
-
-  const handleBulkUpload = () => {
-    console.log("Bulk upload clicked");
-    // Implement bulk upload functionality
+    setIsEditMode(false);
+    setCurrentStudent(undefined);
+    setIsModalOpen(true);
   };
 
   const handleEditStudent = (id: number) => {
-    console.log("Edit student", id);
-    // Implement edit student functionality
+    const studentToEdit = students.find((student) => student.id === id);
+    if (studentToEdit) {
+      setCurrentStudent(studentToEdit);
+      setIsEditMode(true);
+      setIsModalOpen(true);
+    }
   };
 
   const handleDeleteStudent = (id: number) => {
-    console.log("Delete student", id);
-    // Implement delete student functionality
+    // Filter out the student with the given id
+    const updatedStudents = students.filter((student) => student.id !== id);
+    setStudents(updatedStudents);
+
+    // Show notification
+    setNotification({
+      open: true,
+      message: "Student deleted successfully",
+      severity: "success",
+    });
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+  };
+
+  const handleStudentSubmit = (studentData: Student) => {
+    if (isEditMode && currentStudent) {
+      // Update existing student
+      const updatedStudents = students.map((student) =>
+        student.id === currentStudent.id
+          ? { ...studentData, id: student.id }
+          : student
+      );
+      setStudents(updatedStudents);
+      setNotification({
+        open: true,
+        message: "Student updated successfully",
+        severity: "success",
+      });
+    } else {
+      // Add new student
+      const newId = Math.max(...students.map((student) => student.id), 0) + 1;
+      setStudents([...students, { ...studentData, id: newId }]);
+      setNotification({
+        open: true,
+        message: "Student added successfully",
+        severity: "success",
+      });
+    }
+
+    setIsModalOpen(false);
+  };
+
+  const handleDownloadList = () => {
+    // Implementation for download
+    console.log("Download list clicked");
+  };
+
+  const handleCloseNotification = () => {
+    setNotification({
+      ...notification,
+      open: false,
+    });
   };
 
   return (
@@ -275,10 +235,10 @@ const Students = () => {
         borderRadius: 0.5,
         border: 1,
         borderColor: "grey.200",
-        height: "calc(100% - 16px)", // Account for the parent padding
+        height: "calc(100% - 16px)",
         display: "flex",
         flexDirection: "column",
-        overflow: "hidden", // Prevent the Paper component from scrolling
+        overflow: "hidden",
       }}
     >
       {/* Fixed Header Section */}
@@ -351,8 +311,8 @@ const Students = () => {
             </Button>
             <Button
               variant="outlined"
-              startIcon={<FileUploadIcon />}
-              onClick={handleBulkUpload}
+              startIcon={<DownloadIcon />}
+              onClick={handleDownloadList}
               sx={{
                 textTransform: "none",
                 borderRadius: 0.5,
@@ -368,13 +328,13 @@ const Students = () => {
                 },
               }}
             >
-              Bulk Upload
+              Download
             </Button>
           </Box>
         </Box>
       </Box>
 
-      {/* Scrollable Table Container - ONLY this should scroll */}
+      {/* Scrollable Table Container */}
       <TableContainer
         component={Paper}
         elevation={0}
@@ -383,31 +343,28 @@ const Students = () => {
         sx={{
           borderRadius: 0.5,
           flex: 1,
-          overflow: "auto", // This element should scroll
-          height: "100%", // Take full height of parent
-          maxHeight: "calc(100% - 120px)", // Account for header and pagination
+          overflow: "auto",
+          height: "100%",
+          maxHeight: "calc(100% - 120px)",
         }}
       >
         <Table stickyHeader sx={{ minWidth: 650 }}>
           <TableHead>
             <TableRow sx={{ backgroundColor: "grey.50" }}>
               <TableCell sx={{ fontWeight: 600, bgcolor: "grey.50" }}>
-                Enrollment No.
+                Enrollment No
               </TableCell>
               <TableCell sx={{ fontWeight: 600, bgcolor: "grey.50" }}>
-                First Name
+                Name
               </TableCell>
               <TableCell sx={{ fontWeight: 600, bgcolor: "grey.50" }}>
-                Last Name
+                Phone Number
               </TableCell>
               <TableCell sx={{ fontWeight: 600, bgcolor: "grey.50" }}>
-                Gender
+                City
               </TableCell>
               <TableCell sx={{ fontWeight: 600, bgcolor: "grey.50" }}>
-                Contact Number
-              </TableCell>
-              <TableCell sx={{ fontWeight: 600, bgcolor: "grey.50" }}>
-                Status
+                State
               </TableCell>
               <TableCell
                 sx={{ fontWeight: 600, bgcolor: "grey.50" }}
@@ -426,41 +383,23 @@ const Students = () => {
                   hover
                   sx={{
                     "&:hover": {
-                      backgroundColor: "rgba(0, 0, 0, 0.02)", // Very subtle hover
+                      backgroundColor: "rgba(0, 0, 0, 0.02)",
                     },
                     transition: "none",
                   }}
                 >
-                  <TableCell>{student.studentId}</TableCell>
-                  <TableCell>{student.firstName}</TableCell>
-                  <TableCell>{student.lastName}</TableCell>
-                  <TableCell sx={{ textTransform: "capitalize" }}>
-                    {student.gender}
-                  </TableCell>
-                  <TableCell>{student.contactNumber}</TableCell>
                   <TableCell>
-                    <Box
-                      sx={{
-                        display: "inline-block",
-                        px: 1.5,
-                        py: 0.5,
-                        borderRadius: 1,
-                        backgroundColor:
-                          student.status === "active"
-                            ? "rgba(46, 125, 50, 0.1)"
-                            : "rgba(211, 47, 47, 0.1)",
-                        color:
-                          student.status === "active"
-                            ? "success.main"
-                            : "error.main",
-                        fontSize: "0.75rem",
-                        fontWeight: "medium",
-                        textTransform: "capitalize",
-                      }}
-                    >
-                      {student.status}
-                    </Box>
+                    <Chip
+                      label={student.enrollmentNo}
+                      size="small"
+                      variant="outlined"
+                      sx={{ borderRadius: 0.5, height: 24 }}
+                    />
                   </TableCell>
+                  <TableCell>{`${student.firstName} ${student.lastName}`}</TableCell>
+                  <TableCell>{student.phoneNumber}</TableCell>
+                  <TableCell>{student.city}</TableCell>
+                  <TableCell>{student.state}</TableCell>
                   <TableCell align="center">
                     <Box sx={{ display: "flex", justifyContent: "center" }}>
                       <IconButton
@@ -469,12 +408,12 @@ const Students = () => {
                         color="primary"
                         sx={{
                           transition: "none",
-                          outline: "none", // Remove outline
+                          outline: "none",
                           "&:hover": {
                             bgcolor: "rgba(25, 118, 210, 0.04)",
                           },
                           "&:focus": {
-                            outline: "none", // Remove focus outline
+                            outline: "none",
                           },
                         }}
                       >
@@ -486,12 +425,12 @@ const Students = () => {
                         color="error"
                         sx={{
                           transition: "none",
-                          outline: "none", // Remove outline
+                          outline: "none",
                           "&:hover": {
                             bgcolor: "rgba(211, 47, 47, 0.04)",
                           },
                           "&:focus": {
-                            outline: "none", // Remove focus outline
+                            outline: "none",
                           },
                         }}
                       >
@@ -503,7 +442,7 @@ const Students = () => {
               ))}
             {filteredStudents.length === 0 && (
               <TableRow>
-                <TableCell colSpan={7} align="center" sx={{ py: 3 }}>
+                <TableCell colSpan={6} align="center" sx={{ py: 3 }}>
                   No students found.
                 </TableCell>
               </TableRow>
@@ -525,7 +464,7 @@ const Students = () => {
           flexShrink: 0,
           borderTop: 1,
           borderColor: "grey.200",
-          mt: 1, // Add margin-top for spacing
+          mt: 1,
           "& .MuiButtonBase-root": {
             transition: "none",
             "&:hover": {
@@ -535,6 +474,32 @@ const Students = () => {
           },
         }}
       />
+
+      {/* Student Form Modal */}
+      <StudentFormModal
+        open={isModalOpen}
+        onClose={handleCloseModal}
+        onSubmit={handleStudentSubmit}
+        student={currentStudent}
+        isEditMode={isEditMode}
+      />
+
+      {/* Notification Snackbar */}
+      <Snackbar
+        open={notification.open}
+        autoHideDuration={4000}
+        onClose={handleCloseNotification}
+        anchorOrigin={{ vertical: "top", horizontal: "right" }}
+      >
+        <Alert
+          onClose={handleCloseNotification}
+          severity={notification.severity}
+          variant="filled"
+          sx={{ width: "100%" }}
+        >
+          {notification.message}
+        </Alert>
+      </Snackbar>
     </Paper>
   );
 };

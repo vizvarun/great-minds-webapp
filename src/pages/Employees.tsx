@@ -5,11 +5,13 @@ import EditIcon from "@mui/icons-material/Edit";
 import FileUploadIcon from "@mui/icons-material/FileUpload";
 import SearchIcon from "@mui/icons-material/Search";
 import {
+  Alert,
   Box,
   Button,
   IconButton,
   InputAdornment,
   Paper,
+  Snackbar,
   Table,
   TableBody,
   TableCell,
@@ -21,6 +23,8 @@ import {
   Typography,
 } from "@mui/material";
 import { useState } from "react";
+import EmployeeFormModal from "../components/EmployeeFormModal";
+import BulkUploadModal from "../components/BulkUploadModal";
 
 // Mock data for employees
 interface Employee {
@@ -30,6 +34,9 @@ interface Employee {
   lastName: string;
   designation: string;
   mobileNumber: string;
+  email?: string;
+  address?: string;
+  joiningDate?: string;
 }
 
 const mockEmployees: Employee[] = [
@@ -207,9 +214,25 @@ const Employees = () => {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(5);
   const [searchQuery, setSearchQuery] = useState("");
+  const [employees, setEmployees] = useState<Employee[]>(mockEmployees);
+
+  // Modal states
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isBulkUploadModalOpen, setIsBulkUploadModalOpen] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [currentEmployee, setCurrentEmployee] = useState<Employee | undefined>(
+    undefined
+  );
+
+  // Notification state
+  const [notification, setNotification] = useState({
+    open: false,
+    message: "",
+    severity: "success" as "success" | "error",
+  });
 
   // Filter employees based on search query
-  const filteredEmployees = mockEmployees.filter(
+  const filteredEmployees = employees.filter(
     (employee) =>
       employee.firstName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       employee.lastName.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -235,65 +258,101 @@ const Employees = () => {
   };
 
   const handleAddEmployee = () => {
-    console.log("Add employee clicked");
-    // Implement add employee functionality
-  };
-
-  const handleBulkUpload = () => {
-    console.log("Bulk upload clicked");
-    // Implement bulk upload functionality
-  };
-
-  const handleDownloadList = () => {
-    console.log("Download list clicked");
-
-    // Create CSV content
-    const headers = [
-      "Employee No.",
-      "First Name",
-      "Last Name",
-      "Designation",
-      "Mobile Number",
-    ];
-    const csvContent = [
-      headers.join(","),
-      ...mockEmployees.map((emp) =>
-        [
-          emp.employeeNo,
-          emp.firstName,
-          emp.lastName,
-          emp.designation,
-          emp.mobileNumber,
-        ].join(",")
-      ),
-    ].join("\n");
-
-    // Create a Blob containing the CSV data
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-
-    // Create a download link
-    const link = document.createElement("a");
-    const url = URL.createObjectURL(blob);
-
-    // Set up download link properties
-    link.setAttribute("href", url);
-    link.setAttribute("download", "employees_list.csv");
-    link.style.visibility = "hidden";
-
-    // Append to document, click, and remove
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    setIsEditMode(false);
+    setCurrentEmployee(undefined);
+    setIsModalOpen(true);
   };
 
   const handleEditEmployee = (id: number) => {
-    console.log("Edit employee", id);
-    // Implement edit employee functionality
+    const employeeToEdit = employees.find((emp) => emp.id === id);
+    if (employeeToEdit) {
+      setCurrentEmployee(employeeToEdit);
+      setIsEditMode(true);
+      setIsModalOpen(true);
+    }
   };
 
   const handleDeleteEmployee = (id: number) => {
-    console.log("Delete employee", id);
-    // Implement delete employee functionality
+    // Filter out the employee with the given id
+    const updatedEmployees = employees.filter((emp) => emp.id !== id);
+    setEmployees(updatedEmployees);
+
+    // Show notification
+    setNotification({
+      open: true,
+      message: "Employee deleted successfully",
+      severity: "success",
+    });
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+  };
+
+  const handleEmployeeSubmit = (employeeData: Employee) => {
+    if (isEditMode && currentEmployee) {
+      // Update existing employee
+      const updatedEmployees = employees.map((emp) =>
+        emp.id === currentEmployee.id ? { ...employeeData, id: emp.id } : emp
+      );
+      setEmployees(updatedEmployees);
+      setNotification({
+        open: true,
+        message: "Employee updated successfully",
+        severity: "success",
+      });
+    } else {
+      // Add new employee
+      const newId = Math.max(...employees.map((emp) => emp.id)) + 1;
+      setEmployees([...employees, { ...employeeData, id: newId }]);
+      setNotification({
+        open: true,
+        message: "Employee added successfully",
+        severity: "success",
+      });
+    }
+
+    setIsModalOpen(false);
+  };
+
+  const handleBulkUpload = () => {
+    setIsBulkUploadModalOpen(true);
+  };
+
+  const handleCloseBulkUploadModal = () => {
+    setIsBulkUploadModalOpen(false);
+  };
+
+  const handleBulkUploadSuccess = (uploadedEmployees: any[]) => {
+    // Generate new unique IDs for the uploaded employees
+    const lastId =
+      employees.length > 0 ? Math.max(...employees.map((emp) => emp.id)) : 0;
+
+    const newEmployees = uploadedEmployees.map((emp, index) => ({
+      ...emp,
+      id: lastId + index + 1,
+    }));
+
+    setEmployees([...employees, ...newEmployees]);
+
+    // Show notification
+    setNotification({
+      open: true,
+      message: `Successfully added ${uploadedEmployees.length} employees`,
+      severity: "success",
+    });
+  };
+
+  const handleDownloadList = () => {
+    // Implementation for download
+    console.log("Download list clicked");
+  };
+
+  const handleCloseNotification = () => {
+    setNotification({
+      ...notification,
+      open: false,
+    });
   };
 
   return (
@@ -304,10 +363,10 @@ const Employees = () => {
         borderRadius: 0.5,
         border: 1,
         borderColor: "grey.200",
-        height: "calc(100% - 16px)", // Account for the parent padding
+        height: "calc(100% - 16px)",
         display: "flex",
         flexDirection: "column",
-        overflow: "hidden", // Prevent the Paper component from scrolling
+        overflow: "hidden",
       }}
     >
       {/* Fixed Header Section */}
@@ -424,7 +483,7 @@ const Employees = () => {
         </Box>
       </Box>
 
-      {/* Scrollable Table Container - ONLY this should scroll */}
+      {/* Scrollable Table Container */}
       <TableContainer
         component={Paper}
         elevation={0}
@@ -433,16 +492,16 @@ const Employees = () => {
         sx={{
           borderRadius: 0.5,
           flex: 1,
-          overflow: "auto", // This element should scroll
-          height: "100%", // Take full height of parent
-          maxHeight: "calc(100% - 120px)", // Account for header and pagination
+          overflow: "auto",
+          height: "100%",
+          maxHeight: "calc(100% - 120px)",
         }}
       >
         <Table stickyHeader sx={{ minWidth: 650 }}>
           <TableHead>
             <TableRow sx={{ backgroundColor: "grey.50" }}>
               <TableCell sx={{ fontWeight: 600, bgcolor: "grey.50" }}>
-                Employee No.
+                Employee ID
               </TableCell>
               <TableCell sx={{ fontWeight: 600, bgcolor: "grey.50" }}>
                 First Name
@@ -473,7 +532,7 @@ const Employees = () => {
                   hover
                   sx={{
                     "&:hover": {
-                      backgroundColor: "rgba(0, 0, 0, 0.02)", // Very subtle hover
+                      backgroundColor: "rgba(0, 0, 0, 0.02)",
                     },
                     transition: "none",
                   }}
@@ -491,12 +550,12 @@ const Employees = () => {
                         color="primary"
                         sx={{
                           transition: "none",
-                          outline: "none", // Remove outline
+                          outline: "none",
                           "&:hover": {
                             bgcolor: "rgba(25, 118, 210, 0.04)",
                           },
                           "&:focus": {
-                            outline: "none", // Remove focus outline
+                            outline: "none",
                           },
                         }}
                       >
@@ -508,12 +567,12 @@ const Employees = () => {
                         color="error"
                         sx={{
                           transition: "none",
-                          outline: "none", // Remove outline
+                          outline: "none",
                           "&:hover": {
                             bgcolor: "rgba(211, 47, 47, 0.04)",
                           },
                           "&:focus": {
-                            outline: "none", // Remove focus outline
+                            outline: "none",
                           },
                         }}
                       >
@@ -547,7 +606,7 @@ const Employees = () => {
           flexShrink: 0,
           borderTop: 1,
           borderColor: "grey.200",
-          mt: 1, // Add margin-top for spacing
+          mt: 1,
           "& .MuiButtonBase-root": {
             transition: "none",
             "&:hover": {
@@ -557,6 +616,39 @@ const Employees = () => {
           },
         }}
       />
+
+      {/* Employee Form Modal */}
+      <EmployeeFormModal
+        open={isModalOpen}
+        onClose={handleCloseModal}
+        onSubmit={handleEmployeeSubmit}
+        employee={currentEmployee}
+        isEditMode={isEditMode}
+      />
+
+      {/* Bulk Upload Modal */}
+      <BulkUploadModal
+        open={isBulkUploadModalOpen}
+        onClose={handleCloseBulkUploadModal}
+        onUploadSuccess={handleBulkUploadSuccess}
+      />
+
+      {/* Notification Snackbar */}
+      <Snackbar
+        open={notification.open}
+        autoHideDuration={4000}
+        onClose={handleCloseNotification}
+        anchorOrigin={{ vertical: "top", horizontal: "right" }}
+      >
+        <Alert
+          onClose={handleCloseNotification}
+          severity={notification.severity}
+          variant="filled"
+          sx={{ width: "100%" }}
+        >
+          {notification.message}
+        </Alert>
+      </Snackbar>
     </Paper>
   );
 };
