@@ -19,12 +19,12 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import HolidayFormDialog from "./HolidayFormDialog";
 
 // Mock data for holidays
 interface Holiday {
-  id: number;
+  id?: number;
   date: string; // ISO format
   name: string;
   classes: string[]; // List of classes affected
@@ -135,7 +135,7 @@ const Holidays = () => {
     )
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()); // Sort by date
 
-  const handleChangePage = (event: unknown, newPage: number) => {
+  const handleChangePage = (_: unknown, newPage: number) => {
     setPage(newPage);
   };
 
@@ -197,7 +197,7 @@ const Holidays = () => {
           ...holiday,
           id:
             holidays.length > 0
-              ? Math.max(...holidays.map((h) => h.id)) + 1
+              ? Math.max(...holidays.map((h) => h.id ?? 0)) + 1
               : 1,
         },
       ]);
@@ -459,8 +459,8 @@ const Holidays = () => {
       <HolidayFormDialog
         open={openEditDialog}
         onClose={handleEditHolidayClose}
-        onSave={handleSaveHoliday}
-        holiday={editHoliday}
+        onSave={handleSaveHoliday as (holiday: Holiday) => void}
+        holiday={editHoliday as Holiday}
       />
 
       {/* Delete Confirmation Modal (custom, styled like Sections) */}

@@ -77,7 +77,7 @@ const Subjects = () => {
     subject.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const handleChangePage = (event: unknown, newPage: number) => {
+  const handleChangePage = (_: unknown, newPage: number) => {
     setPage(newPage);
   };
 
@@ -170,7 +170,7 @@ const Subjects = () => {
   };
 
   const handleCloseToast = (
-    event?: React.SyntheticEvent | Event,
+    _?: React.SyntheticEvent | Event,
     reason?: string
   ) => {
     if (reason === "clickaway") {
@@ -494,7 +494,7 @@ const Subjects = () => {
             width: "100%",
             boxShadow: "0 2px 10px rgba(0,0,0,0.08)",
             border: "1px solid",
-            borderColor: (theme) =>
+            borderColor:
               toastSeverity === "success"
                 ? "rgba(46, 125, 50, 0.2)"
                 : toastSeverity === "info"

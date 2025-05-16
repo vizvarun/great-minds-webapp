@@ -4,8 +4,6 @@ import { createTheme, responsiveFontSizes } from "@mui/material/styles";
 // Define color palette
 const primaryMain = "#0cb5bf";
 const secondaryMain = "#f5f5f5";
-const neutralLight = "#f8f9fa";
-const neutralDark = "#212529";
 
 // Create the base theme
 let theme = createTheme({

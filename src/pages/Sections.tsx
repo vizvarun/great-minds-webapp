@@ -8,17 +8,11 @@ import PersonIcon from "@mui/icons-material/Person";
 import SearchIcon from "@mui/icons-material/Search";
 import {
   Alert,
-  Avatar,
   Box,
   Button,
-  Chip,
   Divider,
   IconButton,
   InputAdornment,
-  List,
-  ListItem,
-  ListItemAvatar,
-  ListItemText,
   Paper,
   Snackbar,
   Table,
@@ -78,119 +72,6 @@ const mockSections: Section[] = [
   },
 ];
 
-const mockTeachers: Record<number, Teacher[]> = {
-  1: [
-    {
-      id: 1,
-      name: "John Smith",
-      subject: "Mathematics",
-      contactNumber: "9876543210",
-    },
-    {
-      id: 2,
-      name: "Sarah Johnson",
-      subject: "English",
-      contactNumber: "9876543211",
-    },
-  ],
-  2: [
-    {
-      id: 3,
-      name: "Robert Williams",
-      subject: "Science",
-      contactNumber: "9876543212",
-    },
-  ],
-  3: [
-    {
-      id: 4,
-      name: "Lisa Brown",
-      subject: "Hindi",
-      contactNumber: "9876543213",
-    },
-    {
-      id: 5,
-      name: "Michael Davis",
-      subject: "Social Studies",
-      contactNumber: "9876543214",
-    },
-  ],
-  5: [
-    {
-      id: 6,
-      name: "James Wilson",
-      subject: "Computer Science",
-      contactNumber: "9876543215",
-    },
-  ],
-  8: [
-    {
-      id: 7,
-      name: "Emily Taylor",
-      subject: "Art",
-      contactNumber: "9876543216",
-    },
-  ],
-};
-
-const mockStudents: Record<number, Student[]> = {
-  1: [
-    {
-      id: 1,
-      name: "Alice Green",
-      rollNumber: "101",
-      contactNumber: "9876543301",
-    },
-    {
-      id: 2,
-      name: "Bob Wilson",
-      rollNumber: "102",
-      contactNumber: "9876543302",
-    },
-    {
-      id: 3,
-      name: "Charlie Evans",
-      rollNumber: "103",
-      contactNumber: "9876543303",
-    },
-  ],
-  2: [
-    {
-      id: 4,
-      name: "Diana Foster",
-      rollNumber: "104",
-      contactNumber: "9876543304",
-    },
-    {
-      id: 5,
-      name: "Edward Gardner",
-      rollNumber: "105",
-      contactNumber: "9876543305",
-    },
-  ],
-  3: [
-    {
-      id: 6,
-      name: "Fiona Harrison",
-      rollNumber: "106",
-      contactNumber: "9876543306",
-    },
-    {
-      id: 7,
-      name: "George Irving",
-      rollNumber: "107",
-      contactNumber: "9876543307",
-    },
-    {
-      id: 8,
-      name: "Hannah Jackson",
-      rollNumber: "108",
-      contactNumber: "9876543308",
-    },
-  ],
-};
-
-// Mock data for classes, teachers, and admins
 const mockClasses = [
   "Class 1",
   "Class 2",
@@ -254,7 +135,7 @@ const Sections = () => {
       section.sectionName.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const handleChangePage = (event: unknown, newPage: number) => {
+  const handleChangePage = (_: unknown, newPage: number) => {
     setPage(newPage);
   };
 
@@ -287,8 +168,8 @@ const Sections = () => {
       setFormData({
         className: section.className,
         sectionName: section.sectionName,
-        classTeacher: section.classTeacher || "",
-        classAdmin: section.classAdmin || "",
+        classTeacher: section.classTeacher ?? "",
+        classAdmin: section.classAdmin ?? "",
       });
       setSelectedSection(section);
       setIsEditMode(true);
@@ -400,7 +281,7 @@ const Sections = () => {
   };
 
   const handleCloseToast = (
-    event?: React.SyntheticEvent | Event,
+    _?: React.SyntheticEvent | Event,
     reason?: string
   ) => {
     if (reason === "clickaway") {
@@ -556,7 +437,7 @@ const Sections = () => {
                 >
                   <TableCell>{section.className}</TableCell>
                   <TableCell>{section.sectionName}</TableCell>
-                  <TableCell>{section.classTeacher || "-"}</TableCell>
+                  <TableCell>{section.classTeacher ?? "-"}</TableCell>
                   <TableCell align="center">
                     <Box sx={{ display: "flex", justifyContent: "center" }}>
                       <Box
@@ -756,7 +637,7 @@ const Sections = () => {
             width: "100%",
             boxShadow: "0 2px 10px rgba(0,0,0,0.08)",
             border: "1px solid",
-            borderColor: (theme) =>
+            borderColor:
               toastSeverity === "success"
                 ? "rgba(46, 125, 50, 0.2)"
                 : toastSeverity === "info"
@@ -833,7 +714,6 @@ const Sections = () => {
                 name="className"
                 value={formData.className}
                 onChange={handleFormChange}
-                SelectProps={{ native: true }}
                 size="small"
               >
                 <option value="">Select class</option>
@@ -867,7 +747,6 @@ const Sections = () => {
                 name="classTeacher"
                 value={formData.classTeacher}
                 onChange={handleFormChange}
-                SelectProps={{ native: true }}
                 size="small"
               >
                 <option value="">Select class teacher</option>
@@ -888,7 +767,6 @@ const Sections = () => {
                 name="classAdmin"
                 value={formData.classAdmin}
                 onChange={handleFormChange}
-                SelectProps={{ native: true }}
                 size="small"
               >
                 <option value="">Select class admin</option>
@@ -976,7 +854,7 @@ const Sections = () => {
                 Confirm Deletion
               </Typography>
               <Typography variant="body1" sx={{ mb: 3, textAlign: "center" }}>
-                Are you sure you want to delete{" "}
+                Are you sure you want to delete
                 <strong>
                   {sectionToDelete?.className} {sectionToDelete?.sectionName}
                 </strong>

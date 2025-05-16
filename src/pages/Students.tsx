@@ -182,8 +182,8 @@ const Students = () => {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [studentToDelete, setStudentToDelete] = useState<Student | null>(null);
 
-  // Add state for the bulk upload modal
-  const [isBulkUploadModalOpen, setIsBulkUploadModalOpen] = useState(false);
+  // Remove unused state for bulk upload modal
+  // const [isBulkUploadModalOpen, setIsBulkUploadModalOpen] = useState(false);
 
   // Filter students based on search query
   const filteredStudents = students.filter((student) =>
@@ -193,7 +193,7 @@ const Students = () => {
   );
 
   // Handle pagination
-  const handleChangePage = (event: unknown, newPage: number) => {
+  const handleChangePage = (_: unknown, newPage: number) => {
     setPage(newPage);
   };
 
@@ -217,10 +217,10 @@ const Students = () => {
     setIsFormModalOpen(true);
   };
 
-  // Handle bulk upload
-  const handleBulkUpload = () => {
-    setIsBulkUploadModalOpen(true);
-  };
+  // Remove unused bulk upload handler
+  // const handleBulkUpload = () => {
+  //   setIsBulkUploadModalOpen(true);
+  // };
 
   // Handle editing a student
   const handleEditStudent = (student: Student) => {
@@ -312,6 +312,7 @@ const Students = () => {
         open: true,
         message: "Student updated successfully",
         severity: "success",
+        timestamp: Date.now(),
       });
     } else {
       // Add new student
@@ -328,6 +329,7 @@ const Students = () => {
         open: true,
         message: "Student added successfully",
         severity: "success",
+        timestamp: Date.now(),
       });
     }
 
@@ -424,7 +426,7 @@ const Students = () => {
             <Button
               variant="outlined"
               startIcon={<FileUploadIcon />}
-              onClick={handleBulkUpload}
+              // onClick={handleBulkUpload}
               sx={{
                 textTransform: "none",
                 borderRadius: 0.5,
@@ -692,9 +694,6 @@ const Students = () => {
         open={isDeleteModalOpen}
         onClose={handleCancelDelete}
         aria-labelledby="delete-confirmation-modal"
-        BackdropProps={{
-          sx: { backgroundColor: "rgba(0, 0, 0, 0.5)" },
-        }}
         sx={{
           display: "flex",
           alignItems: "center",
@@ -729,7 +728,7 @@ const Students = () => {
               Confirm Deletion
             </Typography>
             <Typography variant="body1" sx={{ mb: 3, textAlign: "center" }}>
-              Are you sure you want to delete{" "}
+              Are you sure you want to delete
               <strong>
                 {studentToDelete?.firstName} {studentToDelete?.lastName}
               </strong>
@@ -811,7 +810,7 @@ const Students = () => {
             width: "100%",
             boxShadow: "0 2px 10px rgba(0,0,0,0.08)",
             border: "1px solid",
-            borderColor: (theme) =>
+            borderColor:
               notification.severity === "success"
                 ? "rgba(46, 125, 50, 0.2)"
                 : notification.severity === "info"
