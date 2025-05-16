@@ -18,17 +18,25 @@ interface BulkUploadModalProps {
   open: boolean;
   onClose: () => void;
   onUploadSuccess: (data: any[]) => void;
+  entityType: string; // Add entityType to make the component generic
+  templateUrl?: string; // Optional URL for downloading the template
 }
 
 const BulkUploadModal = ({
   open,
   onClose,
   onUploadSuccess,
+  entityType = "items", // Default to generic "items"
+  templateUrl,
 }: BulkUploadModalProps) => {
   const [file, setFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Format entity type for display (capitalize first letter)
+  const displayEntityType =
+    entityType.charAt(0).toUpperCase() + entityType.slice(1);
 
   // Handle file selection
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -71,18 +79,16 @@ const BulkUploadModal = ({
         // Mock data that would come from parsing the file
         const mockUploadedData = [
           {
-            employeeNo: "EMP101",
+            id: "MOCK001",
             firstName: "Jane",
             lastName: "Doe",
-            designation: "Teacher",
-            mobileNumber: "9876543210",
+            // Other generic fields
           },
           {
-            employeeNo: "EMP102",
+            id: "MOCK002",
             firstName: "John",
             lastName: "Smith",
-            designation: "Administrator",
-            mobileNumber: "9876543211",
+            // Other generic fields
           },
           // Add more mock data as needed
         ];
@@ -102,9 +108,13 @@ const BulkUploadModal = ({
 
   // Handle template download
   const handleDownloadTemplate = () => {
-    // In a real application, you would generate and download a CSV template
-    // For this demo, we'll just log a message
-    console.log("Downloading template...");
+    // If template URL is provided, use that for download
+    if (templateUrl) {
+      window.open(templateUrl, "_blank");
+    } else {
+      // Mock download behavior
+      console.log(`Downloading ${entityType} template...`);
+    }
   };
 
   // Reset the file input when the modal is closed
@@ -151,7 +161,7 @@ const BulkUploadModal = ({
           }}
         >
           <Typography variant="h6" component="h2" sx={{ fontWeight: 600 }}>
-            Bulk Upload Employees
+            Bulk Upload {displayEntityType}
           </Typography>
           <IconButton
             onClick={handleClose}
@@ -168,7 +178,8 @@ const BulkUploadModal = ({
 
         <Box sx={{ p: 3 }}>
           <Typography variant="body1" sx={{ mb: 2 }}>
-            Upload a CSV or Excel file containing employee details.
+            Upload a CSV or Excel file containing {entityType.toLowerCase()}{" "}
+            details.
           </Typography>
 
           {error && (

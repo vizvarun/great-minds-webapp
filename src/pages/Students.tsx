@@ -23,6 +23,7 @@ import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
 import SearchIcon from "@mui/icons-material/Search";
 import PaymentsIcon from "@mui/icons-material/Payments";
+import FileUploadIcon from "@mui/icons-material/FileUpload";
 import StudentFormModal from "../components/StudentFormModal";
 import StudentFeesModal from "../components/StudentFeesModal";
 
@@ -32,6 +33,7 @@ interface Student {
   enrollmentNo: string;
   firstName: string;
   lastName: string;
+  gender: string;
   phoneNumber: string;
   city: string;
   isActive: boolean;
@@ -43,6 +45,7 @@ const mockStudents: Student[] = [
     enrollmentNo: "GM2023-001",
     firstName: "Aarav",
     lastName: "Sharma",
+    gender: "Male",
     phoneNumber: "9876543210",
     city: "Bengaluru",
     isActive: true,
@@ -52,6 +55,7 @@ const mockStudents: Student[] = [
     enrollmentNo: "GM2023-002",
     firstName: "Priya",
     lastName: "Patel",
+    gender: "Female",
     phoneNumber: "9876543211",
     city: "Mumbai",
     isActive: true,
@@ -61,6 +65,7 @@ const mockStudents: Student[] = [
     enrollmentNo: "GM2023-003",
     firstName: "Vikram",
     lastName: "Singh",
+    gender: "Male",
     phoneNumber: "9876543212",
     city: "Delhi",
     isActive: false,
@@ -70,6 +75,7 @@ const mockStudents: Student[] = [
     enrollmentNo: "GM2023-004",
     firstName: "Sneha",
     lastName: "Kumar",
+    gender: "Female",
     phoneNumber: "9876543213",
     city: "Hyderabad",
     isActive: true,
@@ -79,6 +85,7 @@ const mockStudents: Student[] = [
     enrollmentNo: "GM2023-005",
     firstName: "Rahul",
     lastName: "Gupta",
+    gender: "Male",
     phoneNumber: "9876543214",
     city: "Chennai",
     isActive: true,
@@ -88,6 +95,7 @@ const mockStudents: Student[] = [
     enrollmentNo: "GM2023-006",
     firstName: "Divya",
     lastName: "Rao",
+    gender: "Female",
     phoneNumber: "9876543215",
     city: "Pune",
     isActive: true,
@@ -97,6 +105,7 @@ const mockStudents: Student[] = [
     enrollmentNo: "GM2023-007",
     firstName: "Arjun",
     lastName: "Reddy",
+    gender: "Male",
     phoneNumber: "9876543216",
     city: "Kolkata",
     isActive: true,
@@ -106,6 +115,7 @@ const mockStudents: Student[] = [
     enrollmentNo: "GM2023-008",
     firstName: "Neha",
     lastName: "Verma",
+    gender: "Female",
     phoneNumber: "9876543217",
     city: "Jaipur",
     isActive: false,
@@ -115,6 +125,7 @@ const mockStudents: Student[] = [
     enrollmentNo: "GM2023-009",
     firstName: "Rohan",
     lastName: "Joshi",
+    gender: "Male",
     phoneNumber: "9876543218",
     city: "Ahmedabad",
     isActive: true,
@@ -124,6 +135,7 @@ const mockStudents: Student[] = [
     enrollmentNo: "GM2023-010",
     firstName: "Kavita",
     lastName: "Tiwari",
+    gender: "Female",
     phoneNumber: "9876543219",
     city: "Lucknow",
     isActive: true,
@@ -133,6 +145,7 @@ const mockStudents: Student[] = [
     enrollmentNo: "GM2023-011",
     firstName: "Sanjay",
     lastName: "Mehra",
+    gender: "Male",
     phoneNumber: "9876543220",
     city: "Mysuru",
     isActive: true,
@@ -142,6 +155,7 @@ const mockStudents: Student[] = [
     enrollmentNo: "GM2023-012",
     firstName: "Pooja",
     lastName: "Desai",
+    gender: "Female",
     phoneNumber: "9876543221",
     city: "Indore",
     isActive: true,
@@ -167,6 +181,9 @@ const Students = () => {
   // Add state for the delete confirmation modal
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [studentToDelete, setStudentToDelete] = useState<Student | null>(null);
+
+  // Add state for the bulk upload modal
+  const [isBulkUploadModalOpen, setIsBulkUploadModalOpen] = useState(false);
 
   // Filter students based on search query
   const filteredStudents = students.filter((student) =>
@@ -198,6 +215,11 @@ const Students = () => {
     setSelectedStudent(null);
     setIsEditMode(false);
     setIsFormModalOpen(true);
+  };
+
+  // Handle bulk upload
+  const handleBulkUpload = () => {
+    setIsBulkUploadModalOpen(true);
   };
 
   // Handle editing a student
@@ -374,30 +396,53 @@ const Students = () => {
               ),
             }}
           />
-          <Button
-            variant="contained"
-            disableElevation
-            startIcon={<AddIcon />}
-            onClick={handleAddStudent}
-            sx={{
-              textTransform: "none",
-              borderRadius: 0.5,
-              transition: "none",
-              backgroundImage: "none",
-              background: "primary.main",
-              boxShadow: "none",
-              "&:hover": {
+          <Box sx={{ display: "flex", gap: 1 }}>
+            <Button
+              variant="contained"
+              disableElevation
+              startIcon={<AddIcon />}
+              onClick={handleAddStudent}
+              sx={{
+                textTransform: "none",
+                borderRadius: 0.5,
+                transition: "none",
                 backgroundImage: "none",
                 background: "primary.main",
-                opacity: 0.9,
-              },
-              "&:focus": {
+                boxShadow: "none",
+                "&:hover": {
+                  backgroundImage: "none",
+                  background: "primary.main",
+                  opacity: 0.9,
+                },
+                "&:focus": {
+                  outline: "none",
+                },
+              }}
+            >
+              Add Student
+            </Button>
+            <Button
+              variant="outlined"
+              startIcon={<FileUploadIcon />}
+              onClick={handleBulkUpload}
+              sx={{
+                textTransform: "none",
+                borderRadius: 0.5,
+                transition: "none",
                 outline: "none",
-              },
-            }}
-          >
-            Add Student
-          </Button>
+                "&:hover": {
+                  bgcolor: "transparent",
+                  borderColor: "primary.main",
+                  outline: "none",
+                },
+                "&:focus": {
+                  outline: "none",
+                },
+              }}
+            >
+              Bulk Upload
+            </Button>
+          </Box>
         </Box>
       </Box>
 
@@ -431,6 +476,11 @@ const Students = () => {
                 sx={{ fontWeight: 600, bgcolor: "grey.50", width: "15%" }}
               >
                 Last Name
+              </TableCell>
+              <TableCell
+                sx={{ fontWeight: 600, bgcolor: "grey.50", width: "10%" }}
+              >
+                Gender
               </TableCell>
               <TableCell
                 sx={{ fontWeight: 600, bgcolor: "grey.50", width: "15%" }}
@@ -473,6 +523,7 @@ const Students = () => {
                   <TableCell>{student.enrollmentNo}</TableCell>
                   <TableCell>{student.firstName}</TableCell>
                   <TableCell>{student.lastName}</TableCell>
+                  <TableCell>{student.gender}</TableCell>
                   <TableCell>{student.phoneNumber}</TableCell>
                   <TableCell>{student.city}</TableCell>
                   <TableCell align="center">
@@ -587,7 +638,7 @@ const Students = () => {
               ))}
             {filteredStudents.length === 0 && (
               <TableRow>
-                <TableCell colSpan={7} align="center" sx={{ py: 3 }}>
+                <TableCell colSpan={8} align="center" sx={{ py: 3 }}>
                   No students found.
                 </TableCell>
               </TableRow>

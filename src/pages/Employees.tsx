@@ -641,10 +641,12 @@ const Employees = () => {
         isEditMode={isEditMode}
       />
 
+      {/* Bulk Upload Modal */}
       <BulkUploadModal
         open={isBulkUploadModalOpen}
         onClose={handleCloseBulkUploadModal}
         onUploadSuccess={handleBulkUploadSuccess}
+        entityType="Employees"
       />
 
       <Modal

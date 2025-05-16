@@ -30,6 +30,7 @@ interface StudentData {
   city: string;
   state: string;
   pincode: string;
+  gender: string;
   addressLine1: string;
   addressLine2?: string;
   profilePhoto?: string;
@@ -59,6 +60,7 @@ const initialStudentData: StudentData = {
   city: "",
   state: "",
   pincode: "",
+  gender: "",
   addressLine1: "",
   addressLine2: "",
   // Father details
@@ -682,6 +684,28 @@ const StudentFormModal = ({
                         variant="outlined"
                         error={!!errors.dateOfBirth}
                         helperText={errors.dateOfBirth}
+                        size="small"
+                        InputProps={{
+                          sx: inputStyles,
+                        }}
+                      />
+                    </Grid>
+
+                    <Grid item xs={12} sm={6}>
+                      <FormLabel
+                        sx={{ mb: 1, display: "block", fontWeight: 500 }}
+                      >
+                        Gender
+                      </FormLabel>
+                      <TextField
+                        name="gender"
+                        value={formData.gender}
+                        onChange={handleChange}
+                        fullWidth
+                        variant="outlined"
+                        placeholder="Enter Gender"
+                        error={!!errors.gender}
+                        helperText={errors.gender}
                         size="small"
                         InputProps={{
                           sx: inputStyles,
