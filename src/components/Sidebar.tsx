@@ -25,13 +25,14 @@ import {
 } from "@mui/material";
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import type { ReactNode } from "react";
 
 const drawerWidth = 250;
 
 interface SidebarItem {
   title: string;
   path: string;
-  icon: React.ReactNode;
+  icon: ReactNode;
   children?: SidebarItem[];
 }
 

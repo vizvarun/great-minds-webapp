@@ -1,12 +1,5 @@
 import LogoutIcon from "@mui/icons-material/Logout";
-import {
-  AppBar,
-  Box,
-  Button,
-  Toolbar,
-  Tooltip,
-  Typography,
-} from "@mui/material";
+import { AppBar, Box, Button, Toolbar, Typography } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import logo from "../assets/logo.png";
 
