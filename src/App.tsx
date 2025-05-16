@@ -24,6 +24,8 @@ import Holidays from "./pages/Holidays";
 import AttendanceReport from "./pages/AttendanceReport";
 import FeesStructure from "./pages/FeesStructure";
 import SchoolProfile from "./pages/SchoolProfile";
+import SectionTeachers from "./pages/SectionTeachers";
+import SectionStudents from "./pages/SectionStudents";
 
 // Wrap dashboard layout around content
 const DashboardPage = ({ children }: { children: ReactNode }) => (
@@ -120,6 +122,22 @@ function App() {
             element={
               <DashboardPage>
                 <SchoolProfile />
+              </DashboardPage>
+            }
+          />
+          <Route
+            path="/sections/:sectionId/teachers"
+            element={
+              <DashboardPage>
+                <SectionTeachers />
+              </DashboardPage>
+            }
+          />
+          <Route
+            path="/sections/:sectionId/students"
+            element={
+              <DashboardPage>
+                <SectionStudents />
               </DashboardPage>
             }
           />

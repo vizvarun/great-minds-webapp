@@ -101,10 +101,7 @@ const SchoolProfile = () => {
         overflow: "auto",
       }}
     >
-      <Typography
-        variant="h5"
-        sx={{ fontWeight: 500, color: "text.primary", mb: 3 }}
-      >
+      <Typography variant="h5" sx={{ fontWeight: 500, color: "text.primary" }}>
         School Profile
       </Typography>
 
@@ -139,7 +136,7 @@ const SchoolProfile = () => {
                   display: "flex",
                   justifyContent: "center",
                   alignItems: "center",
-                  mb: 2,
+                  my: 2,
                   overflow: "hidden",
                   backgroundColor: "grey.50",
                 }}
@@ -222,6 +219,7 @@ const SchoolProfile = () => {
                   width: "100%",
                   px: 0,
                   mx: 0,
+                  my: 2,
                 }}
               >
                 <Box sx={{ width: "100%", px: 0 }}>
