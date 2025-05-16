@@ -6,6 +6,7 @@ import {
   Alert,
   Box,
   Button,
+  Divider,
   IconButton,
   InputAdornment,
   Paper,
@@ -405,12 +406,12 @@ const Subjects = () => {
               borderRadius: 2,
               display: "flex",
               flexDirection: "column",
-              gap: 2,
             }}
           >
-            <Typography variant="h6" sx={{ mb: 2 }}>
+            <Typography variant="h6">
               {isEditMode ? "Edit Subject" : "Add Subject"}
             </Typography>
+            <Divider sx={{ mb: 2 }} />
             <Box sx={{ mb: 2 }}>
               <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
                 Subject Name
