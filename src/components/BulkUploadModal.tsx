@@ -164,10 +164,39 @@ const BulkUploadModal = ({
         </Box>
 
         <Box sx={{ p: 3 }}>
-          <Typography variant="body1" sx={{ mb: 2 }}>
-            Upload a CSV or Excel file containing {entityType.toLowerCase()}{" "}
-            details.
-          </Typography>
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              mb: 2,
+            }}
+          >
+            <Typography variant="body1">
+              Upload a CSV or Excel file containing {entityType.toLowerCase()}{" "}
+              details.
+            </Typography>
+
+            {/* Add template download button if templateUrl is provided */}
+            {templateUrl && (
+              <Button
+                variant="text"
+                href={templateUrl}
+                download
+                sx={{
+                  textTransform: "none",
+                  fontSize: "0.875rem",
+                  color: "primary.main",
+                  "&:hover": {
+                    backgroundColor: "transparent",
+                    textDecoration: "underline",
+                  },
+                }}
+              >
+                Download Template
+              </Button>
+            )}
+          </Box>
 
           {error && (
             <Alert severity="error" sx={{ mb: 3 }}>
