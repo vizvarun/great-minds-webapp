@@ -25,6 +25,8 @@ import {
   TableRow,
   TextField,
   Typography,
+  Alert,
+  Snackbar,
 } from "@mui/material";
 import { useState } from "react";
 
@@ -84,8 +86,28 @@ const Classes = () => {
   const [selectedClass, setSelectedClass] = useState<Class | null>(null);
   const [selectedSubjects, setSelectedSubjects] = useState<number[]>([]);
 
+  // New states for handling class operations
+  const [classes, setClasses] = useState<Class[]>(mockClasses);
+  const [isClassModalOpen, setIsClassModalOpen] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [classFormData, setClassFormData] = useState<{ name: string }>({
+    name: "",
+  });
+
+  // State for delete confirmation
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [classToDelete, setClassToDelete] = useState<Class | null>(null);
+
+  // State for notifications
+  const [notification, setNotification] = useState({
+    open: false,
+    message: "",
+    severity: "success" as "success" | "error" | "info" | "warning",
+    timestamp: Date.now(),
+  });
+
   // Filter classes based on search query
-  const filteredClasses = mockClasses.filter((cls) =>
+  const filteredClasses = classes.filter((cls) =>
     cls.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
@@ -105,24 +127,127 @@ const Classes = () => {
     setPage(0);
   };
 
+  // Handle class name input change
+  const handleClassNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setClassFormData({
+      name: e.target.value,
+    });
+  };
+
+  // Open modal to add a new class
   const handleAddClass = () => {
-    console.log("Add class clicked");
-    // Implement add class functionality
+    setIsEditMode(false);
+    setClassFormData({ name: "" });
+    setIsClassModalOpen(true);
   };
 
+  // Open modal to edit an existing class
   const handleEditClass = (id: number) => {
-    console.log("Edit class", id);
-    // Implement edit class functionality
+    const classToEdit = classes.find((cls) => cls.id === id);
+    if (classToEdit) {
+      setIsEditMode(true);
+      setClassFormData({ name: classToEdit.name });
+      setSelectedClass(classToEdit);
+      setIsClassModalOpen(true);
+    }
   };
 
-  const handleDeleteClass = (id: number) => {
-    console.log("Delete class", id);
-    // Implement delete class functionality
+  // Close the class form modal
+  const handleCloseClassModal = () => {
+    setIsClassModalOpen(false);
+    setSelectedClass(null);
+  };
+
+  // Prepare to delete a class - show confirmation modal
+  const handleDeleteClick = (cls: Class) => {
+    setClassToDelete(cls);
+    setIsDeleteModalOpen(true);
+  };
+
+  // Cancel deletion
+  const handleCancelDelete = () => {
+    setIsDeleteModalOpen(false);
+    setClassToDelete(null);
+  };
+
+  // Confirm and perform deletion
+  const handleConfirmDelete = () => {
+    if (classToDelete) {
+      const updatedClasses = classes.filter(
+        (cls) => cls.id !== classToDelete.id
+      );
+      setClasses(updatedClasses);
+
+      setNotification({
+        open: true,
+        message: `${classToDelete.name} has been deleted`,
+        severity: "success",
+        timestamp: Date.now(),
+      });
+
+      setIsDeleteModalOpen(false);
+      setClassToDelete(null);
+    }
+  };
+
+  // Save new class or update existing one
+  const handleSaveClass = () => {
+    if (!classFormData.name.trim()) {
+      setNotification({
+        open: true,
+        message: "Class name cannot be empty",
+        severity: "error",
+        timestamp: Date.now(),
+      });
+      return;
+    }
+
+    if (isEditMode && selectedClass) {
+      // Update existing class
+      const updatedClasses = classes.map((cls) =>
+        cls.id === selectedClass.id ? { ...cls, name: classFormData.name } : cls
+      );
+      setClasses(updatedClasses);
+
+      setNotification({
+        open: true,
+        message: `Class "${classFormData.name}" has been updated`,
+        severity: "success",
+        timestamp: Date.now(),
+      });
+    } else {
+      // Add new class
+      const newId = Math.max(...classes.map((cls) => cls.id), 0) + 1;
+      const newClass: Class = {
+        id: newId,
+        name: classFormData.name,
+        subjectIds: [],
+      };
+
+      setClasses([...classes, newClass]);
+
+      setNotification({
+        open: true,
+        message: `Class "${classFormData.name}" has been added`,
+        severity: "success",
+        timestamp: Date.now(),
+      });
+    }
+
+    handleCloseClassModal();
   };
 
   const handleDownloadClass = (id: number) => {
-    console.log("Download class data for", id);
-    // Implement download functionality
+    const cls = classes.find((c) => c.id === id);
+    if (cls) {
+      setNotification({
+        open: true,
+        message: `Downloading data for ${cls.name}`,
+        severity: "info",
+        timestamp: Date.now(),
+      });
+    }
+    // Implement actual download functionality if needed
   };
 
   const handleOpenSubjectMapping = (cls: Class) => {
@@ -148,23 +273,28 @@ const Classes = () => {
 
   const handleSaveSubjectMapping = () => {
     if (selectedClass) {
-      console.log(
-        `Mapped subjects for ${selectedClass.name}:`,
-        selectedSubjects
-      );
-      // In a real app, you would update the class data here
-
-      // Update local state for demo purposes
-      const updatedClasses = mockClasses.map((cls) => {
+      // Update the class data with new subject mapping
+      const updatedClasses = classes.map((cls) => {
         if (cls.id === selectedClass.id) {
           return { ...cls, subjectIds: selectedSubjects };
         }
         return cls;
       });
-      // This is just for demo since we're not using a real state management system
-      // In a real app, you'd dispatch an action or use a mutation
+
+      setClasses(updatedClasses);
+
+      setNotification({
+        open: true,
+        message: `Subjects updated for ${selectedClass.name}`,
+        severity: "success",
+        timestamp: Date.now(),
+      });
     }
     handleCloseSubjectMapping();
+  };
+
+  const handleCloseNotification = () => {
+    setNotification((prev) => ({ ...prev, open: false }));
   };
 
   return (
@@ -350,7 +480,7 @@ const Classes = () => {
                       </IconButton>
                       <IconButton
                         size="small"
-                        onClick={() => handleDeleteClass(cls.id)}
+                        onClick={() => handleDeleteClick(cls)}
                         color="error"
                         sx={{
                           transition: "none",
@@ -519,6 +649,266 @@ const Classes = () => {
           </Box>
         </Paper>
       </Modal>
+
+      {/* Add/Edit Class Modal */}
+      <Modal
+        open={isClassModalOpen}
+        onClose={handleCloseClassModal}
+        aria-labelledby="class-modal"
+        BackdropProps={{
+          sx: { backgroundColor: "rgba(0, 0, 0, 0.5)" },
+        }}
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <Paper
+          elevation={0}
+          sx={{
+            width: 400,
+            maxWidth: "90%",
+            bgcolor: "background.paper",
+            borderRadius: 1,
+            boxShadow: 24,
+            p: 3,
+            outline: "none",
+          }}
+        >
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              mb: 2,
+            }}
+          >
+            <Typography variant="h6" component="h2" sx={{ fontWeight: 600 }}>
+              {isEditMode ? "Edit Class" : "Add New Class"}
+            </Typography>
+            <IconButton
+              onClick={handleCloseClassModal}
+              sx={{
+                transition: "none",
+                "&:hover": {
+                  bgcolor: "transparent",
+                  opacity: 0.9,
+                },
+              }}
+            >
+              <CloseIcon />
+            </IconButton>
+          </Box>
+          <Divider sx={{ mb: 2 }} />
+
+          <Box sx={{ mb: 3 }}>
+            <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
+              Class Name
+            </Typography>
+            <TextField
+              autoFocus
+              fullWidth
+              value={classFormData.name}
+              onChange={handleClassNameChange}
+              placeholder="Enter class name"
+              size="small"
+              sx={{
+                "& .MuiOutlinedInput-root": {
+                  borderRadius: 0.5,
+                },
+              }}
+            />
+          </Box>
+
+          <Divider sx={{ mb: 2 }} />
+
+          <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 1 }}>
+            <Button
+              variant="outlined"
+              onClick={handleCloseClassModal}
+              sx={{
+                textTransform: "none",
+                transition: "none",
+                borderRadius: 0.5,
+                "&:hover": {
+                  bgcolor: "transparent",
+                  borderColor: "primary.main",
+                  opacity: 0.9,
+                },
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="contained"
+              disableElevation
+              onClick={handleSaveClass}
+              sx={{
+                textTransform: "none",
+                backgroundImage: "none",
+                borderRadius: 0.5,
+                transition: "none",
+                background: "primary.main",
+                "&:hover": {
+                  backgroundImage: "none",
+                  background: "primary.main",
+                  opacity: 0.9,
+                },
+              }}
+            >
+              Save
+            </Button>
+          </Box>
+        </Paper>
+      </Modal>
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        open={isDeleteModalOpen}
+        onClose={handleCancelDelete}
+        aria-labelledby="delete-confirmation-modal"
+        BackdropProps={{
+          sx: { backgroundColor: "rgba(0, 0, 0, 0.5)" },
+        }}
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <Paper
+          elevation={0}
+          sx={{
+            width: 400,
+            maxWidth: "95%",
+            bgcolor: "background.paper",
+            borderRadius: 2,
+            boxShadow: 24,
+            p: 0,
+            outline: "none",
+          }}
+        >
+          <Box
+            sx={{
+              p: 3,
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+            }}
+          >
+            <Typography
+              variant="h6"
+              component="h2"
+              sx={{ fontWeight: 600, mb: 2 }}
+            >
+              Confirm Deletion
+            </Typography>
+            <Typography variant="body1" sx={{ mb: 3, textAlign: "center" }}>
+              Are you sure you want to delete{" "}
+              <strong>{classToDelete?.name}</strong>? This action cannot be
+              undone.
+            </Typography>
+
+            <Box
+              sx={{
+                display: "flex",
+                justifyContent: "center",
+                gap: 2,
+                width: "100%",
+              }}
+            >
+              <Button
+                variant="outlined"
+                onClick={handleCancelDelete}
+                disableRipple
+                sx={{
+                  flex: 1,
+                  textTransform: "none",
+                  borderRadius: 0.5,
+                  backgroundColor: "transparent",
+                  outline: "none",
+                  border: "1px solid",
+                  borderColor: "grey.300",
+                  color: "text.primary",
+                  transition: "none",
+                  "&:hover": {
+                    backgroundColor: "transparent",
+                    borderColor: "grey.400",
+                  },
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="contained"
+                onClick={handleConfirmDelete}
+                disableElevation
+                disableRipple
+                sx={{
+                  flex: 1,
+                  textTransform: "none",
+                  borderRadius: 0.5,
+                  background: "error.main",
+                  color: "white",
+                  transition: "none",
+                  "&:hover": {
+                    background: "error.dark",
+                  },
+                }}
+              >
+                Delete
+              </Button>
+            </Box>
+          </Box>
+        </Paper>
+      </Modal>
+
+      {/* Notification Snackbar */}
+      <Snackbar
+        key={notification.timestamp}
+        open={notification.open}
+        autoHideDuration={4000}
+        onClose={handleCloseNotification}
+        anchorOrigin={{ vertical: "top", horizontal: "right" }}
+        sx={{
+          "& .MuiSnackbarContent-root": {
+            minWidth: "100%",
+          },
+        }}
+      >
+        <Alert
+          onClose={handleCloseNotification}
+          severity={notification.severity}
+          variant="standard"
+          sx={{
+            width: "100%",
+            boxShadow: "0 2px 10px rgba(0,0,0,0.08)",
+            border: "1px solid",
+            borderColor: (theme) =>
+              notification.severity === "success"
+                ? "rgba(46, 125, 50, 0.2)"
+                : notification.severity === "info"
+                ? "rgba(2, 136, 209, 0.2)"
+                : notification.severity === "warning"
+                ? "rgba(237, 108, 2, 0.2)"
+                : "rgba(211, 47, 47, 0.2)",
+            borderRadius: 1,
+            "& .MuiAlert-icon": {
+              opacity: 0.8,
+            },
+            "& .MuiAlert-message": {
+              fontSize: "0.875rem",
+            },
+            "& .MuiAlert-action": {
+              paddingTop: 0,
+              alignItems: "flex-start",
+            },
+          }}
+        >
+          {notification.message}
+        </Alert>
+      </Snackbar>
     </Paper>
   );
 };
