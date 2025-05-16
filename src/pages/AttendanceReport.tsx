@@ -1,13 +1,15 @@
-import { useState, useEffect } from "react";
+import CalendarTodayIcon from "@mui/icons-material/CalendarToday";
 import {
-  Typography,
-  Paper,
   Box,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
   Button,
+  Chip,
+  Divider,
+  FormControl,
+  Grid,
+  InputAdornment,
+  MenuItem,
+  Paper,
+  Select,
   Table,
   TableBody,
   TableCell,
@@ -15,12 +17,9 @@ import {
   TableHead,
   TableRow,
   TextField,
-  Grid,
-  Divider,
-  Chip,
-  InputAdornment,
+  Typography,
 } from "@mui/material";
-import CalendarTodayIcon from "@mui/icons-material/CalendarToday";
+import { useEffect, useState } from "react";
 
 // Mock data for classes
 const mockClasses = [

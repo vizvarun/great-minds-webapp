@@ -1,6 +1,14 @@
-import { AppBar, Box, Button, Toolbar, Typography } from "@mui/material";
-import { useNavigate } from "react-router-dom";
 import LogoutIcon from "@mui/icons-material/Logout";
+import {
+  AppBar,
+  Box,
+  Button,
+  Toolbar,
+  Tooltip,
+  Typography,
+} from "@mui/material";
+import { useNavigate } from "react-router-dom";
+import logo from "../assets/logo.png";
 
 interface HeaderProps {
   schoolName: string;
@@ -27,36 +35,62 @@ const Header = ({ schoolName, username }: HeaderProps) => {
       }}
     >
       <Toolbar sx={{ justifyContent: "space-between" }}>
-        <Typography
-          variant="h6"
-          color="primary"
-          noWrap
-          sx={{ fontWeight: "bold" }}
-        >
-          {schoolName || "Great Minds School"}
-        </Typography>
+        {/* Logo on the left */}
+        <Box sx={{ display: "flex", alignItems: "center", width: "33%" }}>
+          <Box
+            component="img"
+            src={logo}
+            alt="School Logo"
+            sx={{
+              height: 32,
+              width: "auto",
+            }}
+          />
+        </Box>
 
-        <Box sx={{ display: "flex", alignItems: "center" }}>
+        {/* School name centered */}
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            width: "34%",
+          }}
+        >
+          <Typography
+            variant="h5"
+            color="primary"
+            noWrap
+            sx={{ fontWeight: "bold", textAlign: "center" }}
+          >
+            {schoolName || "Great Minds School"}
+          </Typography>
+        </Box>
+
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "flex-end",
+            width: "33%",
+          }}
+        >
           <Typography variant="body1" sx={{ mr: 2 }}>
             Hi, {username || "User"}
           </Typography>
+
+          {/* Full Logout Button */}
           <Button
             size="small"
-            variant="outlined"
-            color="primary"
+            startIcon={<LogoutIcon />}
             onClick={handleLogout}
-            startIcon={<LogoutIcon fontSize="small" />}
             sx={{
-              textTransform: "none",
-              borderRadius: 0.5,
-              minWidth: 0,
-              py: 0.75, // Reduced vertical padding
-              px: 2, // Reduced horizontal padding
               transition: "none",
+              textTransform: "none",
+              borderRadius: 1,
+              px: 2,
               "&:hover": {
-                backgroundColor: "transparent",
-                borderColor: "primary.main", // Keep border color consistent on hover
-                transform: "none", // Disable any transform animations
+                backgroundColor: "transparent", // Prevent background change on hover
               },
             }}
           >

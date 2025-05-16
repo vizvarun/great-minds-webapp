@@ -7,6 +7,7 @@ import PeopleIcon from "@mui/icons-material/People";
 import PersonIcon from "@mui/icons-material/Person";
 import SearchIcon from "@mui/icons-material/Search";
 import {
+  Alert,
   Avatar,
   Box,
   Button,
@@ -20,7 +21,7 @@ import {
   ListItemText,
   Modal,
   Paper,
-  Switch,
+  Snackbar,
   Table,
   TableBody,
   TableCell,
@@ -29,7 +30,7 @@ import {
   TablePagination,
   TableRow,
   TextField,
-  Typography
+  Typography,
 } from "@mui/material";
 import React, { useState } from "react";
 
@@ -207,9 +208,15 @@ const Sections = () => {
   const [teacherModalOpen, setTeacherModalOpen] = useState(false);
   const [studentModalOpen, setStudentModalOpen] = useState(false);
   const [selectedSection, setSelectedSection] = useState<Section | null>(null);
+  const [sections, setSections] = useState<Section[]>(mockSections);
+  const [toastOpen, setToastOpen] = useState(false);
+  const [toastMessage, setToastMessage] = useState("");
+  const [toastSeverity, setToastSeverity] = useState<
+    "success" | "info" | "warning" | "error"
+  >("success");
 
   // Filter sections based on search query
-  const filteredSections = mockSections.filter(
+  const filteredSections = sections.filter(
     (section) =>
       section.className.toLowerCase().includes(searchQuery.toLowerCase()) ||
       section.sectionName.toLowerCase().includes(searchQuery.toLowerCase())
@@ -273,10 +280,37 @@ const Sections = () => {
   };
 
   const handleToggleStatus = (id: number, currentStatus: boolean) => {
-    console.log(
-      `Toggle section ${id} status from ${currentStatus} to ${!currentStatus}`
-    );
-    // Implement toggle status functionality
+    const updatedSections = sections.map((section) => {
+      if (section.id === id) {
+        return { ...section, isActive: !currentStatus };
+      }
+      return section;
+    });
+
+    setSections(updatedSections);
+
+    // Show toast notification with section details
+    const toggledSection = sections.find((section) => section.id === id);
+    if (toggledSection) {
+      const newStatus = !currentStatus;
+      const actionText = newStatus ? "enabled" : "disabled";
+
+      setToastMessage(
+        `Section ${toggledSection.className} ${toggledSection.sectionName} has been ${actionText}`
+      );
+      setToastSeverity(newStatus ? "success" : "info");
+      setToastOpen(true);
+    }
+  };
+
+  const handleCloseToast = (
+    event?: React.SyntheticEvent | Event,
+    reason?: string
+  ) => {
+    if (reason === "clickaway") {
+      return;
+    }
+    setToastOpen(false);
   };
 
   const handleDownloadSection = (id: number) => {
@@ -437,21 +471,57 @@ const Sections = () => {
                   <TableCell>{section.className}</TableCell>
                   <TableCell>{section.sectionName}</TableCell>
                   <TableCell align="center">
-                    <Switch
-                      checked={section.isActive}
-                      onChange={() =>
-                        handleToggleStatus(section.id, section.isActive)
-                      }
-                      size="small"
-                      sx={{
-                        transition: "none",
-                        "& .MuiSwitch-switchBase": {
-                          "&.Mui-checked": {
-                            color: "primary.main",
-                          },
-                        },
-                      }}
-                    />
+                    <Box sx={{ display: "flex", justifyContent: "center" }}>
+                      <Box
+                        sx={{
+                          position: "relative",
+                          display: "inline-flex",
+                          alignItems: "center",
+                        }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={section.isActive}
+                          onChange={() =>
+                            handleToggleStatus(section.id, section.isActive)
+                          }
+                          style={{
+                            appearance: "none",
+                            WebkitAppearance: "none",
+                            MozAppearance: "none",
+                            width: "30px",
+                            height: "18px",
+                            borderRadius: "10px",
+                            background: section.isActive
+                              ? "#0cb5bf"
+                              : "#e0e0e0",
+                            outline: "none",
+                            cursor: "pointer",
+                            position: "relative",
+                            transition: "background 0.25s ease",
+                            border: "1px solid",
+                            borderColor: section.isActive
+                              ? "#0cb5bf"
+                              : "#d0d0d0",
+                          }}
+                        />
+                        <span
+                          style={{
+                            position: "absolute",
+                            left: section.isActive ? "18px" : "2px",
+                            width: "14px",
+                            height: "14px",
+                            borderRadius: "50%",
+                            background: "#ffffff",
+                            boxShadow: "0 1px 2px rgba(0,0,0,0.1)",
+                            transition: "left 0.25s ease",
+                            pointerEvents: "none",
+                            top: "50%",
+                            marginTop: "-7px",
+                          }}
+                        />
+                      </Box>
+                    </Box>
                   </TableCell>
                   <TableCell align="center">
                     <Box sx={{ display: "flex", justifyContent: "center" }}>
@@ -506,23 +576,23 @@ const Sections = () => {
                       >
                         <PeopleIcon fontSize="small" />
                       </IconButton>
-                        <IconButton
-                          size="small"
-                          onClick={() => handleDownloadSection(section.id)}
-                          color="primary"
-                          sx={{
-                            transition: "none",
+                      <IconButton
+                        size="small"
+                        onClick={() => handleDownloadSection(section.id)}
+                        color="primary"
+                        sx={{
+                          transition: "none",
+                          outline: "none",
+                          "&:hover": {
+                            bgcolor: "rgba(25, 118, 210, 0.04)",
+                          },
+                          "&:focus": {
                             outline: "none",
-                            "&:hover": {
-                              bgcolor: "rgba(25, 118, 210, 0.04)",
-                            },
-                            "&:focus": {
-                              outline: "none",
-                            },
-                          }}
-                        >
-                          <DownloadIcon fontSize="small" />
-                        </IconButton>
+                          },
+                        }}
+                      >
+                        <DownloadIcon fontSize="small" />
+                      </IconButton>
                       <IconButton
                         size="small"
                         onClick={() => handleDeleteSection(section.id)}
@@ -778,6 +848,51 @@ const Sections = () => {
           </List>
         </Paper>
       </Modal>
+
+      {/* Toast Notification */}
+      <Snackbar
+        open={toastOpen}
+        autoHideDuration={4000}
+        onClose={handleCloseToast}
+        anchorOrigin={{ vertical: "top", horizontal: "right" }}
+        sx={{
+          "& .MuiSnackbarContent-root": {
+            minWidth: "100%",
+          },
+        }}
+      >
+        <Alert
+          onClose={handleCloseToast}
+          severity={toastSeverity}
+          variant="standard"
+          sx={{
+            width: "100%",
+            boxShadow: "0 2px 10px rgba(0,0,0,0.08)",
+            border: "1px solid",
+            borderColor: (theme) =>
+              toastSeverity === "success"
+                ? "rgba(46, 125, 50, 0.2)"
+                : toastSeverity === "info"
+                ? "rgba(2, 136, 209, 0.2)"
+                : toastSeverity === "warning"
+                ? "rgba(237, 108, 2, 0.2)"
+                : "rgba(211, 47, 47, 0.2)",
+            borderRadius: 1,
+            "& .MuiAlert-icon": {
+              opacity: 0.8,
+            },
+            "& .MuiAlert-message": {
+              fontSize: "0.875rem",
+            },
+            "& .MuiAlert-action": {
+              paddingTop: 0,
+              alignItems: "flex-start",
+            },
+          }}
+        >
+          {toastMessage}
+        </Alert>
+      </Snackbar>
     </Paper>
   );
 };

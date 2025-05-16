@@ -1,22 +1,21 @@
-import { useState, useEffect, useRef } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
 import {
   Box,
   Button,
-  Typography,
-  Paper,
-  TextField,
-  Stack,
   CircularProgress,
+  Stack,
+  TextField,
+  Typography,
 } from "@mui/material";
-import mainBg from "../assets/main-bg.png";
+import { useEffect, useRef, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import logo from "../assets/logo.png";
+import mainBg from "../assets/main-bg.png";
 
 const VerifyOTP = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const mobileNumber = location.state?.mobileNumber || "";
-  const [otp, setOtp] = useState<string[]>(["", "", "", ""]);
+  const [otp, setOtp] = useState<string[]>(["", "", "", "", "", ""]); // Updated to 6 digits
   const [error, setError] = useState("");
   const [timer, setTimer] = useState(30);
   const [canResend, setCanResend] = useState(false);
@@ -58,7 +57,7 @@ const VerifyOTP = () => {
     setOtp(newOtp);
     setError("");
 
-    if (value && index < 3) {
+    if (value && index < 5) {
       inputRefs.current[index + 1]?.focus();
     }
   };
@@ -73,18 +72,19 @@ const VerifyOTP = () => {
     e.preventDefault();
     const pastedData = e.clipboardData.getData("text/plain").trim();
 
-    if (/^\d{4}$/.test(pastedData)) {
+    if (/^\d{6}$/.test(pastedData)) {
+      // Changed to expect 6 digits
       const newOtp = pastedData.split("");
       setOtp(newOtp);
 
-      inputRefs.current[3]?.focus();
+      inputRefs.current[5]?.focus(); // Changed to focus last input (index 5)
     }
   };
 
   const handleResendOTP = () => {
     if (!canResend) return;
 
-    setOtp(["", "", "", ""]);
+    setOtp(["", "", "", "", "", ""]); // Reset 6 digits
     setError("");
     setCanResend(false);
     setTimer(30);
@@ -110,8 +110,9 @@ const VerifyOTP = () => {
 
     const otpValue = otp.join("");
 
-    if (otpValue.length !== 4) {
-      setError("Please enter the 4-digit OTP");
+    if (otpValue.length !== 6) {
+      // Changed validation to expect 6 digits
+      setError("Please enter the 6-digit OTP");
       return;
     }
 
@@ -202,7 +203,7 @@ const VerifyOTP = () => {
           </Typography>
 
           <Typography variant="body2" color="#666666" sx={{ mb: 2 }}>
-            Please enter the 4-digit code sent to
+            Please enter the 6-digit code sent to {/* Updated text */}
           </Typography>
 
           <Typography
@@ -228,37 +229,41 @@ const VerifyOTP = () => {
               justifyContent="space-between"
               sx={{ mb: 3 }}
             >
-              {[0, 1, 2, 3].map((digit) => (
-                <TextField
-                  key={`otp-field-${digit}`}
-                  inputRef={(ref) => (inputRefs.current[digit] = ref)}
-                  variant="outlined"
-                  value={otp[digit]}
-                  onChange={(e) => handleInputChange(digit, e.target.value)}
-                  onKeyDown={(e) => handleKeyDown(digit, e)}
-                  onPaste={digit === 0 ? handlePaste : undefined}
-                  sx={{
-                    width: "60px",
-                    "& .MuiInputBase-input": {
-                      textAlign: "center",
-                      fontWeight: "bold",
-                      fontSize: "1.5rem",
-                      p: 1.5,
-                      height: "35px",
-                    },
-                    "& .MuiOutlinedInput-root": {
-                      borderRadius: 0.5,
-                      "&:hover .MuiOutlinedInput-notchedOutline": {
-                        borderColor: "rgba(0, 0, 0, 0.23)",
+              {[0, 1, 2, 3, 4, 5].map(
+                (
+                  digit // Updated to 6 digits
+                ) => (
+                  <TextField
+                    key={`otp-field-${digit}`}
+                    inputRef={(ref) => (inputRefs.current[digit] = ref)}
+                    variant="outlined"
+                    value={otp[digit]}
+                    onChange={(e) => handleInputChange(digit, e.target.value)}
+                    onKeyDown={(e) => handleKeyDown(digit, e)}
+                    onPaste={digit === 0 ? handlePaste : undefined}
+                    sx={{
+                      width: "45px", // Made boxes slightly smaller to fit 6
+                      "& .MuiInputBase-input": {
+                        textAlign: "center",
+                        fontWeight: "bold",
+                        fontSize: "1.3rem", // Slightly smaller font
+                        p: 1.25,
+                        height: "35px",
                       },
-                    },
-                  }}
-                  inputProps={{
-                    maxLength: 1,
-                    autoComplete: "off",
-                  }}
-                />
-              ))}
+                      "& .MuiOutlinedInput-root": {
+                        borderRadius: 0.5,
+                        "&:hover .MuiOutlinedInput-notchedOutline": {
+                          borderColor: "rgba(0, 0, 0, 0.23)",
+                        },
+                      },
+                    }}
+                    inputProps={{
+                      maxLength: 1,
+                      autoComplete: "off",
+                    }}
+                  />
+                )
+              )}
             </Stack>
 
             {error && (

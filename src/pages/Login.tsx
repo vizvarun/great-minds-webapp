@@ -1,18 +1,17 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import PhoneAndroidIcon from "@mui/icons-material/PhoneAndroid";
 import {
   Box,
   Button,
+  InputAdornment,
   TextField,
   Typography,
-  Paper,
-  InputAdornment,
   useMediaQuery,
   useTheme,
 } from "@mui/material";
-import PhoneAndroidIcon from "@mui/icons-material/PhoneAndroid";
-import mainBg from "../assets/main-bg.png";
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import logo from "../assets/logo.png";
+import mainBg from "../assets/main-bg.png";
 
 const Login = () => {
   const [mobileNumber, setMobileNumber] = useState("");
