@@ -1,6 +1,5 @@
 import CloseIcon from "@mui/icons-material/Close";
 import CloudUploadIcon from "@mui/icons-material/CloudUpload";
-import DownloadIcon from "@mui/icons-material/Download";
 import {
   Alert,
   Box,
@@ -10,7 +9,6 @@ import {
   Modal,
   Paper,
   Typography,
-  Link,
 } from "@mui/material";
 import { useState, useRef } from "react";
 
@@ -103,17 +101,6 @@ const BulkUploadModal = ({
         "Failed to process file. Please check the format and try again."
       );
       setUploading(false);
-    }
-  };
-
-  // Handle template download
-  const handleDownloadTemplate = () => {
-    // If template URL is provided, use that for download
-    if (templateUrl) {
-      window.open(templateUrl, "_blank");
-    } else {
-      // Mock download behavior
-      console.log(`Downloading ${entityType} template...`);
     }
   };
 
