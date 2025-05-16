@@ -19,7 +19,8 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import HolidayFormDialog from "./HolidayFormDialog";
 
 // Mock data for holidays
 interface Holiday {
@@ -114,9 +115,14 @@ const Holidays = () => {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [searchQuery, setSearchQuery] = useState("");
+  const [holidays, setHolidays] = useState<Holiday[]>(mockHolidays);
+  const [editHoliday, setEditHoliday] = useState<Holiday | null>(null);
+  const [openEditDialog, setOpenEditDialog] = useState(false);
+  const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
+  const [holidayToDelete, setHolidayToDelete] = useState<Holiday | null>(null);
 
   // Filter holidays based on search query
-  const filteredHolidays = mockHolidays
+  const filteredHolidays = holidays
     .filter(
       (holiday) =>
         holiday.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -146,18 +152,57 @@ const Holidays = () => {
   };
 
   const handleAddHoliday = () => {
-    console.log("Add holiday clicked");
-    // Implement add holiday functionality
+    setEditHoliday(null);
+    setOpenEditDialog(true);
   };
 
-  const handleEditHoliday = (id: number) => {
-    console.log("Edit holiday", id);
-    // Implement edit holiday functionality
+  const handleEditHolidayOpen = (holiday: Holiday) => {
+    setEditHoliday(holiday);
+    setOpenEditDialog(true);
   };
 
-  const handleDeleteHoliday = (id: number) => {
-    console.log("Delete holiday", id);
-    // Implement delete holiday functionality
+  const handleEditHolidayClose = () => {
+    setOpenEditDialog(false);
+  };
+
+  const handleDeleteHolidayOpen = (holiday: Holiday) => {
+    setHolidayToDelete(holiday);
+    setOpenDeleteDialog(true);
+  };
+
+  const handleDeleteHolidayClose = () => {
+    setOpenDeleteDialog(false);
+  };
+
+  const handleConfirmDelete = () => {
+    if (holidayToDelete) {
+      setHolidays(holidays.filter((h) => h.id !== holidayToDelete.id));
+      setOpenDeleteDialog(false);
+    }
+  };
+
+  const handleSaveHoliday = (holiday: Holiday) => {
+    if (editHoliday) {
+      // Edit existing holiday
+      setHolidays(
+        holidays.map((h) =>
+          h.id === editHoliday.id ? { ...holiday, id: h.id } : h
+        )
+      );
+    } else {
+      // Add new holiday
+      setHolidays([
+        ...holidays,
+        {
+          ...holiday,
+          id:
+            holidays.length > 0
+              ? Math.max(...holidays.map((h) => h.id)) + 1
+              : 1,
+        },
+      ]);
+    }
+    setOpenEditDialog(false);
   };
 
   return (
@@ -339,7 +384,7 @@ const Holidays = () => {
                     <Box sx={{ display: "flex", justifyContent: "center" }}>
                       <IconButton
                         size="small"
-                        onClick={() => handleEditHoliday(holiday.id)}
+                        onClick={() => handleEditHolidayOpen(holiday)}
                         color="primary"
                         sx={{
                           transition: "none",
@@ -356,7 +401,7 @@ const Holidays = () => {
                       </IconButton>
                       <IconButton
                         size="small"
-                        onClick={() => handleDeleteHoliday(holiday.id)}
+                        onClick={() => handleDeleteHolidayOpen(holiday)}
                         color="error"
                         sx={{
                           transition: "none",
@@ -409,6 +454,84 @@ const Holidays = () => {
           },
         }}
       />
+
+      {/* Edit Holiday Dialog */}
+      <HolidayFormDialog
+        open={openEditDialog}
+        onClose={handleEditHolidayClose}
+        onSave={handleSaveHoliday}
+        holiday={editHoliday}
+      />
+
+      {/* Delete Confirmation Modal (custom, styled like Sections) */}
+      {openDeleteDialog && (
+        <Box
+          sx={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            width: "100vw",
+            height: "100vh",
+            bgcolor: "rgba(0,0,0,0.5)",
+            zIndex: 1300,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <Paper
+            elevation={0}
+            sx={{
+              width: 400,
+              maxWidth: "95%",
+              borderRadius: 2,
+              p: 3,
+              outline: "none",
+            }}
+          >
+            <Box
+              sx={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+              }}
+            >
+              <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
+                Confirm Deletion
+              </Typography>
+              <Typography variant="body1" sx={{ mb: 3, textAlign: "center" }}>
+                Are you sure you want to delete{" "}
+                <strong>{holidayToDelete?.name}</strong>? This action cannot be
+                undone.
+              </Typography>
+              <Box
+                sx={{
+                  display: "flex",
+                  justifyContent: "center",
+                  gap: 2,
+                  width: "100%",
+                }}
+              >
+                <Button
+                  variant="outlined"
+                  onClick={handleDeleteHolidayClose}
+                  sx={{ flex: 1 }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="contained"
+                  color="error"
+                  onClick={handleConfirmDelete}
+                  sx={{ flex: 1 }}
+                >
+                  Delete
+                </Button>
+              </Box>
+            </Box>
+          </Paper>
+        </Box>
+      )}
     </Paper>
   );
 };

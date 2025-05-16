@@ -34,28 +34,17 @@ import {
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-// Mock data for sections
+// Extend Section interface to include classTeacher and classAdmin
 interface Section {
   id: number;
   className: string;
   sectionName: string;
   isActive: boolean;
+  classTeacher?: string;
+  classAdmin?: string;
 }
 
-interface Teacher {
-  id: number;
-  name: string;
-  subject: string;
-  contactNumber: string;
-}
-
-interface Student {
-  id: number;
-  name: string;
-  rollNumber: string;
-  contactNumber: string;
-}
-
+// Mock data for sections
 const mockSections: Section[] = [
   { id: 1, className: "Class 1", sectionName: "A", isActive: true },
   { id: 2, className: "Class 1", sectionName: "B", isActive: true },
@@ -201,6 +190,37 @@ const mockStudents: Record<number, Student[]> = {
   ],
 };
 
+// Mock data for classes, teachers, and admins
+const mockClasses = [
+  "Class 1",
+  "Class 2",
+  "Class 3",
+  "Class 4",
+  "Class 5",
+  "Class 6",
+  "Class 7",
+  "Class 8",
+  "Class 9",
+  "Class 10",
+  "Class 11 - Science",
+  "Class 11 - Commerce",
+  "Class 12 - Science",
+  "Class 12 - Commerce",
+];
+const mockAllTeachers = [
+  { id: 1, name: "John Smith" },
+  { id: 2, name: "Sarah Johnson" },
+  { id: 3, name: "Robert Williams" },
+  { id: 4, name: "Lisa Brown" },
+  { id: 5, name: "Michael Davis" },
+  { id: 6, name: "James Wilson" },
+  { id: 7, name: "Emily Taylor" },
+];
+const mockAdmins = [
+  { id: 1, name: "Priya Admin" },
+  { id: 2, name: "Ravi Admin" },
+];
+
 const Sections = () => {
   const navigate = useNavigate();
   const [page, setPage] = useState(0);
@@ -213,6 +233,19 @@ const Sections = () => {
   const [toastSeverity, setToastSeverity] = useState<
     "success" | "info" | "warning" | "error"
   >("success");
+
+  // Modal state
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [formData, setFormData] = useState({
+    className: "",
+    sectionName: "",
+    classTeacher: "",
+    classAdmin: "",
+  });
+  // Delete modal state
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [sectionToDelete, setSectionToDelete] = useState<Section | null>(null);
 
   // Filter sections based on search query
   const filteredSections = sections.filter(
@@ -237,23 +270,91 @@ const Sections = () => {
     setPage(0);
   };
 
+  // Add/Edit handlers
   const handleAddSection = () => {
-    console.log("Add section clicked");
-    // Implement add section functionality
+    setFormData({
+      className: "",
+      sectionName: "",
+      classTeacher: "",
+      classAdmin: "",
+    });
+    setIsEditMode(false);
+    setIsModalOpen(true);
   };
-
   const handleEditSection = (id: number) => {
-    console.log("Edit section", id);
-    // Implement edit section functionality
+    const section = sections.find((s) => s.id === id);
+    if (section) {
+      setFormData({
+        className: section.className,
+        sectionName: section.sectionName,
+        classTeacher: section.classTeacher || "",
+        classAdmin: section.classAdmin || "",
+      });
+      setSelectedSection(section);
+      setIsEditMode(true);
+      setIsModalOpen(true);
+    }
   };
-
+  // Delete handlers
   const handleDeleteSection = (id: number) => {
-    console.log("Delete section", id);
-    // Implement delete section functionality
+    const section = sections.find((s) => s.id === id);
+    setSectionToDelete(section || null);
+    setIsDeleteModalOpen(true);
+  };
+  const handleConfirmDelete = () => {
+    if (sectionToDelete) {
+      setSections(sections.filter((s) => s.id !== sectionToDelete.id));
+      setToastMessage(
+        `Section ${sectionToDelete.className} ${sectionToDelete.sectionName} deleted`
+      );
+      setToastSeverity("success");
+      setToastOpen(true);
+      setIsDeleteModalOpen(false);
+      setSectionToDelete(null);
+    }
+  };
+  const handleCancelDelete = () => {
+    setIsDeleteModalOpen(false);
+    setSectionToDelete(null);
+  };
+  // Form field change
+  const handleFormChange = (
+    e:
+      | React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+      | React.ChangeEvent<{ name?: string; value: unknown }>
+  ) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name as string]: value }));
+  };
+  // Save section (add or edit)
+  const handleSaveSection = () => {
+    if (!formData.className || !formData.sectionName) {
+      setToastMessage("Class and Section are required");
+      setToastSeverity("error");
+      setToastOpen(true);
+      return;
+    }
+    if (isEditMode && selectedSection) {
+      setSections(
+        sections.map((s) =>
+          s.id === selectedSection.id ? { ...s, ...formData } : s
+        )
+      );
+      setToastMessage("Section updated successfully");
+      setToastSeverity("success");
+    } else {
+      const newId = Math.max(...sections.map((s) => s.id), 0) + 1;
+      setSections([...sections, { id: newId, isActive: true, ...formData }]);
+      setToastMessage("Section added successfully");
+      setToastSeverity("success");
+    }
+    setIsModalOpen(false);
+    setSelectedSection(null);
+    setToastOpen(true); // Move here to ensure toast is visible after modal closes
   };
 
+  // Navigate to teachers screen instead of opening a modal
   const handleViewTeacher = (id: number) => {
-    // Navigate to teachers screen instead of opening a modal
     navigate(`/sections/${id}/teachers`, {
       state: {
         sectionId: id,
@@ -263,8 +364,8 @@ const Sections = () => {
     });
   };
 
+  // Navigate to students screen instead of opening a modal
   const handleViewStudents = (id: number) => {
-    // Navigate to students screen instead of opening a modal
     navigate(`/sections/${id}/students`, {
       state: {
         sectionId: id,
@@ -379,12 +480,10 @@ const Sections = () => {
               textTransform: "none",
               borderRadius: 0.5,
               transition: "none",
-              backgroundImage: "none",
-              background: "primary.main",
+              background: (theme) => theme.palette.primary.main,
               boxShadow: "none",
               "&:hover": {
-                backgroundImage: "none",
-                background: "primary.main",
+                background: (theme) => theme.palette.primary.dark,
                 opacity: 0.9,
               },
               "&:focus": {
@@ -414,7 +513,7 @@ const Sections = () => {
           <TableHead>
             <TableRow sx={{ backgroundColor: "grey.50" }}>
               <TableCell
-                sx={{ fontWeight: 600, bgcolor: "grey.50", width: "30%" }}
+                sx={{ fontWeight: 600, bgcolor: "grey.50", width: "20%" }}
               >
                 Class
               </TableCell>
@@ -424,13 +523,19 @@ const Sections = () => {
                 Section
               </TableCell>
               <TableCell
-                sx={{ fontWeight: 600, bgcolor: "grey.50", width: "15%" }}
+                sx={{ fontWeight: 600, bgcolor: "grey.50", width: "20%" }}
+              >
+                Class Teacher
+              </TableCell>
+
+              <TableCell
+                sx={{ fontWeight: 600, bgcolor: "grey.50", width: "10%" }}
                 align="center"
               >
                 Status
               </TableCell>
               <TableCell
-                sx={{ fontWeight: 600, bgcolor: "grey.50", width: "45%" }}
+                sx={{ fontWeight: 600, bgcolor: "grey.50", width: "20%" }}
                 align="center"
               >
                 Actions
@@ -445,14 +550,13 @@ const Sections = () => {
                   key={section.id}
                   hover
                   sx={{
-                    "&:hover": {
-                      backgroundColor: "rgba(0, 0, 0, 0.02)",
-                    },
+                    "&:hover": { backgroundColor: "rgba(0, 0, 0, 0.02)" },
                     transition: "none",
                   }}
                 >
                   <TableCell>{section.className}</TableCell>
                   <TableCell>{section.sectionName}</TableCell>
+                  <TableCell>{section.classTeacher || "-"}</TableCell>
                   <TableCell align="center">
                     <Box sx={{ display: "flex", justifyContent: "center" }}>
                       <Box
@@ -599,7 +703,7 @@ const Sections = () => {
               ))}
             {filteredSections.length === 0 && (
               <TableRow>
-                <TableCell colSpan={4} align="center" sx={{ py: 3 }}>
+                <TableCell colSpan={6} align="center" sx={{ py: 3 }}>
                   No sections found.
                 </TableCell>
               </TableRow>
@@ -676,6 +780,236 @@ const Sections = () => {
           {toastMessage}
         </Alert>
       </Snackbar>
+
+      {/* Add/Edit Section Modal */}
+      {isModalOpen && (
+        <Box
+          sx={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            width: "100vw",
+            height: "100vh",
+            bgcolor: "rgba(0,0,0,0.5)",
+            zIndex: 1300,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <Paper
+            elevation={0}
+            sx={{
+              width: 400,
+              maxWidth: "95%",
+              borderRadius: 2,
+              p: 3,
+              outline: "none",
+            }}
+          >
+            <Box
+              sx={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                mb: 2,
+              }}
+            >
+              <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                {isEditMode ? "Edit Section" : "Add New Section"}
+              </Typography>
+              <IconButton onClick={() => setIsModalOpen(false)}>
+                <CloseIcon />
+              </IconButton>
+            </Box>
+            <Divider sx={{ mb: 2 }} />
+            <Box sx={{ mb: 2 }}>
+              <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
+                Class
+              </Typography>
+              <TextField
+                select
+                fullWidth
+                name="className"
+                value={formData.className}
+                onChange={handleFormChange}
+                SelectProps={{ native: true }}
+                size="small"
+              >
+                <option value="">Select class</option>
+                {mockClasses.map((cls) => (
+                  <option key={cls} value={cls}>
+                    {cls}
+                  </option>
+                ))}
+              </TextField>
+            </Box>
+            <Box sx={{ mb: 2 }}>
+              <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
+                Section Name
+              </Typography>
+              <TextField
+                fullWidth
+                name="sectionName"
+                value={formData.sectionName}
+                onChange={handleFormChange}
+                placeholder="Enter section name"
+                size="small"
+              />
+            </Box>
+            <Box sx={{ mb: 2 }}>
+              <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
+                Class Teacher
+              </Typography>
+              <TextField
+                select
+                fullWidth
+                name="classTeacher"
+                value={formData.classTeacher}
+                onChange={handleFormChange}
+                SelectProps={{ native: true }}
+                size="small"
+              >
+                <option value="">Select class teacher</option>
+                {mockAllTeachers.map((t) => (
+                  <option key={t.id} value={t.name}>
+                    {t.name}
+                  </option>
+                ))}
+              </TextField>
+            </Box>
+            <Box sx={{ mb: 3 }}>
+              <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
+                Class Admin
+              </Typography>
+              <TextField
+                select
+                fullWidth
+                name="classAdmin"
+                value={formData.classAdmin}
+                onChange={handleFormChange}
+                SelectProps={{ native: true }}
+                size="small"
+              >
+                <option value="">Select class admin</option>
+                {mockAdmins.map((a) => (
+                  <option key={a.id} value={a.name}>
+                    {a.name}
+                  </option>
+                ))}
+              </TextField>
+            </Box>
+            <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 1 }}>
+              <Button
+                variant="outlined"
+                onClick={() => setIsModalOpen(false)}
+                sx={{
+                  textTransform: "none",
+                  transition: "none",
+                  borderRadius: 0.5,
+                  "&:hover": {
+                    bgcolor: "transparent",
+                    borderColor: "primary.main",
+                    opacity: 0.9,
+                  },
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="contained"
+                disableElevation
+                onClick={handleSaveSection}
+                sx={{
+                  textTransform: "none",
+                  backgroundImage: "none",
+                  borderRadius: 0.5,
+                  transition: "none",
+                  background: "primary.main",
+                  "&:hover": {
+                    backgroundImage: "none",
+                    background: "primary.main",
+                    opacity: 0.9,
+                  },
+                }}
+              >
+                {isEditMode ? "Update" : "Add"}
+              </Button>
+            </Box>
+          </Paper>
+        </Box>
+      )}
+      {/* Delete Confirmation Modal */}
+      {isDeleteModalOpen && (
+        <Box
+          sx={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            width: "100vw",
+            height: "100vh",
+            bgcolor: "rgba(0,0,0,0.5)",
+            zIndex: 1300,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <Paper
+            elevation={0}
+            sx={{
+              width: 400,
+              maxWidth: "95%",
+              borderRadius: 2,
+              p: 3,
+              outline: "none",
+            }}
+          >
+            <Box
+              sx={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+              }}
+            >
+              <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
+                Confirm Deletion
+              </Typography>
+              <Typography variant="body1" sx={{ mb: 3, textAlign: "center" }}>
+                Are you sure you want to delete{" "}
+                <strong>
+                  {sectionToDelete?.className} {sectionToDelete?.sectionName}
+                </strong>
+                ? This action cannot be undone.
+              </Typography>
+              <Box
+                sx={{
+                  display: "flex",
+                  justifyContent: "center",
+                  gap: 2,
+                  width: "100%",
+                }}
+              >
+                <Button
+                  variant="outlined"
+                  onClick={handleCancelDelete}
+                  sx={{ flex: 1 }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="contained"
+                  color="error"
+                  onClick={handleConfirmDelete}
+                  sx={{ flex: 1 }}
+                >
+                  Delete
+                </Button>
+              </Box>
+            </Box>
+          </Paper>
+        </Box>
+      )}
     </Paper>
   );
 };
