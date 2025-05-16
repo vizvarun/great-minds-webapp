@@ -3,13 +3,14 @@ import { useLocation, useNavigate } from "react-router-dom";
 import {
   Box,
   Button,
-  Container,
   Typography,
   Paper,
   TextField,
   Stack,
+  CircularProgress,
 } from "@mui/material";
-import Footer from "../components/Footer";
+import mainBg from "../assets/main-bg.png";
+import logo from "../assets/logo.png";
 
 const VerifyOTP = () => {
   const location = useLocation();
@@ -21,15 +22,14 @@ const VerifyOTP = () => {
   const [canResend, setCanResend] = useState(false);
 
   const inputRefs = useRef<Array<HTMLInputElement | null>>([]);
+  const isMobile = window.innerWidth <= 768;
 
   useEffect(() => {
-    // If no mobile number provided, redirect back to login
     if (!mobileNumber) {
       navigate("/login");
       return;
     }
 
-    // Start the timer for resend OTP
     const interval = setInterval(() => {
       setTimer((prevTimer) => {
         if (prevTimer <= 1) {
@@ -53,20 +53,17 @@ const VerifyOTP = () => {
       return;
     }
 
-    // Update the OTP array
     const newOtp = [...otp];
     newOtp[index] = value;
     setOtp(newOtp);
     setError("");
 
-    // Move focus to the next input field if not the last one
     if (value && index < 3) {
       inputRefs.current[index + 1]?.focus();
     }
   };
 
   const handleKeyDown = (index: number, e: React.KeyboardEvent) => {
-    // If backspace and no value in current input, move to previous
     if (e.key === "Backspace" && !otp[index] && index > 0) {
       inputRefs.current[index - 1]?.focus();
     }
@@ -76,12 +73,10 @@ const VerifyOTP = () => {
     e.preventDefault();
     const pastedData = e.clipboardData.getData("text/plain").trim();
 
-    // Check if pasted content is 4 digits
     if (/^\d{4}$/.test(pastedData)) {
       const newOtp = pastedData.split("");
       setOtp(newOtp);
 
-      // Focus the last input
       inputRefs.current[3]?.focus();
     }
   };
@@ -89,13 +84,11 @@ const VerifyOTP = () => {
   const handleResendOTP = () => {
     if (!canResend) return;
 
-    // Reset the OTP fields
     setOtp(["", "", "", ""]);
     setError("");
     setCanResend(false);
     setTimer(30);
 
-    // Start the timer again
     const interval = setInterval(() => {
       setTimer((prevTimer) => {
         if (prevTimer <= 1) {
@@ -107,10 +100,8 @@ const VerifyOTP = () => {
       });
     }, 1000);
 
-    // TODO: Call the API to resend OTP
     console.log("Resending OTP to", mobileNumber);
 
-    // Focus on first input field
     inputRefs.current[0]?.focus();
   };
 
@@ -124,135 +115,228 @@ const VerifyOTP = () => {
       return;
     }
 
-    // TODO: Call API to validate OTP
     console.log("Verifying OTP:", otpValue, "for mobile number:", mobileNumber);
 
-    // In a real application, we would validate the OTP with the backend
-    // For demo purposes, any 4-digit OTP is considered valid
-
-    // Set authentication flag in localStorage
     localStorage.setItem("isAuthenticated", "true");
 
-    // Navigate to dashboard on successful verification
     navigate("/dashboard");
   };
 
+  const formattedMobile = mobileNumber
+    ? `+91 ${mobileNumber.slice(0, 5)} ${mobileNumber.slice(5)}`
+    : "";
+
   return (
-    <Box sx={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}>
-      <Container
-        component="main"
-        maxWidth="xs"
+    <Box
+      sx={{
+        display: "flex",
+        minHeight: "100vh",
+        bgcolor: "#FFFFFF",
+      }}
+    >
+      {!isMobile ? (
+        <Box
+          sx={{
+            flex: "0 0 50%",
+            position: "relative",
+            backgroundImage: `url(${mainBg})`,
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+            "&:before": {
+              content: '""',
+              position: "absolute",
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: "rgba(0, 0, 0, 0.4)",
+              zIndex: 1,
+            },
+          }}
+        >
+          <Box
+            component="img"
+            src={logo}
+            alt="Great Minds Logo"
+            sx={{
+              position: "absolute",
+              top: 40,
+              left: 40,
+              width: 200,
+              zIndex: 2,
+              filter: "brightness(1.2)",
+            }}
+          />
+        </Box>
+      ) : null}
+
+      <Box
         sx={{
           flex: 1,
           display: "flex",
-          flexDirection: "column",
+          alignItems: "center",
           justifyContent: "center",
-          py: 8,
+          bgcolor: "#FFFFFF",
+          p: 4,
         }}
       >
-        <Paper elevation={3} sx={{ p: 4, borderRadius: 2 }}>
-          <Box
-            sx={{
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-            }}
+        <Box
+          sx={{
+            width: "100%",
+            maxWidth: 360,
+          }}
+        >
+          {isMobile && (
+            <Box sx={{ textAlign: "center", mb: 6 }}>
+              <Box
+                component="img"
+                src={logo}
+                alt="Great Minds Logo"
+                sx={{ width: 90, mb: 2 }}
+              />
+            </Box>
+          )}
+
+          <Typography variant="h5" fontWeight={600} sx={{ mb: 1 }}>
+            Verification
+          </Typography>
+
+          <Typography variant="body2" color="#666666" sx={{ mb: 2 }}>
+            Please enter the 4-digit code sent to
+          </Typography>
+
+          <Typography
+            variant="subtitle2"
+            fontWeight={500}
+            sx={{ mb: 5, color: "#333333" }}
           >
+            {formattedMobile}
+          </Typography>
+
+          <Box component="form" onSubmit={handleSubmit} sx={{ width: "100%" }}>
             <Typography
-              component="h1"
-              variant="h4"
-              color="primary"
-              sx={{ mb: 4, fontWeight: "bold" }}
-            >
-              Great Minds
-            </Typography>
-            <Typography component="h2" variant="h5" sx={{ mb: 2 }}>
-              OTP Verification
-            </Typography>
-            <Typography
-              variant="body1"
+              variant="body2"
               color="text.secondary"
-              sx={{ mb: 3, textAlign: "center" }}
+              sx={{ mb: 1, ml: 0.5 }}
             >
-              Please enter the 4-digit OTP sent to
-              <br />
-              {mobileNumber}
+              Verification Code
             </Typography>
+
+            <Stack
+              direction="row"
+              spacing={2}
+              justifyContent="space-between"
+              sx={{ mb: 3 }}
+            >
+              {[0, 1, 2, 3].map((digit) => (
+                <TextField
+                  key={`otp-field-${digit}`}
+                  inputRef={(ref) => (inputRefs.current[digit] = ref)}
+                  variant="outlined"
+                  value={otp[digit]}
+                  onChange={(e) => handleInputChange(digit, e.target.value)}
+                  onKeyDown={(e) => handleKeyDown(digit, e)}
+                  onPaste={digit === 0 ? handlePaste : undefined}
+                  sx={{
+                    width: "60px",
+                    "& .MuiInputBase-input": {
+                      textAlign: "center",
+                      fontWeight: "bold",
+                      fontSize: "1.5rem",
+                      p: 1.5,
+                      height: "35px",
+                    },
+                    "& .MuiOutlinedInput-root": {
+                      borderRadius: 0.5,
+                      "&:hover .MuiOutlinedInput-notchedOutline": {
+                        borderColor: "rgba(0, 0, 0, 0.23)",
+                      },
+                    },
+                  }}
+                  inputProps={{
+                    maxLength: 1,
+                    autoComplete: "off",
+                  }}
+                />
+              ))}
+            </Stack>
+
+            {error && (
+              <Typography
+                color="error"
+                variant="body2"
+                sx={{ textAlign: "left", mb: 2 }}
+              >
+                {error}
+              </Typography>
+            )}
+
+            <Button
+              type="submit"
+              fullWidth
+              variant="contained"
+              disableElevation
+              sx={{
+                py: 1.5,
+                borderRadius: 0.5,
+                textTransform: "none",
+                fontWeight: 500,
+                backgroundColor: "primary.main",
+                boxShadow: "none",
+                "&:hover": {
+                  backgroundColor: "primary.main",
+                  opacity: 0.9,
+                },
+              }}
+            >
+              Verify
+            </Button>
 
             <Box
-              component="form"
-              onSubmit={handleSubmit}
-              sx={{ width: "100%" }}
+              sx={{
+                display: "flex",
+                justifyContent: "center",
+                alignItems: "center",
+                mt: 3,
+              }}
             >
-              <Stack
-                direction="row"
-                spacing={2}
-                justifyContent="center"
-                sx={{ mb: 2 }}
-              >
-                {[0, 1, 2, 3].map((digit) => (
-                  <TextField
-                    key={`otp-field-${digit}`}
-                    inputRef={(ref) => (inputRefs.current[digit] = ref)}
-                    variant="outlined"
-                    value={otp[digit]}
-                    onChange={(e) => handleInputChange(digit, e.target.value)}
-                    onKeyDown={(e) => handleKeyDown(digit, e)}
-                    onPaste={digit === 0 ? handlePaste : undefined}
-                    sx={{
-                      width: 60,
-                      height: 60,
-                      "& .MuiInputBase-input": {
-                        textAlign: "center",
-                        fontWeight: "bold",
-                        fontSize: "1.5rem",
-                        maxLength: 1,
-                        autoComplete: "off",
-                      },
-                    }}
-                  />
-                ))}
-              </Stack>
-
-              {error && (
-                <Typography
-                  color="error"
-                  variant="body2"
-                  sx={{ textAlign: "center", mb: 2 }}
+              {canResend ? (
+                <Button
+                  onClick={handleResendOTP}
+                  variant="text"
+                  color="primary"
+                  sx={{
+                    textTransform: "none",
+                    fontWeight: 500,
+                    borderRadius: 0.5,
+                  }}
                 >
-                  {error}
-                </Typography>
-              )}
-
-              <Button
-                type="submit"
-                fullWidth
-                variant="contained"
-                sx={{ mt: 2, mb: 2, py: 1.5 }}
-              >
-                Verify OTP
-              </Button>
-
-              <Box sx={{ display: "flex", justifyContent: "center", mt: 1 }}>
-                {canResend ? (
-                  <Button
-                    onClick={handleResendOTP}
-                    variant="text"
-                    color="primary"
-                  >
-                    Resend OTP
-                  </Button>
-                ) : (
-                  <Typography variant="body2" color="text.secondary">
-                    Resend OTP in {timer} seconds
+                  Resend Verification Code
+                </Button>
+              ) : (
+                <Box sx={{ display: "flex", alignItems: "center" }}>
+                  <CircularProgress
+                    variant="determinate"
+                    value={(timer / 30) * 100}
+                    size={16}
+                    thickness={4}
+                    sx={{ mr: 1, color: "#999999" }}
+                  />
+                  <Typography variant="body2" color="#777777">
+                    Resend code in {timer} seconds
                   </Typography>
-                )}
-              </Box>
+                </Box>
+              )}
             </Box>
           </Box>
-        </Paper>
-      </Container>
-      <Footer />
+
+          <Box sx={{ mt: 8, textAlign: "center" }}>
+            <Typography variant="caption" color="#999999">
+              © {new Date().getFullYear()} Great Minds School Management System
+            </Typography>
+          </Box>
+        </Box>
+      </Box>
     </Box>
   );
 };

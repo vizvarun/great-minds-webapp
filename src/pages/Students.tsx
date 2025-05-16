@@ -27,7 +27,8 @@ interface Student {
   studentId: string;
   firstName: string;
   lastName: string;
-  status: "active" | "inactive"; // Replace grade and section with status
+  gender: "male" | "female" | "other"; // Add gender field
+  status: "active" | "inactive";
   contactNumber: string;
 }
 
@@ -37,6 +38,7 @@ const mockStudents: Student[] = [
     studentId: "STD001",
     firstName: "Alice",
     lastName: "Johnson",
+    gender: "female",
     status: "active",
     contactNumber: "9876543101",
   },
@@ -45,6 +47,7 @@ const mockStudents: Student[] = [
     studentId: "STD002",
     firstName: "Bob",
     lastName: "Smith",
+    gender: "male",
     status: "active",
     contactNumber: "9876543102",
   },
@@ -53,6 +56,7 @@ const mockStudents: Student[] = [
     studentId: "STD003",
     firstName: "Charlie",
     lastName: "Williams",
+    gender: "male",
     status: "active",
     contactNumber: "9876543103",
   },
@@ -61,6 +65,7 @@ const mockStudents: Student[] = [
     studentId: "STD004",
     firstName: "Diana",
     lastName: "Brown",
+    gender: "female",
     status: "inactive",
     contactNumber: "9876543104",
   },
@@ -69,6 +74,7 @@ const mockStudents: Student[] = [
     studentId: "STD005",
     firstName: "Edward",
     lastName: "Jones",
+    gender: "male",
     status: "active",
     contactNumber: "9876543105",
   },
@@ -77,6 +83,7 @@ const mockStudents: Student[] = [
     studentId: "STD006",
     firstName: "Fiona",
     lastName: "Miller",
+    gender: "female",
     status: "inactive",
     contactNumber: "9876543106",
   },
@@ -85,6 +92,7 @@ const mockStudents: Student[] = [
     studentId: "STD007",
     firstName: "George",
     lastName: "Davis",
+    gender: "male",
     status: "active",
     contactNumber: "9876543107",
   },
@@ -93,6 +101,7 @@ const mockStudents: Student[] = [
     studentId: "STD008",
     firstName: "Helen",
     lastName: "Wilson",
+    gender: "female",
     status: "active",
     contactNumber: "9876543108",
   },
@@ -101,6 +110,7 @@ const mockStudents: Student[] = [
     studentId: "STD009",
     firstName: "Ian",
     lastName: "Taylor",
+    gender: "male",
     status: "inactive",
     contactNumber: "9876543109",
   },
@@ -109,6 +119,7 @@ const mockStudents: Student[] = [
     studentId: "STD010",
     firstName: "Jessica",
     lastName: "Anderson",
+    gender: "female",
     status: "active",
     contactNumber: "9876543110",
   },
@@ -117,6 +128,7 @@ const mockStudents: Student[] = [
     studentId: "STD011",
     firstName: "Kevin",
     lastName: "Thomas",
+    gender: "male",
     status: "active",
     contactNumber: "9876543111",
   },
@@ -125,6 +137,7 @@ const mockStudents: Student[] = [
     studentId: "STD012",
     firstName: "Laura",
     lastName: "Jackson",
+    gender: "female",
     status: "inactive",
     contactNumber: "9876543112",
   },
@@ -133,6 +146,7 @@ const mockStudents: Student[] = [
     studentId: "STD013",
     firstName: "Mike",
     lastName: "White",
+    gender: "male",
     status: "active",
     contactNumber: "9876543113",
   },
@@ -141,6 +155,7 @@ const mockStudents: Student[] = [
     studentId: "STD014",
     firstName: "Nancy",
     lastName: "Harris",
+    gender: "female",
     status: "inactive",
     contactNumber: "9876543114",
   },
@@ -149,6 +164,7 @@ const mockStudents: Student[] = [
     studentId: "STD015",
     firstName: "Oscar",
     lastName: "Martin",
+    gender: "male",
     status: "active",
     contactNumber: "9876543115",
   },
@@ -157,6 +173,7 @@ const mockStudents: Student[] = [
     studentId: "STD016",
     firstName: "Patricia",
     lastName: "Thompson",
+    gender: "female",
     status: "active",
     contactNumber: "9876543116",
   },
@@ -165,6 +182,7 @@ const mockStudents: Student[] = [
     studentId: "STD017",
     firstName: "Quentin",
     lastName: "Garcia",
+    gender: "male",
     status: "inactive",
     contactNumber: "9876543117",
   },
@@ -173,6 +191,7 @@ const mockStudents: Student[] = [
     studentId: "STD018",
     firstName: "Rachel",
     lastName: "Martinez",
+    gender: "female",
     status: "active",
     contactNumber: "9876543118",
   },
@@ -181,6 +200,7 @@ const mockStudents: Student[] = [
     studentId: "STD019",
     firstName: "Steve",
     lastName: "Robinson",
+    gender: "male",
     status: "inactive",
     contactNumber: "9876543119",
   },
@@ -189,6 +209,7 @@ const mockStudents: Student[] = [
     studentId: "STD020",
     firstName: "Tina",
     lastName: "Clark",
+    gender: "female",
     status: "active",
     contactNumber: "9876543120",
   },
@@ -205,6 +226,7 @@ const Students = () => {
       student.firstName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       student.lastName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       student.studentId.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      student.gender.toLowerCase().includes(searchQuery.toLowerCase()) || // Add gender to search
       student.status.toLowerCase().includes(searchQuery.toLowerCase()) ||
       student.contactNumber.includes(searchQuery)
   );
@@ -379,6 +401,9 @@ const Students = () => {
                 Last Name
               </TableCell>
               <TableCell sx={{ fontWeight: 600, bgcolor: "grey.50" }}>
+                Gender
+              </TableCell>
+              <TableCell sx={{ fontWeight: 600, bgcolor: "grey.50" }}>
                 Contact Number
               </TableCell>
               <TableCell sx={{ fontWeight: 600, bgcolor: "grey.50" }}>
@@ -409,6 +434,9 @@ const Students = () => {
                   <TableCell>{student.studentId}</TableCell>
                   <TableCell>{student.firstName}</TableCell>
                   <TableCell>{student.lastName}</TableCell>
+                  <TableCell sx={{ textTransform: "capitalize" }}>
+                    {student.gender}
+                  </TableCell>
                   <TableCell>{student.contactNumber}</TableCell>
                   <TableCell>
                     <Box
@@ -475,7 +503,7 @@ const Students = () => {
               ))}
             {filteredStudents.length === 0 && (
               <TableRow>
-                <TableCell colSpan={6} align="center" sx={{ py: 3 }}>
+                <TableCell colSpan={7} align="center" sx={{ py: 3 }}>
                   No students found.
                 </TableCell>
               </TableRow>

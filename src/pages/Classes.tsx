@@ -27,6 +27,7 @@ import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import MenuBookIcon from "@mui/icons-material/MenuBook";
 import CloseIcon from "@mui/icons-material/Close";
+import DownloadIcon from "@mui/icons-material/Download";
 
 // Mock data for classes
 interface Class {
@@ -118,6 +119,11 @@ const Classes = () => {
   const handleDeleteClass = (id: number) => {
     console.log("Delete class", id);
     // Implement delete class functionality
+  };
+
+  const handleDownloadClass = (id: number) => {
+    console.log("Download class data for", id);
+    // Implement download functionality
   };
 
   const handleOpenSubjectMapping = (cls: Class) => {
@@ -325,6 +331,23 @@ const Classes = () => {
                         }}
                       >
                         <EditIcon fontSize="small" />
+                      </IconButton>
+                      <IconButton
+                        size="small"
+                        onClick={() => handleDownloadClass(cls.id)}
+                        color="primary"
+                        sx={{
+                          transition: "none",
+                          outline: "none",
+                          "&:hover": {
+                            bgcolor: "rgba(25, 118, 210, 0.04)",
+                          },
+                          "&:focus": {
+                            outline: "none",
+                          },
+                        }}
+                      >
+                        <DownloadIcon fontSize="small" />
                       </IconButton>
                       <IconButton
                         size="small"

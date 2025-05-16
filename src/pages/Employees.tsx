@@ -21,6 +21,7 @@ import AddIcon from "@mui/icons-material/Add";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import FileUploadIcon from "@mui/icons-material/FileUpload";
+import DownloadIcon from "@mui/icons-material/Download";
 
 // Mock data for employees
 interface Employee {
@@ -244,6 +245,48 @@ const Employees = () => {
     // Implement bulk upload functionality
   };
 
+  const handleDownloadList = () => {
+    console.log("Download list clicked");
+
+    // Create CSV content
+    const headers = [
+      "Employee No.",
+      "First Name",
+      "Last Name",
+      "Designation",
+      "Mobile Number",
+    ];
+    const csvContent = [
+      headers.join(","),
+      ...mockEmployees.map((emp) =>
+        [
+          emp.employeeNo,
+          emp.firstName,
+          emp.lastName,
+          emp.designation,
+          emp.mobileNumber,
+        ].join(",")
+      ),
+    ].join("\n");
+
+    // Create a Blob containing the CSV data
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+
+    // Create a download link
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+
+    // Set up download link properties
+    link.setAttribute("href", url);
+    link.setAttribute("download", "employees_list.csv");
+    link.style.visibility = "hidden";
+
+    // Append to document, click, and remove
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const handleEditEmployee = (id: number) => {
     console.log("Edit employee", id);
     // Implement edit employee functionality
@@ -356,6 +399,27 @@ const Employees = () => {
               }}
             >
               Bulk Upload
+            </Button>
+            <Button
+              variant="outlined"
+              startIcon={<DownloadIcon />}
+              onClick={handleDownloadList}
+              sx={{
+                textTransform: "none",
+                borderRadius: 0.5,
+                transition: "none",
+                outline: "none",
+                "&:hover": {
+                  bgcolor: "transparent",
+                  borderColor: "primary.main",
+                  outline: "none",
+                },
+                "&:focus": {
+                  outline: "none",
+                },
+              }}
+            >
+              Download
             </Button>
           </Box>
         </Box>

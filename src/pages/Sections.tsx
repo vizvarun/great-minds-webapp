@@ -1,37 +1,37 @@
-import React, { useState } from "react";
+import AddIcon from "@mui/icons-material/Add";
+import CloseIcon from "@mui/icons-material/Close";
+import DeleteIcon from "@mui/icons-material/Delete";
+import DownloadIcon from "@mui/icons-material/Download";
+import EditIcon from "@mui/icons-material/Edit";
+import PeopleIcon from "@mui/icons-material/People";
+import PersonIcon from "@mui/icons-material/Person";
+import SearchIcon from "@mui/icons-material/Search";
 import {
-  Typography,
-  Paper,
+  Avatar,
   Box,
-  TextField,
   Button,
+  Chip,
+  Divider,
+  IconButton,
+  InputAdornment,
+  List,
+  ListItem,
+  ListItemAvatar,
+  ListItemText,
+  Modal,
+  Paper,
+  Switch,
   Table,
   TableBody,
   TableCell,
   TableContainer,
   TableHead,
-  TableRow,
   TablePagination,
-  InputAdornment,
-  IconButton,
-  Tooltip,
-  Switch,
-  Modal,
-  List,
-  ListItem,
-  ListItemText,
-  ListItemAvatar,
-  Avatar,
-  Divider,
-  Chip,
+  TableRow,
+  TextField,
+  Typography
 } from "@mui/material";
-import SearchIcon from "@mui/icons-material/Search";
-import AddIcon from "@mui/icons-material/Add";
-import EditIcon from "@mui/icons-material/Edit";
-import DeleteIcon from "@mui/icons-material/Delete";
-import PersonIcon from "@mui/icons-material/Person";
-import PeopleIcon from "@mui/icons-material/People";
-import CloseIcon from "@mui/icons-material/Close";
+import React, { useState } from "react";
 
 // Mock data for sections
 interface Section {
@@ -279,6 +279,11 @@ const Sections = () => {
     // Implement toggle status functionality
   };
 
+  const handleDownloadSection = (id: number) => {
+    console.log("Download section data for", id);
+    // Implement download functionality
+  };
+
   // Get the teachers for the selected section
   const sectionTeachers =
     selectedSection && mockTeachers[selectedSection.id]
@@ -392,17 +397,23 @@ const Sections = () => {
           <TableHead>
             <TableRow sx={{ backgroundColor: "grey.50" }}>
               <TableCell
-                sx={{ fontWeight: 600, bgcolor: "grey.50", width: "35%" }}
+                sx={{ fontWeight: 600, bgcolor: "grey.50", width: "30%" }}
               >
                 Class
               </TableCell>
               <TableCell
-                sx={{ fontWeight: 600, bgcolor: "grey.50", width: "15%" }}
+                sx={{ fontWeight: 600, bgcolor: "grey.50", width: "10%" }}
               >
                 Section
               </TableCell>
               <TableCell
-                sx={{ fontWeight: 600, bgcolor: "grey.50", width: "50%" }}
+                sx={{ fontWeight: 600, bgcolor: "grey.50", width: "15%" }}
+                align="center"
+              >
+                Status
+              </TableCell>
+              <TableCell
+                sx={{ fontWeight: 600, bgcolor: "grey.50", width: "45%" }}
                 align="center"
               >
                 Actions
@@ -425,6 +436,23 @@ const Sections = () => {
                 >
                   <TableCell>{section.className}</TableCell>
                   <TableCell>{section.sectionName}</TableCell>
+                  <TableCell align="center">
+                    <Switch
+                      checked={section.isActive}
+                      onChange={() =>
+                        handleToggleStatus(section.id, section.isActive)
+                      }
+                      size="small"
+                      sx={{
+                        transition: "none",
+                        "& .MuiSwitch-switchBase": {
+                          "&.Mui-checked": {
+                            color: "primary.main",
+                          },
+                        },
+                      }}
+                    />
+                  </TableCell>
                   <TableCell align="center">
                     <Box sx={{ display: "flex", justifyContent: "center" }}>
                       <IconButton
@@ -478,6 +506,23 @@ const Sections = () => {
                       >
                         <PeopleIcon fontSize="small" />
                       </IconButton>
+                        <IconButton
+                          size="small"
+                          onClick={() => handleDownloadSection(section.id)}
+                          color="primary"
+                          sx={{
+                            transition: "none",
+                            outline: "none",
+                            "&:hover": {
+                              bgcolor: "rgba(25, 118, 210, 0.04)",
+                            },
+                            "&:focus": {
+                              outline: "none",
+                            },
+                          }}
+                        >
+                          <DownloadIcon fontSize="small" />
+                        </IconButton>
                       <IconButton
                         size="small"
                         onClick={() => handleDeleteSection(section.id)}
@@ -495,28 +540,13 @@ const Sections = () => {
                       >
                         <DeleteIcon fontSize="small" />
                       </IconButton>
-                      <Switch
-                        checked={section.isActive}
-                        onChange={() =>
-                          handleToggleStatus(section.id, section.isActive)
-                        }
-                        size="small"
-                        sx={{
-                          transition: "none",
-                          "& .MuiSwitch-switchBase": {
-                            "&.Mui-checked": {
-                              color: "primary.main",
-                            },
-                          },
-                        }}
-                      />
                     </Box>
                   </TableCell>
                 </TableRow>
               ))}
             {filteredSections.length === 0 && (
               <TableRow>
-                <TableCell colSpan={3} align="center" sx={{ py: 3 }}>
+                <TableCell colSpan={4} align="center" sx={{ py: 3 }}>
                   No sections found.
                 </TableCell>
               </TableRow>
