@@ -97,7 +97,7 @@ const SectionStudents = () => {
 
   const [students, setStudents] = useState<Student[]>([]);
   const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(5);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
   const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {

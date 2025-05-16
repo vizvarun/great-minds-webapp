@@ -49,7 +49,7 @@ const mockSubjects: Subject[] = [
 
 const Subjects = () => {
   const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(5);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
   const [searchQuery, setSearchQuery] = useState("");
 
   // Filter subjects based on search query

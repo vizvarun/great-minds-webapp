@@ -204,7 +204,7 @@ const mockStudents: Record<number, Student[]> = {
 const Sections = () => {
   const navigate = useNavigate();
   const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(5);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedSection, setSelectedSection] = useState<Section | null>(null);
   const [sections, setSections] = useState<Section[]>(mockSections);

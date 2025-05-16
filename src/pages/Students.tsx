@@ -1,18 +1,10 @@
-import AddIcon from "@mui/icons-material/Add";
-import DeleteIcon from "@mui/icons-material/Delete";
-import DownloadIcon from "@mui/icons-material/Download";
-import EditIcon from "@mui/icons-material/Edit";
-import FileUploadIcon from "@mui/icons-material/FileUpload";
-import SearchIcon from "@mui/icons-material/Search";
+import React, { useState } from "react";
 import {
-  Alert,
   Box,
   Button,
-  Chip,
   IconButton,
   InputAdornment,
   Paper,
-  Snackbar,
   Table,
   TableBody,
   TableCell,
@@ -22,123 +14,168 @@ import {
   TableRow,
   TextField,
   Typography,
+  Alert,
+  Snackbar,
+  Modal,
 } from "@mui/material";
-import { useState } from "react";
+import AddIcon from "@mui/icons-material/Add";
+import DeleteIcon from "@mui/icons-material/Delete";
+import EditIcon from "@mui/icons-material/Edit";
+import SearchIcon from "@mui/icons-material/Search";
+import PaymentsIcon from "@mui/icons-material/Payments";
 import StudentFormModal from "../components/StudentFormModal";
+import StudentFeesModal from "../components/StudentFeesModal";
 
-// Student interface matching the form data structure
+// Mock data for students
 interface Student {
   id: number;
   enrollmentNo: string;
   firstName: string;
   lastName: string;
   phoneNumber: string;
-  dateOfBirth: string;
   city: string;
-  state: string;
-  pincode: string;
-  addressLine1: string;
-  addressLine2?: string;
-  profilePhoto?: string;
-  // Father details
-  fatherFirstName: string;
-  fatherLastName: string;
-  fatherPhoneNumber: string;
-  fatherEmail?: string;
-  // Mother details
-  motherFirstName: string;
-  motherLastName: string;
-  motherPhoneNumber: string;
-  motherEmail?: string;
-  // Guardian details
-  guardianFirstName: string;
-  guardianLastName: string;
-  guardianPhoneNumber: string;
-  guardianEmail?: string;
+  isActive: boolean;
 }
 
-// Mock data for students
 const mockStudents: Student[] = [
   {
     id: 1,
-    enrollmentNo: "2023001",
+    enrollmentNo: "GM2023-001",
     firstName: "Aarav",
     lastName: "Sharma",
     phoneNumber: "9876543210",
-    dateOfBirth: "2010-05-15",
     city: "Bengaluru",
-    state: "Karnataka",
-    pincode: "560001",
-    addressLine1: "123 Main St",
-    fatherFirstName: "Raj",
-    fatherLastName: "Sharma",
-    fatherPhoneNumber: "9876543211",
-    fatherEmail: "raj@example.com",
-    motherFirstName: "Priya",
-    motherLastName: "Sharma",
-    motherPhoneNumber: "9876543212",
-    motherEmail: "priya@example.com",
-    guardianFirstName: "",
-    guardianLastName: "",
-    guardianPhoneNumber: "",
-    guardianEmail: "",
+    isActive: true,
   },
   {
     id: 2,
-    enrollmentNo: "2023002",
-    firstName: "Aisha",
+    enrollmentNo: "GM2023-002",
+    firstName: "Priya",
     lastName: "Patel",
-    phoneNumber: "9876543220",
-    dateOfBirth: "2011-07-22",
+    phoneNumber: "9876543211",
     city: "Mumbai",
-    state: "Maharashtra",
-    pincode: "400001",
-    addressLine1: "456 Park Ave",
-    fatherFirstName: "Kunal",
-    fatherLastName: "Patel",
-    fatherPhoneNumber: "9876543221",
-    fatherEmail: "kunal@example.com",
-    motherFirstName: "Neha",
-    motherLastName: "Patel",
-    motherPhoneNumber: "9876543222",
-    motherEmail: "neha@example.com",
-    guardianFirstName: "",
-    guardianLastName: "",
-    guardianPhoneNumber: "",
-    guardianEmail: "",
+    isActive: true,
   },
-  // Add more mock students as needed
+  {
+    id: 3,
+    enrollmentNo: "GM2023-003",
+    firstName: "Vikram",
+    lastName: "Singh",
+    phoneNumber: "9876543212",
+    city: "Delhi",
+    isActive: false,
+  },
+  {
+    id: 4,
+    enrollmentNo: "GM2023-004",
+    firstName: "Sneha",
+    lastName: "Kumar",
+    phoneNumber: "9876543213",
+    city: "Hyderabad",
+    isActive: true,
+  },
+  {
+    id: 5,
+    enrollmentNo: "GM2023-005",
+    firstName: "Rahul",
+    lastName: "Gupta",
+    phoneNumber: "9876543214",
+    city: "Chennai",
+    isActive: true,
+  },
+  {
+    id: 6,
+    enrollmentNo: "GM2023-006",
+    firstName: "Divya",
+    lastName: "Rao",
+    phoneNumber: "9876543215",
+    city: "Pune",
+    isActive: true,
+  },
+  {
+    id: 7,
+    enrollmentNo: "GM2023-007",
+    firstName: "Arjun",
+    lastName: "Reddy",
+    phoneNumber: "9876543216",
+    city: "Kolkata",
+    isActive: true,
+  },
+  {
+    id: 8,
+    enrollmentNo: "GM2023-008",
+    firstName: "Neha",
+    lastName: "Verma",
+    phoneNumber: "9876543217",
+    city: "Jaipur",
+    isActive: false,
+  },
+  {
+    id: 9,
+    enrollmentNo: "GM2023-009",
+    firstName: "Rohan",
+    lastName: "Joshi",
+    phoneNumber: "9876543218",
+    city: "Ahmedabad",
+    isActive: true,
+  },
+  {
+    id: 10,
+    enrollmentNo: "GM2023-010",
+    firstName: "Kavita",
+    lastName: "Tiwari",
+    phoneNumber: "9876543219",
+    city: "Lucknow",
+    isActive: true,
+  },
+  {
+    id: 11,
+    enrollmentNo: "GM2023-011",
+    firstName: "Sanjay",
+    lastName: "Mehra",
+    phoneNumber: "9876543220",
+    city: "Mysuru",
+    isActive: true,
+  },
+  {
+    id: 12,
+    enrollmentNo: "GM2023-012",
+    firstName: "Pooja",
+    lastName: "Desai",
+    phoneNumber: "9876543221",
+    city: "Indore",
+    isActive: true,
+  },
 ];
 
 const Students = () => {
   const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(5);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
   const [searchQuery, setSearchQuery] = useState("");
   const [students, setStudents] = useState<Student[]>(mockStudents);
-
-  // Modal state
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isFormModalOpen, setIsFormModalOpen] = useState(false);
+  const [isFeesModalOpen, setIsFeesModalOpen] = useState(false);
+  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [isEditMode, setIsEditMode] = useState(false);
-  const [currentStudent, setCurrentStudent] = useState<Student | undefined>(
-    undefined
-  );
-
-  // Notification state
   const [notification, setNotification] = useState({
     open: false,
     message: "",
-    severity: "success" as "success" | "error",
+    severity: "success" as "success" | "error" | "info" | "warning",
+    timestamp: 0, // Add timestamp to track changes
   });
 
+  // Add state for the delete confirmation modal
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [studentToDelete, setStudentToDelete] = useState<Student | null>(null);
+
   // Filter students based on search query
-  const filteredStudents = students.filter(
-    (student) =>
-      student.firstName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      student.lastName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      student.enrollmentNo.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      student.phoneNumber.includes(searchQuery)
+  const filteredStudents = students.filter((student) =>
+    `${student.enrollmentNo} ${student.firstName} ${student.lastName} ${student.phoneNumber} ${student.city}`
+      .toLowerCase()
+      .includes(searchQuery.toLowerCase())
   );
 
+  // Handle pagination
   const handleChangePage = (event: unknown, newPage: number) => {
     setPage(newPage);
   };
@@ -150,49 +187,102 @@ const Students = () => {
     setPage(0);
   };
 
+  // Handle search
   const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setSearchQuery(event.target.value);
     setPage(0);
   };
 
+  // Handle adding a new student
   const handleAddStudent = () => {
+    setSelectedStudent(null);
     setIsEditMode(false);
-    setCurrentStudent(undefined);
-    setIsModalOpen(true);
+    setIsFormModalOpen(true);
   };
 
-  const handleEditStudent = (id: number) => {
-    const studentToEdit = students.find((student) => student.id === id);
-    if (studentToEdit) {
-      setCurrentStudent(studentToEdit);
-      setIsEditMode(true);
-      setIsModalOpen(true);
+  // Handle editing a student
+  const handleEditStudent = (student: Student) => {
+    setSelectedStudent(student);
+    setIsEditMode(true);
+    setIsFormModalOpen(true);
+  };
+
+  // Handle toggling student status
+  const handleToggleStatus = (id: number, currentStatus: boolean) => {
+    const updatedStudents = students.map((student) =>
+      student.id === id ? { ...student, isActive: !currentStatus } : student
+    );
+    setStudents(updatedStudents);
+
+    // Get student details for notification message
+    const student = students.find((s) => s.id === id);
+    if (student) {
+      // Close any existing notification first
+      setNotification((prev) => ({ ...prev, open: false }));
+
+      // Then set a new one after a brief delay to ensure DOM update
+      setTimeout(() => {
+        setNotification({
+          open: true,
+          message: `${student.firstName} ${student.lastName} status has been ${
+            !currentStatus ? "activated" : "deactivated"
+          }`,
+          severity: !currentStatus ? "success" : "info",
+          timestamp: Date.now(),
+        });
+      }, 100);
     }
   };
 
-  const handleDeleteStudent = (id: number) => {
-    // Filter out the student with the given id
-    const updatedStudents = students.filter((student) => student.id !== id);
-    setStudents(updatedStudents);
-
-    // Show notification
-    setNotification({
-      open: true,
-      message: "Student deleted successfully",
-      severity: "success",
-    });
+  // Update delete handling to show confirmation first
+  const handleDeleteClick = (student: Student) => {
+    setStudentToDelete(student);
+    setIsDeleteModalOpen(true);
   };
 
-  const handleCloseModal = () => {
-    setIsModalOpen(false);
+  // Actual delete function after confirmation
+  const handleConfirmDelete = () => {
+    if (studentToDelete) {
+      const updatedStudents = students.filter(
+        (student) => student.id !== studentToDelete.id
+      );
+      setStudents(updatedStudents);
+
+      setNotification({
+        open: true,
+        message: `${studentToDelete.firstName} ${studentToDelete.lastName} has been deleted`,
+        severity: "success",
+        timestamp: Date.now(),
+      });
+
+      setIsDeleteModalOpen(false);
+      setStudentToDelete(null);
+    }
   };
 
-  const handleStudentSubmit = (studentData: Student) => {
-    if (isEditMode && currentStudent) {
+  // Cancel delete
+  const handleCancelDelete = () => {
+    setIsDeleteModalOpen(false);
+    setStudentToDelete(null);
+  };
+
+  // Handle viewing student fees
+  const handleViewFees = (student: Student) => {
+    setSelectedStudent(student);
+    setIsFeesModalOpen(true);
+  };
+
+  // Handle form submission (add/edit)
+  const handleFormSubmit = (studentData: any) => {
+    if (isEditMode && selectedStudent) {
       // Update existing student
       const updatedStudents = students.map((student) =>
-        student.id === currentStudent.id
-          ? { ...studentData, id: student.id }
+        student.id === selectedStudent.id
+          ? {
+              ...studentData,
+              id: student.id,
+              isActive: student.isActive,
+            }
           : student
       );
       setStudents(updatedStudents);
@@ -203,8 +293,15 @@ const Students = () => {
       });
     } else {
       // Add new student
-      const newId = Math.max(...students.map((student) => student.id), 0) + 1;
-      setStudents([...students, { ...studentData, id: newId }]);
+      const newId = Math.max(...students.map((student) => student.id)) + 1;
+      setStudents([
+        ...students,
+        {
+          ...studentData,
+          id: newId,
+          isActive: true,
+        },
+      ]);
       setNotification({
         open: true,
         message: "Student added successfully",
@@ -212,19 +309,12 @@ const Students = () => {
       });
     }
 
-    setIsModalOpen(false);
+    setIsFormModalOpen(false);
   };
 
-  const handleDownloadList = () => {
-    // Implementation for download
-    console.log("Download list clicked");
-  };
-
+  // Handle closing the notification
   const handleCloseNotification = () => {
-    setNotification({
-      ...notification,
-      open: false,
-    });
+    setNotification((prev) => ({ ...prev, open: false }));
   };
 
   return (
@@ -241,7 +331,7 @@ const Students = () => {
         overflow: "hidden",
       }}
     >
-      {/* Fixed Header Section */}
+      {/* Header Section */}
       <Box sx={{ mb: 3, flexShrink: 0 }}>
         <Typography
           variant="h5"
@@ -284,62 +374,38 @@ const Students = () => {
               ),
             }}
           />
-          <Box sx={{ display: "flex", gap: 1 }}>
-            <Button
-              variant="contained"
-              disableElevation
-              startIcon={<AddIcon />}
-              onClick={handleAddStudent}
-              sx={{
-                textTransform: "none",
-                borderRadius: 0.5,
-                transition: "none",
+          <Button
+            variant="contained"
+            disableElevation
+            startIcon={<AddIcon />}
+            onClick={handleAddStudent}
+            sx={{
+              textTransform: "none",
+              borderRadius: 0.5,
+              transition: "none",
+              backgroundImage: "none",
+              background: "primary.main",
+              boxShadow: "none",
+              "&:hover": {
                 backgroundImage: "none",
                 background: "primary.main",
-                boxShadow: "none",
-                "&:hover": {
-                  backgroundImage: "none",
-                  background: "primary.main",
-                  opacity: 0.9,
-                },
-                "&:focus": {
-                  outline: "none",
-                },
-              }}
-            >
-              Add Student
-            </Button>
-            <Button
-              variant="outlined"
-              startIcon={<DownloadIcon />}
-              onClick={handleDownloadList}
-              sx={{
-                textTransform: "none",
-                borderRadius: 0.5,
-                transition: "none",
+                opacity: 0.9,
+              },
+              "&:focus": {
                 outline: "none",
-                "&:hover": {
-                  bgcolor: "transparent",
-                  borderColor: "primary.main",
-                  outline: "none",
-                },
-                "&:focus": {
-                  outline: "none",
-                },
-              }}
-            >
-              Download
-            </Button>
-          </Box>
+              },
+            }}
+          >
+            Add Student
+          </Button>
         </Box>
       </Box>
 
-      {/* Scrollable Table Container */}
+      {/* Table Container */}
       <TableContainer
         component={Paper}
         elevation={0}
         variant="outlined"
-        mt={2}
         sx={{
           borderRadius: 0.5,
           flex: 1,
@@ -351,23 +417,39 @@ const Students = () => {
         <Table stickyHeader sx={{ minWidth: 650 }}>
           <TableHead>
             <TableRow sx={{ backgroundColor: "grey.50" }}>
-              <TableCell sx={{ fontWeight: 600, bgcolor: "grey.50" }}>
-                Enrollment No
-              </TableCell>
-              <TableCell sx={{ fontWeight: 600, bgcolor: "grey.50" }}>
-                Name
-              </TableCell>
-              <TableCell sx={{ fontWeight: 600, bgcolor: "grey.50" }}>
-                Phone Number
-              </TableCell>
-              <TableCell sx={{ fontWeight: 600, bgcolor: "grey.50" }}>
-                City
-              </TableCell>
-              <TableCell sx={{ fontWeight: 600, bgcolor: "grey.50" }}>
-                State
+              <TableCell
+                sx={{ fontWeight: 600, bgcolor: "grey.50", width: "15%" }}
+              >
+                Enrollment No.
               </TableCell>
               <TableCell
-                sx={{ fontWeight: 600, bgcolor: "grey.50" }}
+                sx={{ fontWeight: 600, bgcolor: "grey.50", width: "15%" }}
+              >
+                First Name
+              </TableCell>
+              <TableCell
+                sx={{ fontWeight: 600, bgcolor: "grey.50", width: "15%" }}
+              >
+                Last Name
+              </TableCell>
+              <TableCell
+                sx={{ fontWeight: 600, bgcolor: "grey.50", width: "15%" }}
+              >
+                Phone No.
+              </TableCell>
+              <TableCell
+                sx={{ fontWeight: 600, bgcolor: "grey.50", width: "15%" }}
+              >
+                City
+              </TableCell>
+              <TableCell
+                sx={{ fontWeight: 600, bgcolor: "grey.50", width: "15%" }}
+                align="center"
+              >
+                Status
+              </TableCell>
+              <TableCell
+                sx={{ fontWeight: 600, bgcolor: "grey.50", width: "10%" }}
                 align="center"
               >
                 Actions
@@ -388,23 +470,69 @@ const Students = () => {
                     transition: "none",
                   }}
                 >
-                  <TableCell>
-                    <Chip
-                      label={student.enrollmentNo}
-                      size="small"
-                      variant="outlined"
-                      sx={{ borderRadius: 0.5, height: 24 }}
-                    />
-                  </TableCell>
-                  <TableCell>{`${student.firstName} ${student.lastName}`}</TableCell>
+                  <TableCell>{student.enrollmentNo}</TableCell>
+                  <TableCell>{student.firstName}</TableCell>
+                  <TableCell>{student.lastName}</TableCell>
                   <TableCell>{student.phoneNumber}</TableCell>
                   <TableCell>{student.city}</TableCell>
-                  <TableCell>{student.state}</TableCell>
+                  <TableCell align="center">
+                    <Box sx={{ display: "flex", justifyContent: "center" }}>
+                      <Box
+                        sx={{
+                          position: "relative",
+                          display: "inline-flex",
+                          alignItems: "center",
+                        }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={student.isActive}
+                          onChange={() =>
+                            handleToggleStatus(student.id, student.isActive)
+                          }
+                          style={{
+                            appearance: "none",
+                            WebkitAppearance: "none",
+                            MozAppearance: "none",
+                            width: "30px",
+                            height: "18px",
+                            borderRadius: "10px",
+                            background: student.isActive
+                              ? "#0cb5bf"
+                              : "#e0e0e0",
+                            outline: "none",
+                            cursor: "pointer",
+                            position: "relative",
+                            transition: "background 0.25s ease",
+                            border: "1px solid",
+                            borderColor: student.isActive
+                              ? "#0cb5bf"
+                              : "#d0d0d0",
+                          }}
+                        />
+                        <span
+                          style={{
+                            position: "absolute",
+                            left: student.isActive ? "18px" : "2px",
+                            width: "14px",
+                            height: "14px",
+                            borderRadius: "50%",
+                            background: "#ffffff",
+                            boxShadow: "0 1px 2px rgba(0,0,0,0.1)",
+                            transition: "left 0.25s ease",
+                            pointerEvents: "none",
+                            top: "50%",
+                            marginTop: "-7px",
+                          }}
+                        />
+                      </Box>
+                    </Box>
+                  </TableCell>
                   <TableCell align="center">
                     <Box sx={{ display: "flex", justifyContent: "center" }}>
                       <IconButton
                         size="small"
-                        onClick={() => handleEditStudent(student.id)}
+                        onClick={() => handleEditStudent(student)}
                         color="primary"
                         sx={{
                           transition: "none",
@@ -421,7 +549,24 @@ const Students = () => {
                       </IconButton>
                       <IconButton
                         size="small"
-                        onClick={() => handleDeleteStudent(student.id)}
+                        onClick={() => handleViewFees(student)}
+                        color="primary"
+                        sx={{
+                          transition: "none",
+                          outline: "none",
+                          "&:hover": {
+                            bgcolor: "rgba(25, 118, 210, 0.04)",
+                          },
+                          "&:focus": {
+                            outline: "none",
+                          },
+                        }}
+                      >
+                        <PaymentsIcon fontSize="small" />
+                      </IconButton>
+                      <IconButton
+                        size="small"
+                        onClick={() => handleDeleteClick(student)}
                         color="error"
                         sx={{
                           transition: "none",
@@ -442,7 +587,7 @@ const Students = () => {
               ))}
             {filteredStudents.length === 0 && (
               <TableRow>
-                <TableCell colSpan={6} align="center" sx={{ py: 3 }}>
+                <TableCell colSpan={7} align="center" sx={{ py: 3 }}>
                   No students found.
                 </TableCell>
               </TableRow>
@@ -451,7 +596,7 @@ const Students = () => {
         </Table>
       </TableContainer>
 
-      {/* Fixed Pagination Section */}
+      {/* Pagination Section */}
       <TablePagination
         component="div"
         rowsPerPageOptions={[5, 10, 25]}
@@ -477,25 +622,164 @@ const Students = () => {
 
       {/* Student Form Modal */}
       <StudentFormModal
-        open={isModalOpen}
-        onClose={handleCloseModal}
-        onSubmit={handleStudentSubmit}
-        student={currentStudent}
+        open={isFormModalOpen}
+        onClose={() => setIsFormModalOpen(false)}
+        onSubmit={handleFormSubmit}
+        student={selectedStudent as any}
         isEditMode={isEditMode}
       />
 
+      {/* Student Fees Modal */}
+      <StudentFeesModal
+        open={isFeesModalOpen}
+        onClose={() => setIsFeesModalOpen(false)}
+        student={selectedStudent}
+      />
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        open={isDeleteModalOpen}
+        onClose={handleCancelDelete}
+        aria-labelledby="delete-confirmation-modal"
+        BackdropProps={{
+          sx: { backgroundColor: "rgba(0, 0, 0, 0.5)" },
+        }}
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <Paper
+          elevation={0}
+          sx={{
+            width: 400,
+            maxWidth: "95%",
+            bgcolor: "background.paper",
+            borderRadius: 2,
+            boxShadow: 24,
+            p: 0,
+            outline: "none",
+          }}
+        >
+          <Box
+            sx={{
+              p: 3,
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+            }}
+          >
+            <Typography
+              variant="h6"
+              component="h2"
+              sx={{ fontWeight: 600, mb: 2 }}
+            >
+              Confirm Deletion
+            </Typography>
+            <Typography variant="body1" sx={{ mb: 3, textAlign: "center" }}>
+              Are you sure you want to delete{" "}
+              <strong>
+                {studentToDelete?.firstName} {studentToDelete?.lastName}
+              </strong>
+              ? This action cannot be undone.
+            </Typography>
+
+            <Box
+              sx={{
+                display: "flex",
+                justifyContent: "center",
+                gap: 2,
+                width: "100%",
+              }}
+            >
+              <Button
+                variant="outlined"
+                onClick={handleCancelDelete}
+                disableRipple
+                sx={{
+                  flex: 1,
+                  textTransform: "none",
+                  borderRadius: 0.5,
+                  backgroundColor: "transparent",
+                  outline: "none",
+                  border: "1px solid",
+                  borderColor: "grey.300",
+                  color: "text.primary",
+                  transition: "none",
+                  "&:hover": {
+                    backgroundColor: "transparent",
+                    borderColor: "grey.400",
+                  },
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="contained"
+                onClick={handleConfirmDelete}
+                disableElevation
+                disableRipple
+                sx={{
+                  flex: 1,
+                  textTransform: "none",
+                  borderRadius: 0.5,
+                  background: "error.main",
+                  color: "white",
+                  transition: "none",
+                  "&:hover": {
+                    background: "error.dark",
+                  },
+                }}
+              >
+                Delete
+              </Button>
+            </Box>
+          </Box>
+        </Paper>
+      </Modal>
+
       {/* Notification Snackbar */}
       <Snackbar
+        key={notification.timestamp} // Use timestamp as key to force re-render
         open={notification.open}
         autoHideDuration={4000}
         onClose={handleCloseNotification}
         anchorOrigin={{ vertical: "top", horizontal: "right" }}
+        sx={{
+          "& .MuiSnackbarContent-root": {
+            minWidth: "100%",
+          },
+        }}
       >
         <Alert
           onClose={handleCloseNotification}
           severity={notification.severity}
-          variant="filled"
-          sx={{ width: "100%" }}
+          variant="standard"
+          sx={{
+            width: "100%",
+            boxShadow: "0 2px 10px rgba(0,0,0,0.08)",
+            border: "1px solid",
+            borderColor: (theme) =>
+              notification.severity === "success"
+                ? "rgba(46, 125, 50, 0.2)"
+                : notification.severity === "info"
+                ? "rgba(2, 136, 209, 0.2)"
+                : notification.severity === "warning"
+                ? "rgba(237, 108, 2, 0.2)"
+                : "rgba(211, 47, 47, 0.2)",
+            borderRadius: 1,
+            "& .MuiAlert-icon": {
+              opacity: 0.8,
+            },
+            "& .MuiAlert-message": {
+              fontSize: "0.875rem",
+            },
+            "& .MuiAlert-action": {
+              paddingTop: 0,
+              alignItems: "flex-start",
+            },
+          }}
         >
           {notification.message}
         </Alert>

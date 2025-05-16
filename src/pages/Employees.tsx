@@ -10,6 +10,7 @@ import {
   Button,
   IconButton,
   InputAdornment,
+  Modal,
   Paper,
   Snackbar,
   Table,
@@ -212,7 +213,7 @@ const mockEmployees: Employee[] = [
 
 const Employees = () => {
   const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(5);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
   const [searchQuery, setSearchQuery] = useState("");
   const [employees, setEmployees] = useState<Employee[]>(mockEmployees);
 
@@ -224,11 +225,18 @@ const Employees = () => {
     undefined
   );
 
+  // Delete confirmation modal state
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [employeeToDelete, setEmployeeToDelete] = useState<Employee | null>(
+    null
+  );
+
   // Notification state
   const [notification, setNotification] = useState({
     open: false,
     message: "",
     severity: "success" as "success" | "error",
+    timestamp: Date.now(),
   });
 
   // Filter employees based on search query
@@ -272,17 +280,33 @@ const Employees = () => {
     }
   };
 
-  const handleDeleteEmployee = (id: number) => {
-    // Filter out the employee with the given id
-    const updatedEmployees = employees.filter((emp) => emp.id !== id);
-    setEmployees(updatedEmployees);
+  const handleDeleteClick = (employee: Employee) => {
+    setEmployeeToDelete(employee);
+    setIsDeleteModalOpen(true);
+  };
 
-    // Show notification
-    setNotification({
-      open: true,
-      message: "Employee deleted successfully",
-      severity: "success",
-    });
+  const handleConfirmDelete = () => {
+    if (employeeToDelete) {
+      const updatedEmployees = employees.filter(
+        (emp) => emp.id !== employeeToDelete.id
+      );
+      setEmployees(updatedEmployees);
+
+      setNotification({
+        open: true,
+        message: `${employeeToDelete.firstName} ${employeeToDelete.lastName} has been deleted`,
+        severity: "success",
+        timestamp: Date.now(),
+      });
+
+      setIsDeleteModalOpen(false);
+      setEmployeeToDelete(null);
+    }
+  };
+
+  const handleCancelDelete = () => {
+    setIsDeleteModalOpen(false);
+    setEmployeeToDelete(null);
   };
 
   const handleCloseModal = () => {
@@ -291,7 +315,6 @@ const Employees = () => {
 
   const handleEmployeeSubmit = (employeeData: Employee) => {
     if (isEditMode && currentEmployee) {
-      // Update existing employee
       const updatedEmployees = employees.map((emp) =>
         emp.id === currentEmployee.id ? { ...employeeData, id: emp.id } : emp
       );
@@ -302,7 +325,6 @@ const Employees = () => {
         severity: "success",
       });
     } else {
-      // Add new employee
       const newId = Math.max(...employees.map((emp) => emp.id)) + 1;
       setEmployees([...employees, { ...employeeData, id: newId }]);
       setNotification({
@@ -324,7 +346,6 @@ const Employees = () => {
   };
 
   const handleBulkUploadSuccess = (uploadedEmployees: any[]) => {
-    // Generate new unique IDs for the uploaded employees
     const lastId =
       employees.length > 0 ? Math.max(...employees.map((emp) => emp.id)) : 0;
 
@@ -335,7 +356,6 @@ const Employees = () => {
 
     setEmployees([...employees, ...newEmployees]);
 
-    // Show notification
     setNotification({
       open: true,
       message: `Successfully added ${uploadedEmployees.length} employees`,
@@ -344,7 +364,6 @@ const Employees = () => {
   };
 
   const handleDownloadList = () => {
-    // Implementation for download
     console.log("Download list clicked");
   };
 
@@ -369,7 +388,6 @@ const Employees = () => {
         overflow: "hidden",
       }}
     >
-      {/* Fixed Header Section */}
       <Box sx={{ mb: 3, flexShrink: 0 }}>
         <Typography
           variant="h5"
@@ -483,7 +501,6 @@ const Employees = () => {
         </Box>
       </Box>
 
-      {/* Scrollable Table Container */}
       <TableContainer
         component={Paper}
         elevation={0}
@@ -563,7 +580,7 @@ const Employees = () => {
                       </IconButton>
                       <IconButton
                         size="small"
-                        onClick={() => handleDeleteEmployee(employee.id)}
+                        onClick={() => handleDeleteClick(employee)}
                         color="error"
                         sx={{
                           transition: "none",
@@ -593,7 +610,6 @@ const Employees = () => {
         </Table>
       </TableContainer>
 
-      {/* Fixed Pagination Section */}
       <TablePagination
         component="div"
         rowsPerPageOptions={[5, 10, 25]}
@@ -617,7 +633,6 @@ const Employees = () => {
         }}
       />
 
-      {/* Employee Form Modal */}
       <EmployeeFormModal
         open={isModalOpen}
         onClose={handleCloseModal}
@@ -626,15 +641,116 @@ const Employees = () => {
         isEditMode={isEditMode}
       />
 
-      {/* Bulk Upload Modal */}
       <BulkUploadModal
         open={isBulkUploadModalOpen}
         onClose={handleCloseBulkUploadModal}
         onUploadSuccess={handleBulkUploadSuccess}
       />
 
-      {/* Notification Snackbar */}
+      <Modal
+        open={isDeleteModalOpen}
+        onClose={handleCancelDelete}
+        aria-labelledby="delete-confirmation-modal"
+        BackdropProps={{
+          sx: { backgroundColor: "rgba(0, 0, 0, 0.5)" },
+        }}
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <Paper
+          elevation={0}
+          sx={{
+            width: 400,
+            maxWidth: "95%",
+            bgcolor: "background.paper",
+            borderRadius: 2,
+            boxShadow: 24,
+            p: 0,
+            outline: "none",
+          }}
+        >
+          <Box
+            sx={{
+              p: 3,
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+            }}
+          >
+            <Typography
+              variant="h6"
+              component="h2"
+              sx={{ fontWeight: 600, mb: 2 }}
+            >
+              Confirm Deletion
+            </Typography>
+            <Typography variant="body1" sx={{ mb: 3, textAlign: "center" }}>
+              Are you sure you want to delete{" "}
+              <strong>
+                {employeeToDelete?.firstName} {employeeToDelete?.lastName}
+              </strong>
+              ? This action cannot be undone.
+            </Typography>
+
+            <Box
+              sx={{
+                display: "flex",
+                justifyContent: "center",
+                gap: 2,
+                width: "100%",
+              }}
+            >
+              <Button
+                variant="outlined"
+                onClick={handleCancelDelete}
+                disableRipple
+                sx={{
+                  flex: 1,
+                  textTransform: "none",
+                  borderRadius: 0.5,
+                  backgroundColor: "transparent",
+                  outline: "none",
+                  border: "1px solid",
+                  borderColor: "grey.300",
+                  color: "text.primary",
+                  transition: "none",
+                  "&:hover": {
+                    backgroundColor: "transparent",
+                    borderColor: "grey.400",
+                  },
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="contained"
+                onClick={handleConfirmDelete}
+                disableElevation
+                disableRipple
+                sx={{
+                  flex: 1,
+                  textTransform: "none",
+                  borderRadius: 0.5,
+                  background: "error.main",
+                  color: "white",
+                  transition: "none",
+                  "&:hover": {
+                    background: "error.dark",
+                  },
+                }}
+              >
+                Delete
+              </Button>
+            </Box>
+          </Box>
+        </Paper>
+      </Modal>
+
       <Snackbar
+        key={notification.timestamp}
         open={notification.open}
         autoHideDuration={4000}
         onClose={handleCloseNotification}

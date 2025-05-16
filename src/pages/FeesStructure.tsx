@@ -158,7 +158,7 @@ const FeesStructure = () => {
   const [selectedClass, setSelectedClass] = useState<string>("");
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(5);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
 
   // Handle filter changes
   const handleYearChange = (event: React.ChangeEvent<{ value: unknown }>) => {
