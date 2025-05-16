@@ -43,34 +43,6 @@ const Footer = () => {
           <Typography variant="body2" color="text.secondary">
             &copy; {currentYear} Great Minds School Management System
           </Typography>
-
-          {/* Position absolutely to the end on sm and up */}
-          <Stack
-            direction="row"
-            spacing={2}
-            sx={{
-              mt: { xs: 1, sm: 0 },
-              position: { xs: "static", sm: "absolute" },
-              right: 0,
-            }}
-          >
-            <Link
-              href="#"
-              color="inherit"
-              underline="hover"
-              sx={{ fontSize: "0.875rem" }}
-            >
-              Terms
-            </Link>
-            <Link
-              href="#"
-              color="inherit"
-              underline="hover"
-              sx={{ fontSize: "0.875rem" }}
-            >
-              Privacy
-            </Link>
-          </Stack>
         </Box>
       </Container>
     </Box>
