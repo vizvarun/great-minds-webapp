@@ -111,7 +111,7 @@ const Classes = () => {
     cls.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const handleChangePage = (event: unknown, newPage: number) => {
+  const handleChangePage = (_: unknown, newPage: number) => {
     setPage(newPage);
   };
 
@@ -539,9 +539,6 @@ const Classes = () => {
         open={modalOpen}
         onClose={handleCloseSubjectMapping}
         aria-labelledby="subject-mapping-modal"
-        BackdropProps={{
-          sx: { backgroundColor: "rgba(0, 0, 0, 0.5)" },
-        }}
         sx={{
           display: "flex",
           alignItems: "center",
@@ -655,9 +652,6 @@ const Classes = () => {
         open={isClassModalOpen}
         onClose={handleCloseClassModal}
         aria-labelledby="class-modal"
-        BackdropProps={{
-          sx: { backgroundColor: "rgba(0, 0, 0, 0.5)" },
-        }}
         sx={{
           display: "flex",
           alignItems: "center",
@@ -768,9 +762,6 @@ const Classes = () => {
         open={isDeleteModalOpen}
         onClose={handleCancelDelete}
         aria-labelledby="delete-confirmation-modal"
-        BackdropProps={{
-          sx: { backgroundColor: "rgba(0, 0, 0, 0.5)" },
-        }}
         sx={{
           display: "flex",
           alignItems: "center",

@@ -1,7 +1,6 @@
 import {
   Typography,
   Paper,
-  Grid,
   Box,
   Card,
   CardContent,
@@ -20,11 +19,11 @@ import {
 } from "@mui/material";
 import PeopleAltIcon from "@mui/icons-material/PeopleAlt";
 import SchoolIcon from "@mui/icons-material/School";
-import WomanIcon from "@mui/icons-material/Woman";
 import ManIcon from "@mui/icons-material/Man";
 import CakeIcon from "@mui/icons-material/Cake";
 import AssignmentIcon from "@mui/icons-material/Assignment";
 import FemaleIcon from "@mui/icons-material/Female"; // Import proper female icon
+import Grid from "@mui/material/Grid";
 
 // Mock data - replace with actual API calls in production
 const schoolMetrics = {
@@ -121,7 +120,7 @@ const Dashboard = () => {
       {/* Scrollable Content Area */}
       <Box sx={{ overflow: "auto", flex: 1, width: "100%" }}>
         {/* Stats Cards */}
-        <Grid container spacing={3} sx={{ mb: 3, width: "100%", mx: 0 }}>
+        <Grid container spacing={3}>
           <Grid item xs={12} sm={6} lg={3}>
             <Card
               elevation={0}
@@ -269,7 +268,7 @@ const Dashboard = () => {
         </Grid>
 
         {/* Birthday and Activity Section */}
-        <Grid container spacing={3} sx={{ width: "100%", mx: 0 }}>
+        <Grid container spacing={3} sx={{ mt: 3 }}>
           <Grid item xs={12} lg={6}>
             <Paper
               elevation={0}

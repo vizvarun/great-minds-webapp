@@ -1,17 +1,18 @@
 import AddIcon from "@mui/icons-material/Add";
 import SearchIcon from "@mui/icons-material/Search";
 import VisibilityIcon from "@mui/icons-material/Visibility";
+import Grid from "@mui/material/Grid";
+import Select from "@mui/material/Select";
+import type { SelectChangeEvent } from "@mui/material/Select";
 import {
   Box,
   Button,
   Chip,
   FormControl,
-  Grid,
   IconButton,
   InputAdornment,
   MenuItem,
   Paper,
-  Select,
   Table,
   TableBody,
   TableCell,
@@ -161,12 +162,12 @@ const FeesStructure = () => {
   const [rowsPerPage, setRowsPerPage] = useState(10);
 
   // Handle filter changes
-  const handleYearChange = (event: React.ChangeEvent<{ value: unknown }>) => {
+  const handleYearChange = (event: SelectChangeEvent) => {
     setSelectedYear(event.target.value as string);
     setPage(0);
   };
 
-  const handleClassChange = (event: React.ChangeEvent<{ value: unknown }>) => {
+  const handleClassChange = (event: SelectChangeEvent) => {
     setSelectedClass(event.target.value as string);
     setPage(0);
   };
@@ -187,7 +188,7 @@ const FeesStructure = () => {
   };
 
   // Pagination handlers
-  const handleChangePage = (event: unknown, newPage: number) => {
+  const handleChangePage = (_: unknown, newPage: number) => {
     setPage(newPage);
   };
 

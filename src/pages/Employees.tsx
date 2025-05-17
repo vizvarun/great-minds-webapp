@@ -249,7 +249,7 @@ const Employees = () => {
       employee.mobileNumber.includes(searchQuery)
   );
 
-  const handleChangePage = (event: unknown, newPage: number) => {
+  const handleChangePage = (_: unknown, newPage: number) => {
     setPage(newPage);
   };
 
@@ -294,7 +294,7 @@ const Employees = () => {
 
       setNotification({
         open: true,
-        message: `${employeeToDelete.firstName} ${employeeToDelete.lastName} has been deleted`,
+        message: "Employee deleted successfully",
         severity: "success",
         timestamp: Date.now(),
       });
@@ -323,6 +323,7 @@ const Employees = () => {
         open: true,
         message: "Employee updated successfully",
         severity: "success",
+        timestamp: Date.now(),
       });
     } else {
       const newId = Math.max(...employees.map((emp) => emp.id)) + 1;
@@ -331,6 +332,7 @@ const Employees = () => {
         open: true,
         message: "Employee added successfully",
         severity: "success",
+        timestamp: Date.now(),
       });
     }
 
@@ -360,6 +362,7 @@ const Employees = () => {
       open: true,
       message: `Successfully added ${uploadedEmployees.length} employees`,
       severity: "success",
+      timestamp: Date.now(),
     });
   };
 
@@ -505,8 +508,8 @@ const Employees = () => {
         component={Paper}
         elevation={0}
         variant="outlined"
-        mt={2}
         sx={{
+          mt: 2,
           borderRadius: 0.5,
           flex: 1,
           overflow: "auto",
@@ -636,7 +639,7 @@ const Employees = () => {
       <EmployeeFormModal
         open={isModalOpen}
         onClose={handleCloseModal}
-        onSubmit={handleEmployeeSubmit}
+        onSubmit={(employeeData) => handleEmployeeSubmit(employeeData as any)}
         employee={currentEmployee}
         isEditMode={isEditMode}
       />
@@ -653,9 +656,6 @@ const Employees = () => {
         open={isDeleteModalOpen}
         onClose={handleCancelDelete}
         aria-labelledby="delete-confirmation-modal"
-        BackdropProps={{
-          sx: { backgroundColor: "rgba(0, 0, 0, 0.5)" },
-        }}
         sx={{
           display: "flex",
           alignItems: "center",

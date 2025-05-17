@@ -235,7 +235,7 @@ const EmployeeFormModal = ({
 
         <Box component="form" onSubmit={handleSubmit} sx={{ p: 4 }}>
           <Grid container spacing={3}>
-            <Grid item={true} xs={12} sx={fieldContainerStyle}>
+            <Grid item xs={12} sx={fieldContainerStyle}>
               <FormLabel sx={{ mb: 1, display: "block", fontWeight: 500 }}>
                 Mobile Number
               </FormLabel>
@@ -256,7 +256,7 @@ const EmployeeFormModal = ({
               />
             </Grid>
 
-            <Grid item={true} xs={12} sm={6} sx={fieldContainerStyle}>
+            <Grid item xs={12} sm={6} sx={fieldContainerStyle}>
               <FormLabel sx={{ mb: 1, display: "block", fontWeight: 500 }}>
                 Employee ID
               </FormLabel>
@@ -277,7 +277,7 @@ const EmployeeFormModal = ({
               />
             </Grid>
 
-            <Grid item={true} xs={12} sm={6} sx={fieldContainerStyle}>
+            <Grid item xs={12} sm={6} sx={fieldContainerStyle}>
               <FormLabel sx={{ mb: 1, display: "block", fontWeight: 500 }}>
                 First Name
               </FormLabel>
@@ -297,7 +297,7 @@ const EmployeeFormModal = ({
               />
             </Grid>
 
-            <Grid item={true} xs={12} sm={6} sx={fieldContainerStyle}>
+            <Grid item xs={12} sm={6} sx={fieldContainerStyle}>
               <FormLabel sx={{ mb: 1, display: "block", fontWeight: 500 }}>
                 Last Name
               </FormLabel>
@@ -317,7 +317,7 @@ const EmployeeFormModal = ({
               />
             </Grid>
 
-            <Grid item={true} xs={12} sm={6} sx={fieldContainerStyle}>
+            <Grid item xs={12} sm={6} sx={fieldContainerStyle}>
               <FormLabel sx={{ mb: 1, display: "block", fontWeight: 500 }}>
                 Designation
               </FormLabel>
