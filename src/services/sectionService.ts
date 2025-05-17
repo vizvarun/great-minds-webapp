@@ -85,7 +85,7 @@ export const createSection = async (
 ): Promise<Section> => {
   try {
     const user_id = AuthService.getUserId() || 14;
-    const response = await api.post(`/sections?user_id=${user_id}`, section);
+    const response = await api.post(`/sections/create`, section);
     return response.data.data;
   } catch (error) {
     console.error("Error creating section:", error);

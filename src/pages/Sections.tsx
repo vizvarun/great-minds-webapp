@@ -1,5 +1,4 @@
 import AddIcon from "@mui/icons-material/Add";
-import CloseIcon from "@mui/icons-material/Close";
 import DeleteIcon from "@mui/icons-material/Delete";
 import DownloadIcon from "@mui/icons-material/Download";
 import EditIcon from "@mui/icons-material/Edit";
@@ -11,9 +10,7 @@ import {
   Box,
   Button,
   CircularProgress,
-  Divider,
   FormControl,
-  FormHelperText,
   IconButton,
   InputAdornment,
   MenuItem,
@@ -31,16 +28,17 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import {
-  getSections,
-  createSection,
-  updateSection,
-  deleteSection,
-  toggleSectionStatus,
-} from "../services/sectionService";
+import SectionFormModal from "../components/SectionFormModal";
 import { getAllActiveClasses } from "../services/classService";
+import {
+  createSection,
+  deleteSection,
+  getSections,
+  toggleSectionStatus,
+  updateSection,
+} from "../services/sectionService";
 
 import type { SelectChangeEvent } from "@mui/material";
 import type { Class } from "../services/classService";
@@ -64,14 +62,6 @@ const Sections = () => {
   // Modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
-  const [formData, setFormData] = useState({
-    classId: "",
-    sectionName: "",
-  });
-  const [formErrors, setFormErrors] = useState({
-    classId: "",
-    sectionName: "",
-  });
 
   // Delete modal state
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -128,17 +118,15 @@ const Sections = () => {
       const classId = filterClassId ? parseInt(filterClassId) : undefined;
       const response = await getSections(page, rowsPerPage, classId);
 
-      setSections(response.data);
-      setTotalRecords(response.total_records || response.data.length);
+      setSections(response.data || []);
+      setTotalRecords(response.total_records || 0);
       setError(null);
     } catch (err) {
-      setError("Failed to load sections. Please try again later.");
-      setNotification({
-        open: true,
-        message: "Failed to load sections",
-        severity: "error",
-        timestamp: Date.now(),
-      });
+      // Instead of showing error, just set empty sections
+      console.error("Error fetching sections:", err);
+      setSections([]);
+      setTotalRecords(0);
+      setError(null); // Don't set error state
     } finally {
       setLoading(false);
     }
@@ -175,14 +163,7 @@ const Sections = () => {
 
   // Add/Edit handlers
   const handleAddSection = () => {
-    setFormData({
-      classId: "",
-      sectionName: "",
-    });
-    setFormErrors({
-      classId: "",
-      sectionName: "",
-    });
+    setSelectedSection(null);
     setIsEditMode(false);
     setIsModalOpen(true);
   };
@@ -190,14 +171,6 @@ const Sections = () => {
   const handleEditSection = (id: number) => {
     const section = sections.find((s) => s.id === id);
     if (section) {
-      setFormData({
-        classId: section.classid.toString(),
-        sectionName: section.section,
-      });
-      setFormErrors({
-        classId: "",
-        sectionName: "",
-      });
       setSelectedSection(section);
       setIsEditMode(true);
       setIsModalOpen(true);
@@ -246,60 +219,20 @@ const Sections = () => {
     setSectionToDelete(null);
   };
 
-  // Form field change
-  const handleFormChange = (
-    e: React.ChangeEvent<HTMLInputElement | { name?: string; value: unknown }>
-  ) => {
-    const { name, value } = e.target as { name?: string; value: unknown };
-    if (name) {
-      setFormData((prev) => ({ ...prev, [name]: value }));
-
-      // Clear any errors for this field
-      setFormErrors((prev) => ({ ...prev, [name]: "" }));
-    }
-  };
-
-  // Validate form before submission
-  const validateForm = (): boolean => {
-    const errors = {
-      classId: "",
-      sectionName: "",
-    };
-    let isValid = true;
-
-    if (!formData.classId) {
-      errors.classId = "Class is required";
-      isValid = false;
-    }
-
-    if (!formData.sectionName) {
-      errors.sectionName = "Section name is required";
-      isValid = false;
-    }
-
-    setFormErrors(errors);
-    return isValid;
-  };
-
   // Save section (add or edit)
-  const handleSaveSection = async () => {
-    if (!validateForm()) return;
-
+  const handleSaveSection = async (sectionData: Partial<Section>) => {
     try {
-      const school_id = parseInt(localStorage.getItem("schoolId") || "4");
-      const payload = {
-        schoolid: school_id,
-        classid: parseInt(formData.classId),
-        section: formData.sectionName,
-        isactive: true,
-      };
-
       if (isEditMode && selectedSection) {
         // Update existing section
         const response = await updateSection({
-          ...payload,
+          ...sectionData,
           id: selectedSection.id,
-        });
+          schoolid:
+            sectionData.schoolid ||
+            parseInt(localStorage.getItem("schoolId") || "4"),
+          isactive:
+            sectionData.isactive !== undefined ? sectionData.isactive : true,
+        } as Section);
 
         // Update the UI
         setSections((prevSections) =>
@@ -308,8 +241,8 @@ const Sections = () => {
               ? {
                   ...response,
                   className:
-                    classes.find((c) => c.id === parseInt(formData.classId))
-                      ?.name || `Class ${formData.classId}`,
+                    classes.find((c) => c.id === sectionData.classid)
+                      ?.classname || `Class ${sectionData.classid}`,
                 }
               : s
           )
@@ -323,14 +256,22 @@ const Sections = () => {
         });
       } else {
         // Add new section
-        const response = await createSection(payload);
+        const payload = {
+          ...sectionData,
+          schoolid:
+            sectionData.schoolid ||
+            parseInt(localStorage.getItem("schoolId") || "4"),
+          isactive: true,
+        };
+
+        const response = await createSection(payload as Omit<Section, "id">);
 
         // Add class name before adding to state
         const newSection = {
           ...response,
           className:
-            classes.find((c) => c.id === parseInt(formData.classId))?.name ||
-            `Class ${formData.classId}`,
+            classes.find((c) => c.id === sectionData.classid)?.classname ||
+            `Class ${sectionData.classid}`,
         };
 
         // Update the UI
@@ -567,18 +508,6 @@ const Sections = () => {
           >
             <CircularProgress />
           </Box>
-        ) : error ? (
-          <Box
-            sx={{
-              display: "flex",
-              justifyContent: "center",
-              alignItems: "center",
-              height: "100%",
-              p: 4,
-            }}
-          >
-            <Typography color="error">{error}</Typography>
-          </Box>
         ) : (
           <Table stickyHeader sx={{ minWidth: 650 }}>
             <TableHead>
@@ -608,164 +537,165 @@ const Sections = () => {
               </TableRow>
             </TableHead>
             <TableBody>
-              {filteredSections.map((section) => (
-                <TableRow
-                  key={section.id}
-                  hover
-                  sx={{
-                    "&:hover": { backgroundColor: "rgba(0, 0, 0, 0.02)" },
-                    transition: "none",
-                  }}
-                >
-                  <TableCell>
-                    {section.className || `Class ${section.classid}`}
-                  </TableCell>
-                  <TableCell>{section.section}</TableCell>
-                  <TableCell align="center">
-                    <Box sx={{ display: "flex", justifyContent: "center" }}>
-                      <Box
-                        sx={{
-                          position: "relative",
-                          display: "inline-flex",
-                          alignItems: "center",
-                        }}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={section.isactive}
-                          onChange={() =>
-                            handleToggleStatus(section.id, section.isactive)
-                          }
-                          style={{
-                            appearance: "none",
-                            WebkitAppearance: "none",
-                            MozAppearance: "none",
-                            width: "30px",
-                            height: "18px",
-                            borderRadius: "10px",
-                            background: section.isactive
-                              ? "#0cb5bf"
-                              : "#e0e0e0",
-                            outline: "none",
-                            cursor: "pointer",
+              {filteredSections.length > 0 ? (
+                filteredSections.map((section) => (
+                  <TableRow
+                    key={section.id}
+                    hover
+                    sx={{
+                      "&:hover": { backgroundColor: "rgba(0, 0, 0, 0.02)" },
+                      transition: "none",
+                    }}
+                  >
+                    <TableCell>
+                      {section.className || `Class ${section.classid}`}
+                    </TableCell>
+                    <TableCell>{section.section}</TableCell>
+                    <TableCell align="center">
+                      <Box sx={{ display: "flex", justifyContent: "center" }}>
+                        <Box
+                          sx={{
                             position: "relative",
-                            transition: "background 0.25s ease",
-                            border: "1px solid",
-                            borderColor: section.isactive
-                              ? "#0cb5bf"
-                              : "#d0d0d0",
+                            display: "inline-flex",
+                            alignItems: "center",
                           }}
-                        />
-                        <span
-                          style={{
-                            position: "absolute",
-                            left: section.isactive ? "18px" : "2px",
-                            width: "14px",
-                            height: "14px",
-                            borderRadius: "50%",
-                            background: "#ffffff",
-                            boxShadow: "0 1px 2px rgba(0,0,0,0.1)",
-                            transition: "left 0.25s ease",
-                            pointerEvents: "none",
-                            top: "50%",
-                            marginTop: "-7px",
-                          }}
-                        />
+                        >
+                          <input
+                            type="checkbox"
+                            checked={section.isactive}
+                            onChange={() =>
+                              handleToggleStatus(section.id, section.isactive)
+                            }
+                            style={{
+                              appearance: "none",
+                              WebkitAppearance: "none",
+                              MozAppearance: "none",
+                              width: "30px",
+                              height: "18px",
+                              borderRadius: "10px",
+                              background: section.isactive
+                                ? "#0cb5bf"
+                                : "#e0e0e0",
+                              outline: "none",
+                              cursor: "pointer",
+                              position: "relative",
+                              transition: "background 0.25s ease",
+                              border: "1px solid",
+                              borderColor: section.isactive
+                                ? "#0cb5bf"
+                                : "#d0d0d0",
+                            }}
+                          />
+                          <span
+                            style={{
+                              position: "absolute",
+                              left: section.isactive ? "18px" : "2px",
+                              width: "14px",
+                              height: "14px",
+                              borderRadius: "50%",
+                              background: "#ffffff",
+                              boxShadow: "0 1px 2px rgba(0,0,0,0.1)",
+                              transition: "left 0.25s ease",
+                              pointerEvents: "none",
+                              top: "50%",
+                              marginTop: "-7px",
+                            }}
+                          />
+                        </Box>
                       </Box>
-                    </Box>
-                  </TableCell>
-                  <TableCell align="center">
-                    <Box sx={{ display: "flex", justifyContent: "center" }}>
-                      <IconButton
-                        size="small"
-                        onClick={() => handleEditSection(section.id)}
-                        color="primary"
-                        sx={{
-                          transition: "none",
-                          outline: "none",
-                          "&:hover": {
-                            bgcolor: "rgba(25, 118, 210, 0.04)",
-                          },
-                          "&:focus": {
+                    </TableCell>
+                    <TableCell align="center">
+                      <Box sx={{ display: "flex", justifyContent: "center" }}>
+                        <IconButton
+                          size="small"
+                          onClick={() => handleEditSection(section.id)}
+                          color="primary"
+                          sx={{
+                            transition: "none",
                             outline: "none",
-                          },
-                        }}
-                      >
-                        <EditIcon fontSize="small" />
-                      </IconButton>
-                      <IconButton
-                        size="small"
-                        onClick={() => handleViewTeacher(section.id)}
-                        color="primary"
-                        sx={{
-                          transition: "none",
-                          outline: "none",
-                          "&:hover": {
-                            bgcolor: "rgba(25, 118, 210, 0.04)",
-                          },
-                          "&:focus": {
+                            "&:hover": {
+                              bgcolor: "rgba(25, 118, 210, 0.04)",
+                            },
+                            "&:focus": {
+                              outline: "none",
+                            },
+                          }}
+                        >
+                          <EditIcon fontSize="small" />
+                        </IconButton>
+                        <IconButton
+                          size="small"
+                          onClick={() => handleViewTeacher(section.id)}
+                          color="primary"
+                          sx={{
+                            transition: "none",
                             outline: "none",
-                          },
-                        }}
-                      >
-                        <PersonIcon fontSize="small" />
-                      </IconButton>
-                      <IconButton
-                        size="small"
-                        onClick={() => handleViewStudents(section.id)}
-                        color="primary"
-                        sx={{
-                          transition: "none",
-                          outline: "none",
-                          "&:hover": {
-                            bgcolor: "rgba(25, 118, 210, 0.04)",
-                          },
-                          "&:focus": {
+                            "&:hover": {
+                              bgcolor: "rgba(25, 118, 210, 0.04)",
+                            },
+                            "&:focus": {
+                              outline: "none",
+                            },
+                          }}
+                        >
+                          <PersonIcon fontSize="small" />
+                        </IconButton>
+                        <IconButton
+                          size="small"
+                          onClick={() => handleViewStudents(section.id)}
+                          color="primary"
+                          sx={{
+                            transition: "none",
                             outline: "none",
-                          },
-                        }}
-                      >
-                        <PeopleIcon fontSize="small" />
-                      </IconButton>
-                      <IconButton
-                        size="small"
-                        onClick={() => handleDownloadSection(section.id)}
-                        color="primary"
-                        sx={{
-                          transition: "none",
-                          outline: "none",
-                          "&:hover": {
-                            bgcolor: "rgba(25, 118, 210, 0.04)",
-                          },
-                          "&:focus": {
+                            "&:hover": {
+                              bgcolor: "rgba(25, 118, 210, 0.04)",
+                            },
+                            "&:focus": {
+                              outline: "none",
+                            },
+                          }}
+                        >
+                          <PeopleIcon fontSize="small" />
+                        </IconButton>
+                        <IconButton
+                          size="small"
+                          onClick={() => handleDownloadSection(section.id)}
+                          color="primary"
+                          sx={{
+                            transition: "none",
                             outline: "none",
-                          },
-                        }}
-                      >
-                        <DownloadIcon fontSize="small" />
-                      </IconButton>
-                      <IconButton
-                        size="small"
-                        onClick={() => handleDeleteClick(section.id)}
-                        color="error"
-                        sx={{
-                          transition: "none",
-                          outline: "none",
-                          "&:hover": {
-                            bgcolor: "rgba(211, 47, 47, 0.04)",
-                          },
-                          "&:focus": {
+                            "&:hover": {
+                              bgcolor: "rgba(25, 118, 210, 0.04)",
+                            },
+                            "&:focus": {
+                              outline: "none",
+                            },
+                          }}
+                        >
+                          <DownloadIcon fontSize="small" />
+                        </IconButton>
+                        <IconButton
+                          size="small"
+                          onClick={() => handleDeleteClick(section.id)}
+                          color="error"
+                          sx={{
+                            transition: "none",
                             outline: "none",
-                          },
-                        }}
-                      >
-                        <DeleteIcon fontSize="small" />
-                      </IconButton>
-                    </Box>
-                  </TableCell>
-                </TableRow>
-              ))}
-              {filteredSections.length === 0 && (
+                            "&:hover": {
+                              bgcolor: "rgba(211, 47, 47, 0.04)",
+                            },
+                            "&:focus": {
+                              outline: "none",
+                            },
+                          }}
+                        >
+                          <DeleteIcon fontSize="small" />
+                        </IconButton>
+                      </Box>
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : (
                 <TableRow>
                   <TableCell colSpan={4} align="center" sx={{ py: 3 }}>
                     No sections found.
@@ -801,132 +731,15 @@ const Sections = () => {
         }}
       />
 
-      {/* Add/Edit Section Modal */}
-      <Modal
+      {/* Section Form Modal */}
+      <SectionFormModal
         open={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        aria-labelledby="section-modal"
-        sx={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-        }}
-      >
-        <Paper
-          elevation={0}
-          sx={{
-            width: 400,
-            maxWidth: "95%",
-            borderRadius: 2,
-            p: 3,
-            outline: "none",
-          }}
-        >
-          <Box
-            sx={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              mb: 2,
-            }}
-          >
-            <Typography variant="h6" sx={{ fontWeight: 600 }}>
-              {isEditMode ? "Edit Section" : "Add New Section"}
-            </Typography>
-            <IconButton onClick={() => setIsModalOpen(false)}>
-              <CloseIcon />
-            </IconButton>
-          </Box>
-          <Divider sx={{ mb: 2 }} />
-
-          <Box sx={{ mb: 2 }}>
-            <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
-              Class
-            </Typography>
-            <FormControl fullWidth error={!!formErrors.classId}>
-              <Select
-                name="classId"
-                value={formData.classId}
-                onChange={handleFormChange as any}
-                displayEmpty
-                size="small"
-              >
-                <MenuItem value="" disabled>
-                  Select class
-                </MenuItem>
-                {Array.isArray(classes) && classes.length > 0 ? (
-                  classes.map((cls) => (
-                    <MenuItem key={cls.id} value={cls.id.toString()}>
-                      {cls.name}
-                    </MenuItem>
-                  ))
-                ) : (
-                  <MenuItem value="" disabled>
-                    No classes available
-                  </MenuItem>
-                )}
-              </Select>
-              {formErrors.classId && (
-                <FormHelperText>{formErrors.classId}</FormHelperText>
-              )}
-            </FormControl>
-          </Box>
-
-          <Box sx={{ mb: 3 }}>
-            <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
-              Section Name
-            </Typography>
-            <TextField
-              fullWidth
-              name="sectionName"
-              value={formData.sectionName}
-              onChange={handleFormChange}
-              placeholder="Enter section name"
-              size="small"
-              error={!!formErrors.sectionName}
-              helperText={formErrors.sectionName}
-            />
-          </Box>
-
-          <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 1 }}>
-            <Button
-              variant="outlined"
-              onClick={() => setIsModalOpen(false)}
-              sx={{
-                textTransform: "none",
-                transition: "none",
-                borderRadius: 0.5,
-                "&:hover": {
-                  bgcolor: "transparent",
-                  borderColor: "primary.main",
-                  opacity: 0.9,
-                },
-              }}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="contained"
-              disableElevation
-              onClick={handleSaveSection}
-              sx={{
-                textTransform: "none",
-                backgroundImage: "none",
-                borderRadius: 0.5,
-                transition: "none",
-                background: "primary.main",
-                "&:hover": {
-                  backgroundImage: "none",
-                  background: "primary.main",
-                  opacity: 0.9,
-                },
-              }}
-            >
-              {isEditMode ? "Update" : "Add"}
-            </Button>
-          </Box>
-        </Paper>
-      </Modal>
+        onSubmit={handleSaveSection}
+        section={selectedSection || undefined}
+        isEditMode={isEditMode}
+        sectionId={selectedSection?.id} // Pass section ID separately for API calls
+      />
 
       {/* Delete Confirmation Modal */}
       <Modal
