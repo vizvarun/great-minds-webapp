@@ -86,13 +86,33 @@ const VerifyOTP = () => {
       setApiError("");
 
       // Call the verifyOTP API
-      const response = await AuthService.verifyOTP({
+      const verifyResponse = await AuthService.verifyOTP({
         mobile_number: mobileNumber,
+        device_id: "web", // Make sure this is included per the updated interface
         otp: otpValue,
       });
 
-      // If verification successful, navigate to dashboard
-      navigate("/dashboard");
+      // Check if OTP verification was successful
+      if (verifyResponse.status) {
+        try {
+          // Fetch user profile after successful verification
+          const profileResponse = await AuthService.getUserProfile();
+
+          if (profileResponse.status) {
+            // Navigate to dashboard after successful profile fetch
+            navigate("/dashboard");
+          } else {
+            setApiError(
+              profileResponse.message || "Failed to load user profile"
+            );
+          }
+        } catch (profileError: any) {
+          console.error("Profile fetch error:", profileError);
+          setApiError("Failed to load profile data. Please try again.");
+        }
+      } else {
+        setApiError(verifyResponse.message || "OTP verification failed");
+      }
     } catch (err: any) {
       console.error("OTP verification error:", err);
       setApiError(
@@ -240,7 +260,6 @@ const VerifyOTP = () => {
                   value={otp[digit]}
                   onChange={(e) => handleChange(digit, e.target.value)}
                   onKeyDown={(e) => handleKeyDown(digit, e)}
-                  onPaste={digit === 0 ? handlePaste : undefined}
                   sx={{
                     width: "45px",
                     "& .MuiInputBase-input": {

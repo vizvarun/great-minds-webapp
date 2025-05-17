@@ -8,6 +8,7 @@ export interface LoginPayload {
 
 export interface VerifyOTPPayload {
   mobile_number: string;
+  device_id: string; // Added device_id field
   otp: string;
 }
 
@@ -17,6 +18,38 @@ export interface AuthResponse {
     id: number;
     name: string;
     role: string;
+  };
+}
+
+interface ProfileResponse {
+  status: boolean;
+  message: string;
+  errors: any;
+  data: {
+    schoolid: number;
+    name: string;
+    address: string;
+    city: string;
+    logo: string;
+    userid: number;
+    firstname: string;
+    middlename: string;
+    lastname: string;
+  };
+  dashboard: {
+    total_students: number;
+    total_teachers: number;
+    total_male_students: number;
+    total_female_students: number;
+  };
+}
+
+interface OTPVerifyResponse {
+  status: boolean;
+  message: string;
+  errors: any;
+  data: {
+    access_token: string;
   };
 }
 
@@ -31,12 +64,30 @@ const AuthService = {
   },
 
   verifyOTP: async (payload: VerifyOTPPayload) => {
-    const response = await api.post<AuthResponse>("/auth/verify-otp", payload);
+    const response = await api.post<OTPVerifyResponse>(
+      "/auth/verify-otp",
+      {},
+      { params: payload }
+    );
 
     // Store token if authentication successful
-    if (response.data.token) {
-      localStorage.setItem("authToken", response.data.token);
-      localStorage.setItem("user", JSON.stringify(response.data.user));
+    if (response.data.status && response.data.data.access_token) {
+      localStorage.setItem("authToken", response.data.data.access_token);
+    }
+
+    return response.data;
+  },
+
+  getUserProfile: async () => {
+    const response = await api.get<ProfileResponse>("/user/profile");
+
+    if (response.data.status) {
+      // Store user profile data in localStorage
+      localStorage.setItem("userProfile", JSON.stringify(response.data.data));
+      localStorage.setItem(
+        "dashboardData",
+        JSON.stringify(response.data.dashboard)
+      );
     }
 
     return response.data;
@@ -45,6 +96,8 @@ const AuthService = {
   logout: () => {
     localStorage.removeItem("authToken");
     localStorage.removeItem("user");
+    localStorage.removeItem("userProfile");
+    localStorage.removeItem("dashboardData");
   },
 
   isAuthenticated: (): boolean => {
@@ -58,6 +111,16 @@ const AuthService = {
   getUser: () => {
     const user = localStorage.getItem("user");
     return user ? JSON.parse(user) : null;
+  },
+
+  getCachedUserProfile: () => {
+    const profile = localStorage.getItem("userProfile");
+    return profile ? JSON.parse(profile) : null;
+  },
+
+  getDashboardData: () => {
+    const data = localStorage.getItem("dashboardData");
+    return data ? JSON.parse(data) : null;
   },
 };
 

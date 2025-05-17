@@ -54,26 +54,25 @@ const Login = () => {
       setApiError("");
 
       // Call the login API
-      await AuthService.login({
+      const response = await AuthService.login({
         mobile_number: mobileNumber,
         device_id: "web", // Using "web" as device ID
         bypass_otp: true, // Bypass OTP for now
       });
-
-      // If login successful, navigate to OTP verification
-      // or if bypassing OTP, navigate to dashboard
-      if (true) {
-        // Since bypass_otp is true
-        // Mock successful authentication for now
-        localStorage.setItem("isAuthenticated", "true");
-        navigate("/dashboard");
-      } else {
+      
+      // Check if we got a successful response with OTP
+      if (response && response.message) {
+        // Navigate to OTP verification page and pass the mobile number
         navigate("/verify-otp", { state: { mobileNumber } });
+      } else {
+        // This should not happen if API works correctly, but just in case
+        setApiError("Unexpected response from server");
       }
     } catch (err: any) {
       console.error("Login error:", err);
+      // Display a more subtle error message
       setApiError(
-        err.response?.data?.message || "Failed to send OTP. Please try again."
+        err.response?.data?.message || "Failed to send OTP. Please try again later."
       );
     } finally {
       setIsLoading(false);

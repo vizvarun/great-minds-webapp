@@ -19,21 +19,16 @@ import {
   TableRow,
   Grid,
 } from "@mui/material";
+import { useEffect, useState } from "react";
 import PeopleAltIcon from "@mui/icons-material/PeopleAlt";
 import SchoolIcon from "@mui/icons-material/School";
 import ManIcon from "@mui/icons-material/Man";
 import CakeIcon from "@mui/icons-material/Cake";
 import AssignmentIcon from "@mui/icons-material/Assignment";
-import FemaleIcon from "@mui/icons-material/Female"; // Import proper female icon
+import FemaleIcon from "@mui/icons-material/Female";
+import AuthService from "../services/auth";
 
-// Mock data - replace with actual API calls in production
-const schoolMetrics = {
-  totalStudents: 1248,
-  totalTeachers: 78,
-  maleStudents: 615,
-  femaleStudents: 633,
-};
-
+// Mock data for items that aren't yet coming from the API
 const birthdayStudents = [
   {
     id: 1,
@@ -70,6 +65,17 @@ const recentActivities = [
 
 const Dashboard = () => {
   const theme = useTheme();
+  const [schoolData, setSchoolData] = useState<any>(null);
+  const [dashboardData, setDashboardData] = useState<any>(null);
+
+  // Load data from localStorage on component mount
+  useEffect(() => {
+    const profile = AuthService.getUserProfile();
+    const dashboard = AuthService.getDashboardData();
+
+    setSchoolData(profile);
+    setDashboardData(dashboard);
+  }, []);
 
   // Add a reusable noise background effect
   const noiseEffect = {
@@ -114,7 +120,8 @@ const Dashboard = () => {
         </Typography>
 
         <Typography variant="body1" sx={{ color: "text.secondary" }}>
-          Overview of Great Minds School metrics and activities.
+          Overview of {schoolData?.name || "Great Minds School"} metrics and
+          activities.
         </Typography>
       </Box>
 
@@ -147,7 +154,7 @@ const Dashboard = () => {
                   fontWeight="bold"
                   color="primary.dark"
                 >
-                  {schoolMetrics.totalStudents}
+                  {dashboardData?.total_students || 0}
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
                   Total enrolled students
@@ -180,7 +187,7 @@ const Dashboard = () => {
                   fontWeight="bold"
                   color="success.dark"
                 >
-                  {schoolMetrics.totalTeachers}
+                  {dashboardData?.total_teachers || 0}
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
                   Academic staff members
@@ -213,13 +220,16 @@ const Dashboard = () => {
                   fontWeight="bold"
                   color="warning.dark"
                 >
-                  {schoolMetrics.maleStudents}
+                  {dashboardData?.total_male_students || 0}
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
-                  {Math.round(
-                    (schoolMetrics.maleStudents / schoolMetrics.totalStudents) *
-                      100
-                  )}
+                  {dashboardData && dashboardData.total_students
+                    ? Math.round(
+                        (dashboardData.total_male_students /
+                          dashboardData.total_students) *
+                          100
+                      )
+                    : 0}
                   % of total
                 </Typography>
               </CardContent>
@@ -250,14 +260,16 @@ const Dashboard = () => {
                   fontWeight="bold"
                   color="secondary.dark"
                 >
-                  {schoolMetrics.femaleStudents}
+                  {dashboardData?.total_female_students || 0}
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
-                  {Math.round(
-                    (schoolMetrics.femaleStudents /
-                      schoolMetrics.totalStudents) *
-                      100
-                  )}
+                  {dashboardData && dashboardData.total_students
+                    ? Math.round(
+                        (dashboardData.total_female_students /
+                          dashboardData.total_students) *
+                          100
+                      )
+                    : 0}
                   % of total
                 </Typography>
               </CardContent>
