@@ -1,14 +1,24 @@
-import { type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Box } from "@mui/material";
 import Header from "../components/Header";
 import Sidebar from "../components/Sidebar";
 import Footer from "../components/Footer";
+import AuthService from "../services/auth";
 
 interface DashboardLayoutProps {
   children: ReactNode;
 }
 
 const DashboardLayout = ({ children }: DashboardLayoutProps) => {
+  const [schoolData, setSchoolData] = useState<any>(null);
+
+  // Load data from localStorage on component mount
+  useEffect(() => {
+    const profile = AuthService.getCachedUserProfile();
+    console.log("first", profile);
+    setSchoolData(profile);
+  }, []);
+
   return (
     <Box
       sx={{
@@ -18,7 +28,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
         overflow: "hidden", // Prevent any overflow scrolling
       }}
     >
-      <Header schoolName="Great Minds School" username="Admin User" />
+      <Header schoolName={schoolData?.name} username={schoolData?.firstname} />
 
       {/* Add a toolbar placeholder for fixed header spacing */}
       <Box sx={{ height: "64px" }} />
