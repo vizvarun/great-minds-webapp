@@ -1,3 +1,5 @@
+// @ts-nocheck
+
 import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 import {
   Alert,

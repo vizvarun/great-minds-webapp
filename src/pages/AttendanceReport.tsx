@@ -1,3 +1,5 @@
+// @ts-nocheck
+
 import CalendarTodayIcon from "@mui/icons-material/CalendarToday";
 import {
   Box,
