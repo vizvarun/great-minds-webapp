@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Box,
   Button,
@@ -17,6 +17,7 @@ import {
   Alert,
   Snackbar,
   Modal,
+  CircularProgress,
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import DeleteIcon from "@mui/icons-material/Delete";
@@ -26,147 +27,23 @@ import PaymentsIcon from "@mui/icons-material/Payments";
 import FileUploadIcon from "@mui/icons-material/FileUpload";
 import StudentFormModal from "../components/StudentFormModal";
 import StudentFeesModal from "../components/StudentFeesModal";
-
-// Mock data for students
-interface Student {
-  id: number;
-  enrollmentNo: string;
-  firstName: string;
-  lastName: string;
-  gender: string;
-  phoneNumber: string;
-  city: string;
-  isActive: boolean;
-}
-
-const mockStudents: Student[] = [
-  {
-    id: 1,
-    enrollmentNo: "GM2023-001",
-    firstName: "Aarav",
-    lastName: "Sharma",
-    gender: "Male",
-    phoneNumber: "9876543210",
-    city: "Bengaluru",
-    isActive: true,
-  },
-  {
-    id: 2,
-    enrollmentNo: "GM2023-002",
-    firstName: "Priya",
-    lastName: "Patel",
-    gender: "Female",
-    phoneNumber: "9876543211",
-    city: "Mumbai",
-    isActive: true,
-  },
-  {
-    id: 3,
-    enrollmentNo: "GM2023-003",
-    firstName: "Vikram",
-    lastName: "Singh",
-    gender: "Male",
-    phoneNumber: "9876543212",
-    city: "Delhi",
-    isActive: false,
-  },
-  {
-    id: 4,
-    enrollmentNo: "GM2023-004",
-    firstName: "Sneha",
-    lastName: "Kumar",
-    gender: "Female",
-    phoneNumber: "9876543213",
-    city: "Hyderabad",
-    isActive: true,
-  },
-  {
-    id: 5,
-    enrollmentNo: "GM2023-005",
-    firstName: "Rahul",
-    lastName: "Gupta",
-    gender: "Male",
-    phoneNumber: "9876543214",
-    city: "Chennai",
-    isActive: true,
-  },
-  {
-    id: 6,
-    enrollmentNo: "GM2023-006",
-    firstName: "Divya",
-    lastName: "Rao",
-    gender: "Female",
-    phoneNumber: "9876543215",
-    city: "Pune",
-    isActive: true,
-  },
-  {
-    id: 7,
-    enrollmentNo: "GM2023-007",
-    firstName: "Arjun",
-    lastName: "Reddy",
-    gender: "Male",
-    phoneNumber: "9876543216",
-    city: "Kolkata",
-    isActive: true,
-  },
-  {
-    id: 8,
-    enrollmentNo: "GM2023-008",
-    firstName: "Neha",
-    lastName: "Verma",
-    gender: "Female",
-    phoneNumber: "9876543217",
-    city: "Jaipur",
-    isActive: false,
-  },
-  {
-    id: 9,
-    enrollmentNo: "GM2023-009",
-    firstName: "Rohan",
-    lastName: "Joshi",
-    gender: "Male",
-    phoneNumber: "9876543218",
-    city: "Ahmedabad",
-    isActive: true,
-  },
-  {
-    id: 10,
-    enrollmentNo: "GM2023-010",
-    firstName: "Kavita",
-    lastName: "Tiwari",
-    gender: "Female",
-    phoneNumber: "9876543219",
-    city: "Lucknow",
-    isActive: true,
-  },
-  {
-    id: 11,
-    enrollmentNo: "GM2023-011",
-    firstName: "Sanjay",
-    lastName: "Mehra",
-    gender: "Male",
-    phoneNumber: "9876543220",
-    city: "Mysuru",
-    isActive: true,
-  },
-  {
-    id: 12,
-    enrollmentNo: "GM2023-012",
-    firstName: "Pooja",
-    lastName: "Desai",
-    gender: "Female",
-    phoneNumber: "9876543221",
-    city: "Indore",
-    isActive: true,
-  },
-];
+import {
+  getStudents,
+  createStudent,
+  updateStudent,
+  deleteStudent,
+  toggleStudentStatus,
+} from "../services/studentService";
+import type { Student } from "../services/studentService";
 
 const Students = () => {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [searchQuery, setSearchQuery] = useState("");
-  const [students, setStudents] = useState<Student[]>(mockStudents);
+  const [students, setStudents] = useState<Student[]>([]);
+  const [totalRecords, setTotalRecords] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
   const [isFeesModalOpen, setIsFeesModalOpen] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
@@ -175,19 +52,48 @@ const Students = () => {
     open: false,
     message: "",
     severity: "success" as "success" | "error" | "info" | "warning",
-    timestamp: 0, // Add timestamp to track changes
+    timestamp: 0,
   });
 
   // Add state for the delete confirmation modal
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [studentToDelete, setStudentToDelete] = useState<Student | null>(null);
 
-  // Remove unused state for bulk upload modal
-  // const [isBulkUploadModalOpen, setIsBulkUploadModalOpen] = useState(false);
+  // Fetch students on component mount
+  useEffect(() => {
+    fetchStudents();
+  }, [page, rowsPerPage]);
+
+  const fetchStudents = async () => {
+    setLoading(true);
+    try {
+      const data = await getStudents(page, rowsPerPage);
+
+      if (data && Array.isArray(data.data)) {
+        setStudents(data.data);
+        setTotalRecords(data.total_records || data.data.length);
+        setError(null);
+      } else {
+        setError("Failed to load students. Invalid response format.");
+      }
+    } catch (err) {
+      setError("Failed to load students. Please try again later.");
+      setNotification({
+        open: true,
+        message: "Failed to load students",
+        severity: "error",
+        timestamp: Date.now(),
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Filter students based on search query
   const filteredStudents = students.filter((student) =>
-    `${student.enrollmentNo} ${student.firstName} ${student.lastName} ${student.phoneNumber} ${student.city}`
+    `${student.enrollmentNo || ""} ${student.firstName} ${student.lastName} ${
+      student.mobileNo
+    } ${student.city || ""}`
       .toLowerCase()
       .includes(searchQuery.toLowerCase())
   );
@@ -217,11 +123,6 @@ const Students = () => {
     setIsFormModalOpen(true);
   };
 
-  // Remove unused bulk upload handler
-  // const handleBulkUpload = () => {
-  //   setIsBulkUploadModalOpen(true);
-  // };
-
   // Handle editing a student
   const handleEditStudent = (student: Student) => {
     setSelectedStudent(student);
@@ -229,30 +130,42 @@ const Students = () => {
     setIsFormModalOpen(true);
   };
 
-  // Handle toggling student status
-  const handleToggleStatus = (id: number, currentStatus: boolean) => {
-    const updatedStudents = students.map((student) =>
-      student.id === id ? { ...student, isActive: !currentStatus } : student
-    );
-    setStudents(updatedStudents);
+  // Handle toggling student status with API call
+  const handleToggleStatus = async (id: number, currentStatus: boolean) => {
+    try {
+      await toggleStudentStatus(id, currentStatus);
 
-    // Get student details for notification message
-    const student = students.find((s) => s.id === id);
-    if (student) {
-      // Close any existing notification first
-      setNotification((prev) => ({ ...prev, open: false }));
+      // Update local state
+      const updatedStudents = students.map((student) =>
+        student.id === id ? { ...student, isActive: !currentStatus } : student
+      );
+      setStudents(updatedStudents);
 
-      // Then set a new one after a brief delay to ensure DOM update
-      setTimeout(() => {
-        setNotification({
-          open: true,
-          message: `${student.firstName} ${student.lastName} status has been ${
-            !currentStatus ? "activated" : "deactivated"
-          }`,
-          severity: !currentStatus ? "success" : "info",
-          timestamp: Date.now(),
-        });
-      }, 100);
+      // Get student details for notification message
+      const student = students.find((s) => s.id === id);
+      if (student) {
+        // Close any existing notification first
+        setNotification((prev) => ({ ...prev, open: false }));
+
+        // Then set a new one after a brief delay to ensure DOM update
+        setTimeout(() => {
+          setNotification({
+            open: true,
+            message: `${student.firstName} ${
+              student.lastName
+            } status has been ${!currentStatus ? "activated" : "deactivated"}`,
+            severity: !currentStatus ? "success" : "info",
+            timestamp: Date.now(),
+          });
+        }, 100);
+      }
+    } catch (error) {
+      setNotification({
+        open: true,
+        message: "Failed to update student status",
+        severity: "error",
+        timestamp: Date.now(),
+      });
     }
   };
 
@@ -263,22 +176,33 @@ const Students = () => {
   };
 
   // Actual delete function after confirmation
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     if (studentToDelete) {
-      const updatedStudents = students.filter(
-        (student) => student.id !== studentToDelete.id
-      );
-      setStudents(updatedStudents);
+      try {
+        await deleteStudent(studentToDelete.id);
 
-      setNotification({
-        open: true,
-        message: `${studentToDelete.firstName} ${studentToDelete.lastName} has been deleted`,
-        severity: "success",
-        timestamp: Date.now(),
-      });
+        const updatedStudents = students.filter(
+          (student) => student.id !== studentToDelete.id
+        );
+        setStudents(updatedStudents);
 
-      setIsDeleteModalOpen(false);
-      setStudentToDelete(null);
+        setNotification({
+          open: true,
+          message: `${studentToDelete.firstName} ${studentToDelete.lastName} has been deleted`,
+          severity: "success",
+          timestamp: Date.now(),
+        });
+      } catch (error) {
+        setNotification({
+          open: true,
+          message: "Failed to delete student",
+          severity: "error",
+          timestamp: Date.now(),
+        });
+      } finally {
+        setIsDeleteModalOpen(false);
+        setStudentToDelete(null);
+      }
     }
   };
 
@@ -295,45 +219,56 @@ const Students = () => {
   };
 
   // Handle form submission (add/edit)
-  const handleFormSubmit = (studentData: any) => {
-    if (isEditMode && selectedStudent) {
-      // Update existing student
-      const updatedStudents = students.map((student) =>
-        student.id === selectedStudent.id
-          ? {
-              ...studentData,
-              id: student.id,
-              isActive: student.isActive,
-            }
-          : student
-      );
-      setStudents(updatedStudents);
-      setNotification({
-        open: true,
-        message: "Student updated successfully",
-        severity: "success",
-        timestamp: Date.now(),
-      });
-    } else {
-      // Add new student
-      const newId = Math.max(...students.map((student) => student.id)) + 1;
-      setStudents([
-        ...students,
-        {
+  const handleFormSubmit = async (studentData: any) => {
+    try {
+      if (isEditMode && selectedStudent) {
+        // Update existing student
+        const updatedStudent = await updateStudent({
           ...studentData,
-          id: newId,
-          isActive: true,
-        },
-      ]);
+          id: selectedStudent.id,
+          mobileNo: studentData.phoneNumber || studentData.mobileNo,
+        });
+
+        setStudents(
+          students.map((student) =>
+            student.id === selectedStudent.id ? updatedStudent : student
+          )
+        );
+
+        setNotification({
+          open: true,
+          message: "Student updated successfully",
+          severity: "success",
+          timestamp: Date.now(),
+        });
+      } else {
+        // Add new student
+        const newStudent = await createStudent({
+          ...studentData,
+          mobileNo: studentData.phoneNumber || studentData.mobileNo,
+        });
+
+        setStudents([...students, newStudent]);
+
+        setNotification({
+          open: true,
+          message: "Student added successfully",
+          severity: "success",
+          timestamp: Date.now(),
+        });
+      }
+
+      setIsFormModalOpen(false);
+    } catch (error) {
       setNotification({
         open: true,
-        message: "Student added successfully",
-        severity: "success",
+        message: isEditMode
+          ? "Failed to update student"
+          : "Failed to add student",
+        severity: "error",
         timestamp: Date.now(),
       });
     }
-
-    setIsFormModalOpen(false);
   };
 
   // Handle closing the notification
@@ -461,57 +396,75 @@ const Students = () => {
           maxHeight: "calc(100% - 120px)",
         }}
       >
-        <Table stickyHeader sx={{ minWidth: 650 }}>
-          <TableHead>
-            <TableRow sx={{ backgroundColor: "grey.50" }}>
-              <TableCell
-                sx={{ fontWeight: 600, bgcolor: "grey.50", width: "15%" }}
-              >
-                Enrollment No.
-              </TableCell>
-              <TableCell
-                sx={{ fontWeight: 600, bgcolor: "grey.50", width: "15%" }}
-              >
-                First Name
-              </TableCell>
-              <TableCell
-                sx={{ fontWeight: 600, bgcolor: "grey.50", width: "15%" }}
-              >
-                Last Name
-              </TableCell>
-              <TableCell
-                sx={{ fontWeight: 600, bgcolor: "grey.50", width: "10%" }}
-              >
-                Gender
-              </TableCell>
-              <TableCell
-                sx={{ fontWeight: 600, bgcolor: "grey.50", width: "15%" }}
-              >
-                Phone No.
-              </TableCell>
-              <TableCell
-                sx={{ fontWeight: 600, bgcolor: "grey.50", width: "15%" }}
-              >
-                City
-              </TableCell>
-              <TableCell
-                sx={{ fontWeight: 600, bgcolor: "grey.50", width: "15%" }}
-                align="center"
-              >
-                Status
-              </TableCell>
-              <TableCell
-                sx={{ fontWeight: 600, bgcolor: "grey.50", width: "10%" }}
-                align="center"
-              >
-                Actions
-              </TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {filteredStudents
-              .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-              .map((student) => (
+        {loading ? (
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              height: "100%",
+              p: 4,
+            }}
+          >
+            <CircularProgress />
+          </Box>
+        ) : error ? (
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              height: "100%",
+              p: 4,
+            }}
+          >
+            <Typography color="error">{error}</Typography>
+          </Box>
+        ) : (
+          <Table stickyHeader sx={{ minWidth: 650 }}>
+            <TableHead>
+              <TableRow sx={{ backgroundColor: "grey.50" }}>
+                <TableCell
+                  sx={{ fontWeight: 600, bgcolor: "grey.50", width: "15%" }}
+                >
+                  Enrollment No.
+                </TableCell>
+                <TableCell
+                  sx={{ fontWeight: 600, bgcolor: "grey.50", width: "15%" }}
+                >
+                  First Name
+                </TableCell>
+                <TableCell
+                  sx={{ fontWeight: 600, bgcolor: "grey.50", width: "15%" }}
+                >
+                  Last Name
+                </TableCell>
+                <TableCell
+                  sx={{ fontWeight: 600, bgcolor: "grey.50", width: "15%" }}
+                >
+                  Phone No.
+                </TableCell>
+                <TableCell
+                  sx={{ fontWeight: 600, bgcolor: "grey.50", width: "15%" }}
+                >
+                  City
+                </TableCell>
+                <TableCell
+                  sx={{ fontWeight: 600, bgcolor: "grey.50", width: "15%" }}
+                  align="center"
+                >
+                  Status
+                </TableCell>
+                <TableCell
+                  sx={{ fontWeight: 600, bgcolor: "grey.50", width: "10%" }}
+                  align="center"
+                >
+                  Actions
+                </TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {filteredStudents.map((student) => (
                 <TableRow
                   key={student.id}
                   hover
@@ -522,12 +475,16 @@ const Students = () => {
                     transition: "none",
                   }}
                 >
-                  <TableCell>{student.enrollmentNo}</TableCell>
-                  <TableCell>{student.firstName}</TableCell>
-                  <TableCell>{student.lastName}</TableCell>
-                  <TableCell>{student.gender}</TableCell>
-                  <TableCell>{student.phoneNumber}</TableCell>
-                  <TableCell>{student.city}</TableCell>
+                  <TableCell>
+                    {student.enrollmentNo ||
+                      `ST-${student.id.toString().padStart(4, "0")}`}
+                  </TableCell>
+                  <TableCell>{student.firstName || "-"}</TableCell>
+                  <TableCell>{student.lastName || "-"}</TableCell>
+                  <TableCell>
+                    {student.mobileNo || student.phoneNumber || "-"}
+                  </TableCell>
+                  <TableCell>{student.city || "-"}</TableCell>
                   <TableCell align="center">
                     <Box sx={{ display: "flex", justifyContent: "center" }}>
                       <Box
@@ -638,22 +595,23 @@ const Students = () => {
                   </TableCell>
                 </TableRow>
               ))}
-            {filteredStudents.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={8} align="center" sx={{ py: 3 }}>
-                  No students found.
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
+              {filteredStudents.length === 0 && !loading && (
+                <TableRow>
+                  <TableCell colSpan={7} align="center" sx={{ py: 3 }}>
+                    No students found.
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        )}
       </TableContainer>
 
       {/* Pagination Section */}
       <TablePagination
         component="div"
         rowsPerPageOptions={[5, 10, 25]}
-        count={filteredStudents.length}
+        count={totalRecords}
         rowsPerPage={rowsPerPage}
         page={page}
         onPageChange={handleChangePage}
@@ -728,7 +686,7 @@ const Students = () => {
               Confirm Deletion
             </Typography>
             <Typography variant="body1" sx={{ mb: 3, textAlign: "center" }}>
-              Are you sure you want to delete
+              Are you sure you want to delete{" "}
               <strong>
                 {studentToDelete?.firstName} {studentToDelete?.lastName}
               </strong>
@@ -791,7 +749,7 @@ const Students = () => {
 
       {/* Notification Snackbar */}
       <Snackbar
-        key={notification.timestamp} // Use timestamp as key to force re-render
+        key={notification.timestamp}
         open={notification.open}
         autoHideDuration={4000}
         onClose={handleCloseNotification}

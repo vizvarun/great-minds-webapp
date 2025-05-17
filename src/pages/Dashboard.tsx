@@ -72,7 +72,6 @@ const Dashboard = () => {
   useEffect(() => {
     const profile = AuthService.getCachedUserProfile();
     const dashboard = AuthService.getDashboardData();
-    console.log("first", profile);
     setSchoolData(profile);
     setDashboardData(dashboard);
   }, []);

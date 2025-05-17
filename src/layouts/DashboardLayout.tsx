@@ -15,7 +15,6 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
   // Load data from localStorage on component mount
   useEffect(() => {
     const profile = AuthService.getCachedUserProfile();
-    console.log("first", profile);
     setSchoolData(profile);
   }, []);
 

@@ -22,200 +22,28 @@ import {
   TableRow,
   TextField,
   Typography,
+  CircularProgress,
 } from "@mui/material";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import EmployeeFormModal from "../components/EmployeeFormModal";
 import BulkUploadModal from "../components/BulkUploadModal";
-
-// Mock data for employees
-interface Employee {
-  id: number;
-  employeeNo: string;
-  firstName: string;
-  lastName: string;
-  designation: string;
-  mobileNumber: string;
-  email?: string;
-  address?: string;
-  joiningDate?: string;
-}
-
-const mockEmployees: Employee[] = [
-  {
-    id: 1,
-    employeeNo: "EMP001",
-    firstName: "John",
-    lastName: "Doe",
-    designation: "Principal",
-    mobileNumber: "9876543210",
-  },
-  {
-    id: 2,
-    employeeNo: "EMP002",
-    firstName: "Jane",
-    lastName: "Smith",
-    designation: "Teacher",
-    mobileNumber: "9876543211",
-  },
-  {
-    id: 3,
-    employeeNo: "EMP003",
-    firstName: "Robert",
-    lastName: "Johnson",
-    designation: "Administrator",
-    mobileNumber: "9876543212",
-  },
-  {
-    id: 4,
-    employeeNo: "EMP004",
-    firstName: "Sarah",
-    lastName: "Williams",
-    designation: "Teacher",
-    mobileNumber: "9876543213",
-  },
-  {
-    id: 5,
-    employeeNo: "EMP005",
-    firstName: "Michael",
-    lastName: "Brown",
-    designation: "Accountant",
-    mobileNumber: "9876543214",
-  },
-  {
-    id: 6,
-    employeeNo: "EMP006",
-    firstName: "Emily",
-    lastName: "Davis",
-    designation: "Librarian",
-    mobileNumber: "9876543215",
-  },
-  {
-    id: 7,
-    employeeNo: "EMP007",
-    firstName: "David",
-    lastName: "Wilson",
-    designation: "Physical Education",
-    mobileNumber: "9876543216",
-  },
-  {
-    id: 8,
-    employeeNo: "EMP008",
-    firstName: "Jennifer",
-    lastName: "Taylor",
-    designation: "Mathematics Teacher",
-    mobileNumber: "9876543217",
-  },
-  {
-    id: 9,
-    employeeNo: "EMP009",
-    firstName: "Thomas",
-    lastName: "Anderson",
-    designation: "Science Teacher",
-    mobileNumber: "9876543218",
-  },
-  {
-    id: 10,
-    employeeNo: "EMP010",
-    firstName: "Lisa",
-    lastName: "Martin",
-    designation: "English Teacher",
-    mobileNumber: "9876543219",
-  },
-  {
-    id: 11,
-    employeeNo: "EMP011",
-    firstName: "Richard",
-    lastName: "White",
-    designation: "History Teacher",
-    mobileNumber: "9876543220",
-  },
-  {
-    id: 12,
-    employeeNo: "EMP012",
-    firstName: "Patricia",
-    lastName: "Clark",
-    designation: "Art Teacher",
-    mobileNumber: "9876543221",
-  },
-  {
-    id: 13,
-    employeeNo: "EMP013",
-    firstName: "Daniel",
-    lastName: "Lewis",
-    designation: "Computer Science",
-    mobileNumber: "9876543222",
-  },
-  {
-    id: 14,
-    employeeNo: "EMP014",
-    firstName: "Nancy",
-    lastName: "Young",
-    designation: "Counselor",
-    mobileNumber: "9876543223",
-  },
-  {
-    id: 15,
-    employeeNo: "EMP015",
-    firstName: "Charles",
-    lastName: "Hall",
-    designation: "Vice Principal",
-    mobileNumber: "9876543224",
-  },
-  {
-    id: 16,
-    employeeNo: "EMP016",
-    firstName: "Linda",
-    lastName: "Allen",
-    designation: "Office Staff",
-    mobileNumber: "9876543225",
-  },
-  {
-    id: 17,
-    employeeNo: "EMP017",
-    firstName: "Mark",
-    lastName: "Wright",
-    designation: "Security",
-    mobileNumber: "9876543226",
-  },
-  {
-    id: 18,
-    employeeNo: "EMP018",
-    firstName: "Sandra",
-    lastName: "Scott",
-    designation: "Janitor",
-    mobileNumber: "9876543227",
-  },
-  {
-    id: 19,
-    employeeNo: "EMP019",
-    firstName: "Paul",
-    lastName: "Green",
-    designation: "Bus Driver",
-    mobileNumber: "9876543228",
-  },
-  {
-    id: 20,
-    employeeNo: "EMP020",
-    firstName: "Betty",
-    lastName: "Adams",
-    designation: "Cafeteria Staff",
-    mobileNumber: "9876543229",
-  },
-  {
-    id: 21,
-    employeeNo: "EMP021",
-    firstName: "George",
-    lastName: "Baker",
-    designation: "Maintenance",
-    mobileNumber: "9876543230",
-  },
-];
+import {
+  getEmployees,
+  createEmployee,
+  updateEmployee,
+  deleteEmployee as apiDeleteEmployee,
+  bulkUploadEmployees,
+} from "../services/employeeService";
+import type { Employee } from "../services/employeeService";
 
 const Employees = () => {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [searchQuery, setSearchQuery] = useState("");
-  const [employees, setEmployees] = useState<Employee[]>(mockEmployees);
+  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [totalRecords, setTotalRecords] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   // Modal states
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -239,15 +67,41 @@ const Employees = () => {
     timestamp: Date.now(),
   });
 
-  // Filter employees based on search query
-  const filteredEmployees = employees.filter(
-    (employee) =>
-      employee.firstName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      employee.lastName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      employee.employeeNo.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      employee.designation.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      employee.mobileNumber.includes(searchQuery)
-  );
+  // Fetch employees on component mount
+  useEffect(() => {
+    fetchEmployees();
+  }, [page, rowsPerPage]);
+
+  const fetchEmployees = async () => {
+    setLoading(true);
+    try {
+      const response = await getEmployees(page, rowsPerPage);
+
+      if (response && response.data) {
+        setEmployees(response.data);
+        setTotalRecords(response.total_records || response.data.length);
+        setError(null);
+      } else {
+        // Handle unexpected data format
+        console.error("Unexpected data format:", response);
+        setError("Received invalid data format from server");
+        setEmployees([]);
+      }
+    } catch (err: any) {
+      console.error("Error in fetchEmployees:", err);
+      setError(
+        err.message || "Failed to load employees. Please try again later."
+      );
+      setNotification({
+        open: true,
+        message: "Failed to load employees",
+        severity: "error",
+        timestamp: Date.now(),
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleChangePage = (_: unknown, newPage: number) => {
     setPage(newPage);
@@ -285,19 +139,27 @@ const Employees = () => {
     setIsDeleteModalOpen(true);
   };
 
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     if (employeeToDelete) {
-      const updatedEmployees = employees.filter(
-        (emp) => emp.id !== employeeToDelete.id
-      );
-      setEmployees(updatedEmployees);
+      try {
+        await apiDeleteEmployee(employeeToDelete.id);
 
-      setNotification({
-        open: true,
-        message: "Employee deleted successfully",
-        severity: "success",
-        timestamp: Date.now(),
-      });
+        setEmployees(employees.filter((emp) => emp.id !== employeeToDelete.id));
+
+        setNotification({
+          open: true,
+          message: "Employee deleted successfully",
+          severity: "success",
+          timestamp: Date.now(),
+        });
+      } catch (error) {
+        setNotification({
+          open: true,
+          message: "Failed to delete employee",
+          severity: "error",
+          timestamp: Date.now(),
+        });
+      }
 
       setIsDeleteModalOpen(false);
       setEmployeeToDelete(null);
@@ -313,30 +175,45 @@ const Employees = () => {
     setIsModalOpen(false);
   };
 
-  const handleEmployeeSubmit = (employeeData: Employee) => {
-    if (isEditMode && currentEmployee) {
-      const updatedEmployees = employees.map((emp) =>
-        emp.id === currentEmployee.id ? { ...employeeData, id: emp.id } : emp
-      );
-      setEmployees(updatedEmployees);
+  const handleEmployeeSubmit = async (employeeData: Employee) => {
+    try {
+      if (isEditMode && currentEmployee) {
+        const updatedEmployee = await updateEmployee({
+          ...employeeData,
+          id: currentEmployee.id,
+        });
+        setEmployees(
+          employees.map((emp) =>
+            emp.id === currentEmployee.id ? updatedEmployee : emp
+          )
+        );
+        setNotification({
+          open: true,
+          message: "Employee updated successfully",
+          severity: "success",
+          timestamp: Date.now(),
+        });
+      } else {
+        const newEmployee = await createEmployee(employeeData);
+        setEmployees([...employees, newEmployee]);
+        setNotification({
+          open: true,
+          message: "Employee added successfully",
+          severity: "success",
+          timestamp: Date.now(),
+        });
+      }
+      setIsModalOpen(false);
+    } catch (error) {
       setNotification({
         open: true,
-        message: "Employee updated successfully",
-        severity: "success",
-        timestamp: Date.now(),
-      });
-    } else {
-      const newId = Math.max(...employees.map((emp) => emp.id)) + 1;
-      setEmployees([...employees, { ...employeeData, id: newId }]);
-      setNotification({
-        open: true,
-        message: "Employee added successfully",
-        severity: "success",
+        message: isEditMode
+          ? "Failed to update employee"
+          : "Failed to add employee",
+        severity: "error",
         timestamp: Date.now(),
       });
     }
-
-    setIsModalOpen(false);
   };
 
   const handleBulkUpload = () => {
@@ -347,27 +224,49 @@ const Employees = () => {
     setIsBulkUploadModalOpen(false);
   };
 
-  const handleBulkUploadSuccess = (uploadedEmployees: any[]) => {
-    const lastId =
-      employees.length > 0 ? Math.max(...employees.map((emp) => emp.id)) : 0;
+  const handleBulkUploadSuccess = async (uploadedEmployees: any[]) => {
+    try {
+      const newEmployees = await bulkUploadEmployees(uploadedEmployees);
 
-    const newEmployees = uploadedEmployees.map((emp, index) => ({
-      ...emp,
-      id: lastId + index + 1,
-    }));
+      setEmployees([...employees, ...newEmployees]);
 
-    setEmployees([...employees, ...newEmployees]);
-
-    setNotification({
-      open: true,
-      message: `Successfully added ${uploadedEmployees.length} employees`,
-      severity: "success",
-      timestamp: Date.now(),
-    });
+      setNotification({
+        open: true,
+        message: `Successfully added ${newEmployees.length} employees`,
+        severity: "success",
+        timestamp: Date.now(),
+      });
+    } catch (error) {
+      setNotification({
+        open: true,
+        message: "Failed to bulk upload employees",
+        severity: "error",
+        timestamp: Date.now(),
+      });
+    }
   };
 
   const handleDownloadList = () => {
-    console.log("Download list clicked");
+    const header =
+      "Employee ID,First Name,Last Name,Designation,Mobile Number\n";
+    const csvContent =
+      header +
+      employees
+        .map(
+          (emp) =>
+            `${emp.employeeNo},${emp.firstName},${emp.lastName},${emp.designation},${emp.mobileNumber}`
+        )
+        .join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", "employees.csv");
+    link.style.visibility = "hidden";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const handleCloseNotification = () => {
@@ -517,36 +416,59 @@ const Employees = () => {
           maxHeight: "calc(100% - 120px)",
         }}
       >
-        <Table stickyHeader sx={{ minWidth: 650 }}>
-          <TableHead>
-            <TableRow sx={{ backgroundColor: "grey.50" }}>
-              <TableCell sx={{ fontWeight: 600, bgcolor: "grey.50" }}>
-                Employee ID
-              </TableCell>
-              <TableCell sx={{ fontWeight: 600, bgcolor: "grey.50" }}>
-                First Name
-              </TableCell>
-              <TableCell sx={{ fontWeight: 600, bgcolor: "grey.50" }}>
-                Last Name
-              </TableCell>
-              <TableCell sx={{ fontWeight: 600, bgcolor: "grey.50" }}>
-                Designation
-              </TableCell>
-              <TableCell sx={{ fontWeight: 600, bgcolor: "grey.50" }}>
-                Mobile Number
-              </TableCell>
-              <TableCell
-                sx={{ fontWeight: 600, bgcolor: "grey.50" }}
-                align="center"
-              >
-                Actions
-              </TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {filteredEmployees
-              .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-              .map((employee) => (
+        {loading ? (
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              height: "100%",
+              p: 4,
+            }}
+          >
+            <CircularProgress />
+          </Box>
+        ) : error ? (
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              height: "100%",
+              p: 4,
+            }}
+          >
+            <Typography color="error">{error}</Typography>
+          </Box>
+        ) : (
+          <Table stickyHeader sx={{ minWidth: 650 }}>
+            <TableHead>
+              <TableRow sx={{ backgroundColor: "grey.50" }}>
+                <TableCell sx={{ fontWeight: 600, bgcolor: "grey.50" }}>
+                  Employee ID
+                </TableCell>
+                <TableCell sx={{ fontWeight: 600, bgcolor: "grey.50" }}>
+                  First Name
+                </TableCell>
+                <TableCell sx={{ fontWeight: 600, bgcolor: "grey.50" }}>
+                  Last Name
+                </TableCell>
+                <TableCell sx={{ fontWeight: 600, bgcolor: "grey.50" }}>
+                  Designation
+                </TableCell>
+                <TableCell sx={{ fontWeight: 600, bgcolor: "grey.50" }}>
+                  Mobile Number
+                </TableCell>
+                <TableCell
+                  sx={{ fontWeight: 600, bgcolor: "grey.50" }}
+                  align="center"
+                >
+                  Actions
+                </TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {employees.map((employee) => (
                 <TableRow
                   key={employee.id}
                   hover
@@ -557,11 +479,11 @@ const Employees = () => {
                     transition: "none",
                   }}
                 >
-                  <TableCell>{employee.employeeNo}</TableCell>
-                  <TableCell>{employee.firstName}</TableCell>
-                  <TableCell>{employee.lastName}</TableCell>
-                  <TableCell>{employee.designation}</TableCell>
-                  <TableCell>{employee.mobileNumber}</TableCell>
+                  <TableCell>{employee.empNo || "-"}</TableCell>
+                  <TableCell>{employee.firstName || "-"}</TableCell>
+                  <TableCell>{employee.lastName || "-"}</TableCell>
+                  <TableCell>{employee.designation || "-"}</TableCell>
+                  <TableCell>{employee.mobileNo || "-"}</TableCell>
                   <TableCell align="center">
                     <Box sx={{ display: "flex", justifyContent: "center" }}>
                       <IconButton
@@ -602,21 +524,22 @@ const Employees = () => {
                   </TableCell>
                 </TableRow>
               ))}
-            {filteredEmployees.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={6} align="center" sx={{ py: 3 }}>
-                  No employees found.
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
+              {employees.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={6} align="center" sx={{ py: 3 }}>
+                    No employees found.
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        )}
       </TableContainer>
 
       <TablePagination
         component="div"
         rowsPerPageOptions={[5, 10, 25]}
-        count={filteredEmployees.length}
+        count={totalRecords}
         rowsPerPage={rowsPerPage}
         page={page}
         onPageChange={handleChangePage}

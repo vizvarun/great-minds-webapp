@@ -122,6 +122,34 @@ const AuthService = {
     const data = localStorage.getItem("dashboardData");
     return data ? JSON.parse(data) : null;
   },
+
+  getUserId: (): number | null => {
+    const profile = localStorage.getItem("userProfile");
+    if (profile) {
+      try {
+        const parsed = JSON.parse(profile);
+        return parsed.userid || null;
+      } catch (e) {
+        console.error("Error parsing user profile:", e);
+        return null;
+      }
+    }
+    return null;
+  },
+
+  getSchoolId: (): number | null => {
+    const profile = localStorage.getItem("userProfile");
+    if (profile) {
+      try {
+        const parsed = JSON.parse(profile);
+        return parsed.schoolid || null;
+      } catch (e) {
+        console.error("Error parsing user profile:", e);
+        return null;
+      }
+    }
+    return null;
+  },
 };
 
 export default AuthService;

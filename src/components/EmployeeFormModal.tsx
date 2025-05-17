@@ -9,15 +9,16 @@ import {
   FormHelperText,
   Grid,
   IconButton,
-  MenuItem,
   Modal,
   Paper,
-  Select,
   TextField,
   Typography,
   FormLabel,
+  InputAdornment,
+  CircularProgress,
 } from "@mui/material";
 import { useEffect, useState } from "react";
+import { validateEmployeePhone } from "../services/employeeService";
 
 interface EmployeeFormData {
   id?: number;
@@ -26,6 +27,8 @@ interface EmployeeFormData {
   lastName: string;
   designation: string;
   mobileNumber: string;
+  middleName?: string;
+  email?: string;
 }
 
 const initialFormData: EmployeeFormData = {
@@ -34,6 +37,8 @@ const initialFormData: EmployeeFormData = {
   lastName: "",
   designation: "",
   mobileNumber: "",
+  middleName: "",
+  email: "",
 };
 
 interface EmployeeFormModalProps {
@@ -43,30 +48,6 @@ interface EmployeeFormModalProps {
   employee?: EmployeeFormData;
   isEditMode?: boolean;
 }
-
-// Mock designations for dropdown
-const designations = [
-  "Principal",
-  "Vice Principal",
-  "Administrator",
-  "Teacher",
-  "Librarian",
-  "Accountant",
-  "Office Staff",
-  "Physical Education",
-  "Mathematics Teacher",
-  "Science Teacher",
-  "English Teacher",
-  "History Teacher",
-  "Art Teacher",
-  "Computer Science",
-  "Counselor",
-  "Security",
-  "Janitor",
-  "Bus Driver",
-  "Cafeteria Staff",
-  "Maintenance",
-];
 
 const EmployeeFormModal = ({
   open,
@@ -79,12 +60,25 @@ const EmployeeFormModal = ({
   const [errors, setErrors] = useState<
     Partial<Record<keyof EmployeeFormData, string>>
   >({});
+  const [validateLoading, setValidateLoading] = useState(false);
+  const [phoneValidated, setPhoneValidated] = useState(false);
+  const [fieldsDisabled, setFieldsDisabled] = useState(true);
 
   // Common styles for consistent inputs with increased width
   const inputStyles = {
     borderRadius: 0.5, // Reduced border radius
     width: "100%", // Ensure all inputs have the same width
     minWidth: "250px", // Set a minimum width
+  };
+
+  // Specific styles for disabled inputs
+  const disabledInputStyles = {
+    ...inputStyles,
+    bgcolor: "rgba(0, 0, 0, 0.05)",
+    color: "text.disabled",
+    "& .MuiOutlinedInput-notchedOutline": {
+      borderColor: "rgba(0, 0, 0, 0.15)",
+    },
   };
 
   // Form field container style for consistent sizing
@@ -96,11 +90,63 @@ const EmployeeFormModal = ({
   useEffect(() => {
     if (employee) {
       setFormData({ ...employee });
+      setFieldsDisabled(false); // In edit mode, all fields are enabled
+      setPhoneValidated(true); // In edit mode, phone is already validated
     } else {
       setFormData(initialFormData);
+      setFieldsDisabled(true); // In add mode, fields are initially disabled
+      setPhoneValidated(false); // In add mode, phone is not yet validated
     }
     setErrors({});
-  }, [employee]);
+  }, [employee, isEditMode]);
+
+  const handleValidatePhone = async () => {
+    // Check if the mobile number is valid
+    if (
+      !formData.mobileNumber.trim() ||
+      !/^\d{10}$/.test(formData.mobileNumber)
+    ) {
+      setErrors({
+        ...errors,
+        mobileNumber: "Mobile number must be 10 digits",
+      });
+      return;
+    }
+
+    setValidateLoading(true);
+    try {
+      const result = await validateEmployeePhone(formData.mobileNumber);
+
+      if (result.exists) {
+        // Pre-fill form with existing data
+        setFormData({
+          ...formData,
+          employeeNo: result.employeeNo || "",
+          firstName: result.firstName || "",
+          middleName: result.middleName || "",
+          lastName: result.lastName || "",
+          designation: result.designation || "",
+          email: result.email || "",
+        });
+
+        // Keep fields disabled as we're using existing data
+        setFieldsDisabled(false);
+      } else {
+        // Enable fields for new user input
+        setFieldsDisabled(false);
+      }
+
+      setPhoneValidated(true);
+    } catch (error) {
+      console.error("Error validating phone:", error);
+      setErrors({
+        ...errors,
+        mobileNumber: "Failed to validate phone number",
+      });
+    } finally {
+      setValidateLoading(false);
+    }
+  };
 
   const validateForm = (): boolean => {
     const newErrors: Partial<Record<keyof EmployeeFormData, string>> = {};
@@ -135,6 +181,12 @@ const EmployeeFormModal = ({
       isValid = false;
     }
 
+    // Add validation for phone validation if not in edit mode
+    if (!isEditMode && !phoneValidated) {
+      newErrors.mobileNumber = "Phone number must be validated first";
+      isValid = false;
+    }
+
     setErrors(newErrors);
     return isValid;
   };
@@ -148,21 +200,13 @@ const EmployeeFormModal = ({
       [name]: value,
     });
 
-    // Clear error when field is edited
-    if (errors[name as keyof EmployeeFormData]) {
-      setErrors({
-        ...errors,
-        [name]: undefined,
-      });
+    // If changing phone number, reset validation
+    if (name === "mobileNumber" && phoneValidated) {
+      setPhoneValidated(false);
+      if (!isEditMode) {
+        setFieldsDisabled(true);
+      }
     }
-  };
-
-  const handleSelectChange = (e: any) => {
-    const { name, value } = e.target;
-    setFormData({
-      ...formData,
-      [name]: value,
-    });
 
     // Clear error when field is edited
     if (errors[name as keyof EmployeeFormData]) {
@@ -252,8 +296,36 @@ const EmployeeFormModal = ({
                 helperText={errors.mobileNumber}
                 inputProps={{ maxLength: 10 }}
                 size="small"
+                disabled={validateLoading}
                 InputProps={{
-                  sx: inputStyles,
+                  sx: validateLoading ? disabledInputStyles : inputStyles,
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <Button
+                        onClick={handleValidatePhone}
+                        disabled={
+                          validateLoading || (isEditMode && phoneValidated)
+                        }
+                        size="small"
+                        variant="contained"
+                        disableElevation
+                        sx={{
+                          textTransform: "none",
+                          minWidth: "70px",
+                          height: "30px",
+                          fontSize: "0.75rem",
+                        }}
+                      >
+                        {validateLoading ? (
+                          <CircularProgress size={16} color="inherit" />
+                        ) : phoneValidated ? (
+                          "Validated"
+                        ) : (
+                          "Validate"
+                        )}
+                      </Button>
+                    </InputAdornment>
+                  ),
                 }}
               />
             </Grid>
@@ -271,10 +343,13 @@ const EmployeeFormModal = ({
                 placeholder="Enter employee ID"
                 error={!!errors.employeeNo}
                 helperText={errors.employeeNo}
-                disabled={isEditMode}
+                disabled={isEditMode || fieldsDisabled}
                 size="small"
                 InputProps={{
-                  sx: inputStyles,
+                  sx:
+                    isEditMode || fieldsDisabled
+                      ? disabledInputStyles
+                      : inputStyles,
                 }}
               />
             </Grid>
@@ -292,9 +367,29 @@ const EmployeeFormModal = ({
                 placeholder="Enter first name"
                 error={!!errors.firstName}
                 helperText={errors.firstName}
+                disabled={fieldsDisabled}
                 size="small"
                 InputProps={{
-                  sx: inputStyles,
+                  sx: fieldsDisabled ? disabledInputStyles : inputStyles,
+                }}
+              />
+            </Grid>
+
+            <Grid item xs={12} sm={6} sx={fieldContainerStyle}>
+              <FormLabel sx={{ mb: 1, display: "block", fontWeight: 500 }}>
+                Middle Name
+              </FormLabel>
+              <TextField
+                name="middleName"
+                value={formData.middleName || ""}
+                onChange={handleChange}
+                fullWidth
+                variant="outlined"
+                placeholder="Enter middle name (optional)"
+                disabled={fieldsDisabled}
+                size="small"
+                InputProps={{
+                  sx: fieldsDisabled ? disabledInputStyles : inputStyles,
                 }}
               />
             </Grid>
@@ -312,9 +407,29 @@ const EmployeeFormModal = ({
                 placeholder="Enter last name"
                 error={!!errors.lastName}
                 helperText={errors.lastName}
+                disabled={fieldsDisabled}
                 size="small"
                 InputProps={{
-                  sx: inputStyles,
+                  sx: fieldsDisabled ? disabledInputStyles : inputStyles,
+                }}
+              />
+            </Grid>
+
+            <Grid item xs={12} sm={6} sx={fieldContainerStyle}>
+              <FormLabel sx={{ mb: 1, display: "block", fontWeight: 500 }}>
+                Email
+              </FormLabel>
+              <TextField
+                name="email"
+                value={formData.email || ""}
+                onChange={handleChange}
+                fullWidth
+                variant="outlined"
+                placeholder="Enter email (optional)"
+                disabled={fieldsDisabled}
+                size="small"
+                InputProps={{
+                  sx: fieldsDisabled ? disabledInputStyles : inputStyles,
                 }}
               />
             </Grid>
@@ -323,33 +438,21 @@ const EmployeeFormModal = ({
               <FormLabel sx={{ mb: 1, display: "block", fontWeight: 500 }}>
                 Designation
               </FormLabel>
-              <FormControl fullWidth error={!!errors.designation} size="small">
-                <Select
-                  id="designation"
-                  name="designation"
-                  value={formData.designation}
-                  onChange={handleSelectChange}
-                  displayEmpty
-                  sx={{
-                    ...inputStyles,
-                    "& .MuiSelect-select": {
-                      width: "100%",
-                    },
-                  }}
-                >
-                  <MenuItem disabled value="">
-                    Select designation
-                  </MenuItem>
-                  {designations.map((designation) => (
-                    <MenuItem key={designation} value={designation}>
-                      {designation}
-                    </MenuItem>
-                  ))}
-                </Select>
-                {errors.designation && (
-                  <FormHelperText>{errors.designation}</FormHelperText>
-                )}
-              </FormControl>
+              <TextField
+                name="designation"
+                value={formData.designation}
+                onChange={handleChange}
+                fullWidth
+                variant="outlined"
+                placeholder="Enter designation"
+                error={!!errors.designation}
+                helperText={errors.designation}
+                disabled={fieldsDisabled}
+                size="small"
+                InputProps={{
+                  sx: fieldsDisabled ? disabledInputStyles : inputStyles,
+                }}
+              />
             </Grid>
           </Grid>
 
@@ -399,7 +502,8 @@ const EmployeeFormModal = ({
               type="submit"
               variant="contained"
               disableElevation
-              disableRipple // Disable ripple effect
+              disableRipple
+              disabled={!isEditMode && !phoneValidated}
               sx={{
                 px: 3,
                 py: 1,
@@ -409,7 +513,7 @@ const EmployeeFormModal = ({
                 color: "white",
                 backgroundImage: "none",
                 outline: "none",
-                transition: "none", // Remove all transition effects
+                transition: "none",
                 "&:hover": {
                   backgroundImage: "none",
                   background: (theme) => theme.palette.primary.main,
@@ -421,7 +525,7 @@ const EmployeeFormModal = ({
                   boxShadow: "none",
                 },
                 "&:active": {
-                  transform: "none", // Prevent any transform on click
+                  transform: "none",
                   boxShadow: "none",
                 },
               }}
