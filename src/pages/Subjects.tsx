@@ -6,6 +6,7 @@ import {
   Alert,
   Box,
   Button,
+  CircularProgress,
   Divider,
   IconButton,
   InputAdornment,
@@ -21,45 +22,22 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
-import { useState } from "react";
-
-// Mock data for subjects
-interface Subject {
-  id: number;
-  name: string;
-}
-
-const mockSubjects: Subject[] = [
-  { id: 1, name: "English" },
-  { id: 2, name: "Hindi" },
-  { id: 3, name: "Mathematics" },
-  { id: 4, name: "Science" },
-  { id: 5, name: "Social Studies" },
-  { id: 6, name: "Physics" },
-  { id: 7, name: "Chemistry" },
-  { id: 8, name: "Biology" },
-  { id: 9, name: "Accountancy" },
-  { id: 10, name: "Business Studies" },
-  { id: 11, name: "Economics" },
-  { id: 12, name: "History" },
-  { id: 13, name: "Political Science" },
-  { id: 14, name: "Geography" },
-  { id: 15, name: "Computer Science" },
-  { id: 16, name: "Physical Education" },
-  { id: 17, name: "Art" },
-  { id: 18, name: "Music" },
-];
+import { useState, useEffect } from "react";
+import { getSubjects, createSubject, updateSubject, deleteSubject } from "../services/subjectService";
+import type { Subject } from "../services/subjectService";
 
 const Subjects = () => {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [searchQuery, setSearchQuery] = useState("");
-  const [subjects, setSubjects] = useState<Subject[]>(mockSubjects);
+  const [subjects, setSubjects] = useState<Subject[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [subjectName, setSubjectName] = useState("");
   const [editSubjectId, setEditSubjectId] = useState<number | null>(null);
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [totalRecords, setTotalRecords] = useState(0);
 
   // Toast notification states
   const [toastOpen, setToastOpen] = useState(false);
@@ -72,9 +50,30 @@ const Subjects = () => {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [subjectToDelete, setSubjectToDelete] = useState<Subject | null>(null);
 
+  // Fetch subjects on component mount and when pagination changes
+  useEffect(() => {
+    fetchSubjects();
+  }, [page, rowsPerPage]);
+
+  const fetchSubjects = async () => {
+    setLoading(true);
+    try {
+      const response = await getSubjects(page, rowsPerPage);
+      setSubjects(response.subjects || []);
+      setTotalRecords(response.total_records || 0);
+    } catch (error) {
+      console.error("Error fetching subjects:", error);
+      showToast("Failed to load subjects", "error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Filter subjects based on search query
   const filteredSubjects = subjects.filter((subject) =>
-    subject.name.toLowerCase().includes(searchQuery.toLowerCase())
+    subject && subject.subjectName 
+      ? subject.subjectName.toLowerCase().includes(searchQuery.toLowerCase())
+      : false
   );
 
   const handleChangePage = (_: unknown, newPage: number) => {
@@ -90,7 +89,7 @@ const Subjects = () => {
 
   const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setSearchQuery(event.target.value);
-    setPage(0);
+    // Don't reset page for client-side filtering
   };
 
   const handleAddSubject = () => {
@@ -105,7 +104,7 @@ const Subjects = () => {
     const subject = subjects.find((s) => s.id === id);
     if (subject) {
       setIsEditMode(true);
-      setSubjectName(subject.name);
+      setSubjectName(subject.subjectName);
       setEditSubjectId(id);
       setError("");
       setModalOpen(true);
@@ -118,14 +117,20 @@ const Subjects = () => {
     setIsDeleteModalOpen(true);
   };
 
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     if (subjectToDelete) {
-      setSubjects(subjects.filter((s) => s.id !== subjectToDelete.id));
-      setToastMessage(`Subject "${subjectToDelete.name}" deleted`);
-      setToastSeverity("success");
-      setToastOpen(true);
-      setIsDeleteModalOpen(false);
-      setSubjectToDelete(null);
+      try {
+        await deleteSubject(subjectToDelete.id);
+        
+        // Update local state to remove the deleted subject
+        setSubjects(subjects.filter((s) => s.id !== subjectToDelete.id));
+        showToast(`Subject "${subjectToDelete.subjectName}" deleted`, "success");
+      } catch (error) {
+        showToast("Failed to delete subject", "error");
+      } finally {
+        setIsDeleteModalOpen(false);
+        setSubjectToDelete(null);
+      }
     }
   };
 
@@ -141,32 +146,61 @@ const Subjects = () => {
     setError("");
   };
 
-  const handleModalSave = () => {
+  const handleModalSave = async () => {
     if (!subjectName.trim()) {
       setError("Subject name is required");
       return;
     }
-    if (isEditMode && editSubjectId !== null) {
-      setSubjects(
-        subjects.map((s) =>
-          s.id === editSubjectId ? { ...s, name: subjectName } : s
-        )
+
+    try {
+      if (isEditMode && editSubjectId !== null) {
+        // Update existing subject
+        const updatedSubject = await updateSubject(
+          editSubjectId, 
+          subjectName, 
+          fetchSubjects // Pass fetchSubjects as a callback to refresh data
+        );
+        
+        // Also update the local state to ensure the UI stays consistent
+        setSubjects(prevSubjects => 
+          prevSubjects.map(subject => 
+            subject.id === editSubjectId 
+              ? { ...subject, subjectName: updatedSubject.subjectName } 
+              : subject
+          )
+        );
+        
+        showToast("Subject updated successfully", "success");
+      } else {
+        // Add new subject
+        const newSubject = await createSubject(
+          subjectName, 
+          fetchSubjects // Pass fetchSubjects as a callback to refresh data
+        );
+        
+        // Also update local state
+        setSubjects(prevSubjects => [...prevSubjects, newSubject]);
+        
+        showToast("Subject added successfully", "success");
+      }
+      
+      // Close modal and reset state
+      setModalOpen(false);
+      setSubjectName("");
+      setEditSubjectId(null);
+      setError("");
+    } catch (error) {
+      showToast(
+        isEditMode ? "Failed to update subject" : "Failed to add subject",
+        "error"
       );
-      setToastMessage("Subject updated successfully");
-      setToastSeverity("success");
-      setToastOpen(true);
-    } else {
-      const newId =
-        subjects.length > 0 ? Math.max(...subjects.map((s) => s.id)) + 1 : 1;
-      setSubjects([...subjects, { id: newId, name: subjectName }]);
-      setToastMessage("Subject added successfully");
-      setToastSeverity("success");
-      setToastOpen(true);
     }
-    setModalOpen(false);
-    setSubjectName("");
-    setEditSubjectId(null);
-    setError("");
+  };
+
+  const showToast = (message: string, severity: "success" | "info" | "warning" | "error") => {
+    setToastMessage(message);
+    setToastSeverity(severity);
+    setToastOpen(true);
   };
 
   const handleCloseToast = (
@@ -187,10 +221,10 @@ const Subjects = () => {
         borderRadius: 0.5,
         border: 1,
         borderColor: "grey.200",
-        height: "calc(100% - 16px)", // Account for the parent padding
+        height: "calc(100% - 16px)",
         display: "flex",
         flexDirection: "column",
-        overflow: "hidden", // Prevent the Paper component from scrolling
+        overflow: "hidden",
       }}
     >
       {/* Fixed Header Section */}
@@ -276,26 +310,37 @@ const Subjects = () => {
           maxHeight: "calc(100% - 120px)",
         }}
       >
-        <Table stickyHeader sx={{ minWidth: 500 }}>
-          <TableHead>
-            <TableRow sx={{ backgroundColor: "grey.50" }}>
-              <TableCell
-                sx={{ fontWeight: 600, bgcolor: "grey.50", width: "70%" }}
-              >
-                Subject
-              </TableCell>
-              <TableCell
-                sx={{ fontWeight: 600, bgcolor: "grey.50", width: "30%" }}
-                align="center"
-              >
-                Actions
-              </TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {filteredSubjects
-              .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-              .map((subject) => (
+        {loading ? (
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              height: "100%",
+              p: 4,
+            }}
+          >
+            <CircularProgress />
+          </Box>
+        ) : (
+          <Table stickyHeader sx={{ minWidth: 500 }}>
+            <TableHead>
+              <TableRow sx={{ backgroundColor: "grey.50" }}>
+                <TableCell
+                  sx={{ fontWeight: 600, bgcolor: "grey.50", width: "70%" }}
+                >
+                  Subject
+                </TableCell>
+                <TableCell
+                  sx={{ fontWeight: 600, bgcolor: "grey.50", width: "30%" }}
+                  align="center"
+                >
+                  Actions
+                </TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {filteredSubjects.map((subject) => (
                 <TableRow
                   key={subject.id}
                   hover
@@ -306,7 +351,7 @@ const Subjects = () => {
                     transition: "none",
                   }}
                 >
-                  <TableCell>{subject.name}</TableCell>
+                  <TableCell>{subject.subjectName}</TableCell>
                   <TableCell align="center">
                     <Box sx={{ display: "flex", justifyContent: "center" }}>
                       <IconButton
@@ -347,22 +392,23 @@ const Subjects = () => {
                   </TableCell>
                 </TableRow>
               ))}
-            {filteredSubjects.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={2} align="center" sx={{ py: 3 }}>
-                  No subjects found.
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
+              {filteredSubjects.length === 0 && !loading && (
+                <TableRow>
+                  <TableCell colSpan={2} align="center" sx={{ py: 3 }}>
+                    No subjects found.
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        )}
       </TableContainer>
 
       {/* Fixed Pagination Section */}
       <TablePagination
         component="div"
         rowsPerPageOptions={[5, 10, 25]}
-        count={filteredSubjects.length}
+        count={totalRecords}
         rowsPerPage={rowsPerPage}
         page={page}
         onPageChange={handleChangePage}
@@ -549,7 +595,7 @@ const Subjects = () => {
             </Typography>
             <Typography variant="body1" sx={{ mb: 3, textAlign: "center" }}>
               Are you sure you want to delete{" "}
-              <strong>{subjectToDelete?.name}</strong>? This action cannot be
+              <strong>{subjectToDelete?.subjectName}</strong>? This action cannot be
               undone.
             </Typography>
             <Box sx={{ display: "flex", justifyContent: "center", gap: 2 }}>
