@@ -5,20 +5,24 @@ import {
   Stack,
   TextField,
   Typography,
+  Alert,
 } from "@mui/material";
 import { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import logo from "../assets/logo.png";
 import mainBg from "../assets/main-bg.png";
+import AuthService from "../services/auth";
 
 const VerifyOTP = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const mobileNumber = location.state?.mobileNumber || "";
-  const [otp, setOtp] = useState<string[]>(["", "", "", "", "", ""]); // Updated to 6 digits
+  const [otp, setOtp] = useState<string[]>(["", "", "", "", "", ""]); // 6 digits
   const [error, setError] = useState("");
+  const [apiError, setApiError] = useState("");
   const [timer, setTimer] = useState(30);
   const [canResend, setCanResend] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   const inputRefs = useRef<Array<HTMLInputElement | null>>([]);
   const isMobile = window.innerWidth <= 768;
@@ -43,84 +47,81 @@ const VerifyOTP = () => {
     return () => clearInterval(interval);
   }, [mobileNumber, navigate]);
 
-  const handleInputChange = (index: number, value: string) => {
-    if (value.length > 1) {
-      value = value.charAt(value.length - 1);
-    }
-
-    if (!/^[0-9]*$/.test(value) && value !== "") {
-      return;
-    }
+  const handleChange = (index: number, value: string) => {
+    // Only allow digits
+    if (value !== "" && !/^[0-9]$/.test(value)) return;
 
     const newOtp = [...otp];
     newOtp[index] = value;
     setOtp(newOtp);
     setError("");
+    setApiError("");
 
-    if (value && index < 5) {
+    // Auto-advance to next field
+    if (value !== "" && index < 5) {
       inputRefs.current[index + 1]?.focus();
     }
   };
 
   const handleKeyDown = (index: number, e: React.KeyboardEvent) => {
-    if (e.key === "Backspace" && !otp[index] && index > 0) {
+    // Move to previous field on backspace if current field is empty
+    if (e.key === "Backspace" && otp[index] === "" && index > 0) {
       inputRefs.current[index - 1]?.focus();
     }
   };
 
-  const handlePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const pastedData = e.clipboardData.getData("text/plain").trim();
-
-    if (/^\d{6}$/.test(pastedData)) {
-      // Changed to expect 6 digits
-      const newOtp = pastedData.split("");
-      setOtp(newOtp);
-
-      inputRefs.current[5]?.focus(); // Changed to focus last input (index 5)
-    }
-  };
-
-  const handleResendOTP = () => {
-    if (!canResend) return;
-
-    setOtp(["", "", "", "", "", ""]); // Reset 6 digits
-    setError("");
-    setCanResend(false);
-    setTimer(30);
-
-    const interval = setInterval(() => {
-      setTimer((prevTimer) => {
-        if (prevTimer <= 1) {
-          clearInterval(interval);
-          setCanResend(true);
-          return 0;
-        }
-        return prevTimer - 1;
-      });
-    }, 1000);
-
-    console.log("Resending OTP to", mobileNumber);
-
-    inputRefs.current[0]?.focus();
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-
     const otpValue = otp.join("");
 
     if (otpValue.length !== 6) {
-      // Changed validation to expect 6 digits
-      setError("Please enter the 6-digit OTP");
+      setError("Please enter a valid 6-digit OTP");
       return;
     }
 
-    console.log("Verifying OTP:", otpValue, "for mobile number:", mobileNumber);
+    try {
+      setIsLoading(true);
+      setApiError("");
 
-    localStorage.setItem("isAuthenticated", "true");
+      // Call the verifyOTP API
+      const response = await AuthService.verifyOTP({
+        mobile_number: mobileNumber,
+        otp: otpValue,
+      });
 
-    navigate("/dashboard");
+      // If verification successful, navigate to dashboard
+      navigate("/dashboard");
+    } catch (err: any) {
+      console.error("OTP verification error:", err);
+      setApiError(
+        err.response?.data?.message || "Invalid OTP. Please try again."
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleResendOTP = async () => {
+    try {
+      setApiError("");
+      await AuthService.login({
+        mobile_number: mobileNumber,
+        device_id: "web",
+        bypass_otp: true,
+      });
+
+      setTimer(30);
+      setCanResend(false);
+      // Reset the OTP fields
+      setOtp(["", "", "", "", "", ""]);
+      // Focus on the first input
+      inputRefs.current[0]?.focus();
+    } catch (err: any) {
+      console.error("Resend OTP error:", err);
+      setApiError(
+        err.response?.data?.message || "Failed to resend OTP. Please try again."
+      );
+    }
   };
 
   const formattedMobile = mobileNumber
@@ -203,7 +204,7 @@ const VerifyOTP = () => {
           </Typography>
 
           <Typography variant="body2" color="#666666" sx={{ mb: 2 }}>
-            Please enter the 6-digit code sent to {/* Updated text */}
+            Please enter the 6-digit code sent to
           </Typography>
 
           <Typography
@@ -229,41 +230,37 @@ const VerifyOTP = () => {
               justifyContent="space-between"
               sx={{ mb: 3 }}
             >
-              {[0, 1, 2, 3, 4, 5].map(
-                (
-                  digit // Updated to 6 digits
-                ) => (
-                  <TextField
-                    key={`otp-field-${digit}`}
-                    inputRef={(ref) => (inputRefs.current[digit] = ref)}
-                    variant="outlined"
-                    value={otp[digit]}
-                    onChange={(e) => handleInputChange(digit, e.target.value)}
-                    onKeyDown={(e) => handleKeyDown(digit, e)}
-                    onPaste={digit === 0 ? handlePaste : undefined}
-                    sx={{
-                      width: "45px", // Made boxes slightly smaller to fit 6
-                      "& .MuiInputBase-input": {
-                        textAlign: "center",
-                        fontWeight: "bold",
-                        fontSize: "1.3rem", // Slightly smaller font
-                        p: 1.25,
-                        height: "35px",
+              {[0, 1, 2, 3, 4, 5].map((digit) => (
+                <TextField
+                  key={`otp-field-${digit}`}
+                  inputRef={(ref) => (inputRefs.current[digit] = ref)}
+                  variant="outlined"
+                  value={otp[digit]}
+                  onChange={(e) => handleChange(digit, e.target.value)}
+                  onKeyDown={(e) => handleKeyDown(digit, e)}
+                  onPaste={digit === 0 ? handlePaste : undefined}
+                  sx={{
+                    width: "45px",
+                    "& .MuiInputBase-input": {
+                      textAlign: "center",
+                      fontWeight: "bold",
+                      fontSize: "1.3rem",
+                      p: 1.25,
+                      height: "35px",
+                    },
+                    "& .MuiOutlinedInput-root": {
+                      borderRadius: 0.5,
+                      "&:hover .MuiOutlinedInput-notchedOutline": {
+                        borderColor: "rgba(0, 0, 0, 0.23)",
                       },
-                      "& .MuiOutlinedInput-root": {
-                        borderRadius: 0.5,
-                        "&:hover .MuiOutlinedInput-notchedOutline": {
-                          borderColor: "rgba(0, 0, 0, 0.23)",
-                        },
-                      },
-                    }}
-                    inputProps={{
-                      maxLength: 1,
-                      autoComplete: "off",
-                    }}
-                  />
-                )
-              )}
+                    },
+                  }}
+                  inputProps={{
+                    maxLength: 1,
+                    autoComplete: "off",
+                  }}
+                />
+              ))}
             </Stack>
 
             {error && (
@@ -276,11 +273,18 @@ const VerifyOTP = () => {
               </Typography>
             )}
 
+            {apiError && (
+              <Alert severity="error" sx={{ mb: 2 }}>
+                {apiError}
+              </Alert>
+            )}
+
             <Button
               type="submit"
               fullWidth
               variant="contained"
               disableElevation
+              disabled={isLoading}
               sx={{
                 py: 1.5,
                 borderRadius: 0.5,
@@ -294,7 +298,7 @@ const VerifyOTP = () => {
                 },
               }}
             >
-              Verify
+              {isLoading ? "Verifying..." : "Verify"}
             </Button>
 
             <Box

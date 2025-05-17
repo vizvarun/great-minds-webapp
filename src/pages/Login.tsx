@@ -2,20 +2,25 @@ import PhoneAndroidIcon from "@mui/icons-material/PhoneAndroid";
 import {
   Box,
   Button,
+  CircularProgress,
   InputAdornment,
   TextField,
   Typography,
   useMediaQuery,
   useTheme,
+  Alert,
 } from "@mui/material";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import logo from "../assets/logo.png";
 import mainBg from "../assets/main-bg.png";
+import AuthService from "../services/auth";
 
 const Login = () => {
   const [mobileNumber, setMobileNumber] = useState("");
   const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [apiError, setApiError] = useState("");
   const navigate = useNavigate();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
@@ -26,12 +31,14 @@ const Login = () => {
     if (value === "" || /^[0-9\b]+$/.test(value)) {
       setMobileNumber(value);
       setError("");
+      setApiError("");
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    // Client-side validation
     if (!mobileNumber) {
       setError("Mobile number is required");
       return;
@@ -42,11 +49,35 @@ const Login = () => {
       return;
     }
 
-    // TODO: Call API to send OTP to the mobile number
-    console.log("Sending OTP to", mobileNumber);
+    try {
+      setIsLoading(true);
+      setApiError("");
 
-    // Navigate to OTP verification page
-    navigate("/verify-otp", { state: { mobileNumber } });
+      // Call the login API
+      await AuthService.login({
+        mobile_number: mobileNumber,
+        device_id: "web", // Using "web" as device ID
+        bypass_otp: true, // Bypass OTP for now
+      });
+
+      // If login successful, navigate to OTP verification
+      // or if bypassing OTP, navigate to dashboard
+      if (true) {
+        // Since bypass_otp is true
+        // Mock successful authentication for now
+        localStorage.setItem("isAuthenticated", "true");
+        navigate("/dashboard");
+      } else {
+        navigate("/verify-otp", { state: { mobileNumber } });
+      }
+    } catch (err: any) {
+      console.error("Login error:", err);
+      setApiError(
+        err.response?.data?.message || "Failed to send OTP. Please try again."
+      );
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -132,6 +163,12 @@ const Login = () => {
           </Typography>
 
           <Box component="form" noValidate onSubmit={handleSubmit}>
+            {apiError && (
+              <Alert severity="error" sx={{ mb: 2 }}>
+                {apiError}
+              </Alert>
+            )}
+
             <Typography
               variant="body2"
               color="text.secondary"
@@ -177,6 +214,7 @@ const Login = () => {
               fullWidth
               variant="contained"
               disableElevation
+              disabled={isLoading}
               sx={{
                 py: 1.5,
                 borderRadius: 0.5,
@@ -190,7 +228,11 @@ const Login = () => {
                 },
               }}
             >
-              Continue
+              {isLoading ? (
+                <CircularProgress size={24} color="inherit" />
+              ) : (
+                "Continue"
+              )}
             </Button>
 
             <Typography

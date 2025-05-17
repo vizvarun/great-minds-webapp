@@ -2,6 +2,7 @@ import LogoutIcon from "@mui/icons-material/Logout";
 import { AppBar, Box, Button, Toolbar, Typography } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import logo from "../assets/logo.png";
+import AuthService from "../services/auth";
 
 interface HeaderProps {
   schoolName: string;
@@ -12,7 +13,7 @@ const Header = ({ schoolName, username }: HeaderProps) => {
   const navigate = useNavigate();
 
   const handleLogout = () => {
-    localStorage.removeItem("isAuthenticated");
+    AuthService.logout();
     navigate("/login");
   };
 

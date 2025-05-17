@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { Navigate, useLocation } from "react-router-dom";
+import AuthService from "../services/auth";
 
 interface ProtectedRouteProps {
   children: ReactNode;
@@ -8,8 +9,8 @@ interface ProtectedRouteProps {
 const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
   const location = useLocation();
 
-  // TODO: Implement proper authentication check using auth context/service
-  const isAuthenticated = localStorage.getItem("isAuthenticated") === "true";
+  // Use AuthService to check authentication
+  const isAuthenticated = AuthService.isAuthenticated();
 
   if (!isAuthenticated) {
     // Redirect to login page if not authenticated
