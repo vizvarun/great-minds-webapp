@@ -1,5 +1,3 @@
-// @ts-nocheck
-
 import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 import {
   Alert,
@@ -56,7 +54,7 @@ const SchoolProfile = () => {
 
   // Handle image upload
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files?.[0]) {
+    if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       setImageFile(file);
 
@@ -111,7 +109,8 @@ const SchoolProfile = () => {
 
       <Box component="form" onSubmit={handleSubmit} sx={{ flexGrow: 1 }}>
         <Grid container spacing={4}>
-          <Grid item xs={12} md={4} sx={{ width: "30%" }}>
+          {/* Left side - Logo upload */}
+          <Grid item xs={12} md={4} width={"30%"}>
             <Paper
               elevation={0}
               variant="outlined"
@@ -199,7 +198,7 @@ const SchoolProfile = () => {
               </Typography>
             </Paper>
           </Grid>
-          <Grid item xs={12} md={8} sx={{ width: "65%" }}>
+          <Grid item xs={12} md={8} width={"65%"}>
             <Paper
               elevation={0}
               variant="outlined"
@@ -240,7 +239,7 @@ const SchoolProfile = () => {
                     placeholder="Enter school name"
                     label="" // Remove overlapping label
                     sx={{ width: "100%" }}
-                    slotProps={{ input: { style: { width: "100%" } } }}
+                    inputProps={{ style: { width: "100%" } }}
                   />
                 </Box>
 
@@ -263,7 +262,7 @@ const SchoolProfile = () => {
                     rows={4}
                     label="" // Remove overlapping label
                     sx={{ width: "100%" }}
-                    slotProps={{ input: { style: { width: "100%" } } }}
+                    inputProps={{ style: { width: "100%" } }}
                   />
                 </Box>
               </Box>

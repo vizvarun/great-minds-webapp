@@ -1,5 +1,3 @@
-// @ts-nocheck
-
 import CalendarTodayIcon from "@mui/icons-material/CalendarToday";
 import {
   Box,
@@ -21,7 +19,6 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
-import type { SelectChangeEvent } from "@mui/material/Select";
 import { useEffect, useState } from "react";
 
 // Mock data for classes
@@ -165,13 +162,15 @@ const AttendanceReport = () => {
   }, [selectedClass]);
 
   // Handle form input changes
-  const handleClassChange = (event: SelectChangeEvent) => {
-    setSelectedClass(event.target.value);
+  const handleClassChange = (event: React.ChangeEvent<{ value: unknown }>) => {
+    setSelectedClass(event.target.value as string);
     setReportGenerated(false);
   };
 
-  const handleSectionChange = (event: SelectChangeEvent) => {
-    setSelectedSection(event.target.value);
+  const handleSectionChange = (
+    event: React.ChangeEvent<{ value: unknown }>
+  ) => {
+    setSelectedSection(event.target.value as string);
     setReportGenerated(false);
   };
 
@@ -190,8 +189,8 @@ const AttendanceReport = () => {
     const sectionId = parseInt(selectedSection);
 
     // Get class and section names for display
-    const className = mockClasses.find((c) => c.id === classId)?.name ?? "";
-    const sectionName = sections.find((s) => s.id === sectionId)?.name ?? "";
+    const className = mockClasses.find((c) => c.id === classId)?.name || "";
+    const sectionName = sections.find((s) => s.id === sectionId)?.name || "";
 
     // Generate attendance data
     const data = generateMockAttendanceData(
@@ -355,15 +354,12 @@ const AttendanceReport = () => {
               value={selectedMonthYear}
               onChange={handleMonthYearChange}
               fullWidth
-              slotProps={{
-                input: {
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <CalendarTodayIcon fontSize="small" />
-                    </InputAdornment>
-                  ),
-                  type: "month",
-                },
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <CalendarTodayIcon fontSize="small" />
+                  </InputAdornment>
+                ),
               }}
               sx={{
                 transition: "none",
@@ -372,6 +368,9 @@ const AttendanceReport = () => {
                     borderColor: "rgba(0, 0, 0, 0.23)",
                   },
                 },
+              }}
+              inputProps={{
+                type: "month",
               }}
               placeholder="Select month and year"
             />
