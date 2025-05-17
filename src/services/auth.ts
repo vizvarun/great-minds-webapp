@@ -56,7 +56,7 @@ interface OTPVerifyResponse {
 const AuthService = {
   login: async (payload: LoginPayload) => {
     const response = await api.post<{ message: string }>(
-      "/auth/send-otp",
+      "/web/auth/send-otp",
       {}, // Empty body
       { params: payload } // Send as query params instead
     );
@@ -65,7 +65,7 @@ const AuthService = {
 
   verifyOTP: async (payload: VerifyOTPPayload) => {
     const response = await api.post<OTPVerifyResponse>(
-      "/auth/verify-otp",
+      "/web/auth/verify-otp",
       {},
       { params: payload }
     );
@@ -79,7 +79,7 @@ const AuthService = {
   },
 
   getUserProfile: async () => {
-    const response = await api.get<ProfileResponse>("/user/profile");
+    const response = await api.get<ProfileResponse>("/web/user/profile");
 
     if (response.data.status) {
       // Store user profile data in localStorage

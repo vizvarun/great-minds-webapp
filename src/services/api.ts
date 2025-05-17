@@ -1,6 +1,7 @@
 //@ts-nocheck
 
-import axios, {
+import axios from "axios";
+import type {
   AxiosError,
   AxiosResponse,
   InternalAxiosRequestConfig,
@@ -8,7 +9,7 @@ import axios, {
 
 // Create axios instance with default config
 const api = axios.create({
-  baseURL: "https://vocal-highly-firefly.ngrok-free.app/api/v1/web",
+  baseURL: "https://vocal-highly-firefly.ngrok-free.app/api/v1/",
   headers: {
     "Content-Type": "application/json",
   },
