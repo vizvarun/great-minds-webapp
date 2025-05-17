@@ -30,38 +30,20 @@ import {
   Alert,
   Snackbar,
 } from "@mui/material";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import {
+  getClasses,
+  createClass,
+  updateClass,
+  deleteClass,
+} from "../services/classService";
+import type { Class } from "../services/classService";
 
 // Mock data for classes
-interface Class {
-  id: number;
-  name: string;
-  subjectIds: number[]; // IDs of subjects mapped to this class
-}
-
 interface Subject {
   id: number;
   name: string;
 }
-
-const mockClasses: Class[] = [
-  { id: 1, name: "Class 1", subjectIds: [1, 2] },
-  { id: 2, name: "Class 2", subjectIds: [1, 3, 4] },
-  { id: 3, name: "Class 3", subjectIds: [2, 3, 5] },
-  { id: 4, name: "Class 4", subjectIds: [1, 4, 5] },
-  { id: 5, name: "Class 5", subjectIds: [2, 3, 4] },
-  { id: 6, name: "Class 6", subjectIds: [1, 2, 5] },
-  { id: 7, name: "Class 7", subjectIds: [3, 4] },
-  { id: 8, name: "Class 8", subjectIds: [1, 5] },
-  { id: 9, name: "Class 9", subjectIds: [2, 4] },
-  { id: 10, name: "Class 10", subjectIds: [1, 3, 5] },
-  { id: 11, name: "Class 11 - Science", subjectIds: [6, 7, 8] },
-  { id: 12, name: "Class 11 - Commerce", subjectIds: [9, 10, 11] },
-  { id: 13, name: "Class 11 - Arts", subjectIds: [12, 13, 14] },
-  { id: 14, name: "Class 12 - Science", subjectIds: [6, 7, 8] },
-  { id: 15, name: "Class 12 - Commerce", subjectIds: [9, 10, 11] },
-  { id: 16, name: "Class 12 - Arts", subjectIds: [12, 13, 14] },
-];
 
 const mockSubjects: Subject[] = [
   { id: 1, name: "English" },
@@ -89,12 +71,9 @@ const Classes = () => {
   const [selectedSubjects, setSelectedSubjects] = useState<number[]>([]);
 
   // New states for handling class operations
-  const [classes, setClasses] = useState<Class[]>(mockClasses);
-  const [isClassModalOpen, setIsClassModalOpen] = useState(false);
-  const [isEditMode, setIsEditMode] = useState(false);
-  const [classFormData, setClassFormData] = useState<{ name: string }>({
-    name: "",
-  });
+  const [classes, setClasses] = useState<Class[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [totalRecords, setTotalRecords] = useState(0);
 
   // State for delete confirmation
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -108,9 +87,39 @@ const Classes = () => {
     timestamp: Date.now(),
   });
 
+  // State for class modal
+  const [isClassModalOpen, setIsClassModalOpen] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [classFormData, setClassFormData] = useState<{ name: string }>({
+    name: "",
+  });
+
+  // Fetch classes when component mounts
+  useEffect(() => {
+    fetchClasses();
+  }, []);
+
+  const fetchClasses = async () => {
+    setLoading(true);
+    try {
+      const response = await getClasses();
+      setClasses(response.data);
+      setTotalRecords(response.total_records);
+    } catch (error) {
+      setNotification({
+        open: true,
+        message: "Failed to load classes",
+        severity: "error",
+        timestamp: Date.now(),
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Filter classes based on search query
   const filteredClasses = classes.filter((cls) =>
-    cls.name.toLowerCase().includes(searchQuery.toLowerCase())
+    cls.classname.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const handleChangePage = (_: unknown, newPage: number) => {
@@ -148,7 +157,7 @@ const Classes = () => {
     const classToEdit = classes.find((cls) => cls.id === id);
     if (classToEdit) {
       setIsEditMode(true);
-      setClassFormData({ name: classToEdit.name });
+      setClassFormData({ name: classToEdit.classname });
       setSelectedClass(classToEdit);
       setIsClassModalOpen(true);
     }
@@ -173,27 +182,36 @@ const Classes = () => {
   };
 
   // Confirm and perform deletion
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     if (classToDelete) {
-      const updatedClasses = classes.filter(
-        (cls) => cls.id !== classToDelete.id
-      );
-      setClasses(updatedClasses);
+      try {
+        await deleteClass(classToDelete.id);
 
-      setNotification({
-        open: true,
-        message: `${classToDelete.name} has been deleted`,
-        severity: "success",
-        timestamp: Date.now(),
-      });
+        // Refresh classes after delete
+        fetchClasses();
 
-      setIsDeleteModalOpen(false);
-      setClassToDelete(null);
+        setNotification({
+          open: true,
+          message: `${classToDelete.classname} has been deleted`,
+          severity: "success",
+          timestamp: Date.now(),
+        });
+
+        setIsDeleteModalOpen(false);
+        setClassToDelete(null);
+      } catch (error) {
+        setNotification({
+          open: true,
+          message: "Failed to delete class",
+          severity: "error",
+          timestamp: Date.now(),
+        });
+      }
     }
   };
 
   // Save new class or update existing one
-  const handleSaveClass = () => {
+  const handleSaveClass = async () => {
     if (!classFormData.name.trim()) {
       setNotification({
         open: true,
@@ -204,39 +222,50 @@ const Classes = () => {
       return;
     }
 
-    if (isEditMode && selectedClass) {
-      // Update existing class
-      const updatedClasses = classes.map((cls) =>
-        cls.id === selectedClass.id ? { ...cls, name: classFormData.name } : cls
-      );
-      setClasses(updatedClasses);
+    try {
+      if (isEditMode && selectedClass) {
+        // Update existing class
+        await updateClass({
+          ...selectedClass,
+          classname: classFormData.name,
+        });
 
+        // Refresh classes after update
+        fetchClasses();
+
+        setNotification({
+          open: true,
+          message: `Class "${classFormData.name}" has been updated`,
+          severity: "success",
+          timestamp: Date.now(),
+        });
+      } else {
+        // Add new class
+        await createClass({
+          classname: classFormData.name,
+          isactive: true,
+        });
+
+        // Refresh classes after adding
+        fetchClasses();
+
+        setNotification({
+          open: true,
+          message: `Class "${classFormData.name}" has been added`,
+          severity: "success",
+          timestamp: Date.now(),
+        });
+      }
+
+      handleCloseClassModal();
+    } catch (error) {
       setNotification({
         open: true,
-        message: `Class "${classFormData.name}" has been updated`,
-        severity: "success",
-        timestamp: Date.now(),
-      });
-    } else {
-      // Add new class
-      const newId = Math.max(...classes.map((cls) => cls.id), 0) + 1;
-      const newClass: Class = {
-        id: newId,
-        name: classFormData.name,
-        subjectIds: [],
-      };
-
-      setClasses([...classes, newClass]);
-
-      setNotification({
-        open: true,
-        message: `Class "${classFormData.name}" has been added`,
-        severity: "success",
+        message: isEditMode ? "Failed to update class" : "Failed to add class",
+        severity: "error",
         timestamp: Date.now(),
       });
     }
-
-    handleCloseClassModal();
   };
 
   const handleDownloadClass = (id: number) => {
@@ -244,7 +273,7 @@ const Classes = () => {
     if (cls) {
       setNotification({
         open: true,
-        message: `Downloading data for ${cls.name}`,
+        message: `Downloading data for ${cls.classname}`,
         severity: "info",
         timestamp: Date.now(),
       });
@@ -287,7 +316,7 @@ const Classes = () => {
 
       setNotification({
         open: true,
-        message: `Subjects updated for ${selectedClass.name}`,
+        message: `Subjects updated for ${selectedClass.classname}`,
         severity: "success",
         timestamp: Date.now(),
       });
@@ -426,7 +455,7 @@ const Classes = () => {
                     transition: "none",
                   }}
                 >
-                  <TableCell>{cls.name}</TableCell>
+                  <TableCell>{cls.classname || "-"}</TableCell>
                   <TableCell align="center">
                     <Box sx={{ display: "flex", justifyContent: "center" }}>
                       <IconButton
@@ -568,7 +597,7 @@ const Classes = () => {
             }}
           >
             <Typography variant="h6" component="h2" sx={{ fontWeight: 600 }}>
-              Subject Mapping: {selectedClass?.name}
+              Subject Mapping: {selectedClass?.classname}
             </Typography>
             <IconButton
               onClick={handleCloseSubjectMapping}
@@ -799,7 +828,7 @@ const Classes = () => {
             </Typography>
             <Typography variant="body1" sx={{ mb: 3, textAlign: "center" }}>
               Are you sure you want to delete{" "}
-              <strong>{classToDelete?.name}</strong>? This action cannot be
+              <strong>{classToDelete?.classname}</strong>? This action cannot be
               undone.
             </Typography>
 

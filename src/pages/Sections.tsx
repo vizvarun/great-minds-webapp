@@ -10,10 +10,16 @@ import {
   Alert,
   Box,
   Button,
+  CircularProgress,
   Divider,
+  FormControl,
+  FormHelperText,
   IconButton,
   InputAdornment,
+  MenuItem,
+  Modal,
   Paper,
+  Select,
   Snackbar,
   Table,
   TableBody,
@@ -25,82 +31,20 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import {
+  getSections,
+  createSection,
+  updateSection,
+  deleteSection,
+  toggleSectionStatus,
+} from "../services/sectionService";
+import { getAllActiveClasses } from "../services/classService";
 
-// Extend Section interface to include classTeacher and classAdmin
-interface Section {
-  id: number;
-  className: string;
-  sectionName: string;
-  isActive: boolean;
-  classTeacher?: string;
-  classAdmin?: string;
-}
-
-// Mock data for sections
-const mockSections: Section[] = [
-  { id: 1, className: "Class 1", sectionName: "A", isActive: true },
-  { id: 2, className: "Class 1", sectionName: "B", isActive: true },
-  { id: 3, className: "Class 2", sectionName: "A", isActive: true },
-  { id: 4, className: "Class 2", sectionName: "B", isActive: false },
-  { id: 5, className: "Class 3", sectionName: "A", isActive: true },
-  { id: 6, className: "Class 3", sectionName: "B", isActive: true },
-  { id: 7, className: "Class 3", sectionName: "C", isActive: false },
-  { id: 8, className: "Class 4", sectionName: "A", isActive: true },
-  { id: 9, className: "Class 5", sectionName: "A", isActive: true },
-  { id: 10, className: "Class 5", sectionName: "B", isActive: true },
-  { id: 11, className: "Class 6", sectionName: "A", isActive: true },
-  { id: 12, className: "Class 7", sectionName: "A", isActive: true },
-  { id: 13, className: "Class 8", sectionName: "A", isActive: true },
-  { id: 14, className: "Class 9", sectionName: "A", isActive: true },
-  { id: 15, className: "Class 10", sectionName: "A", isActive: true },
-  { id: 16, className: "Class 10", sectionName: "B", isActive: false },
-  { id: 17, className: "Class 11 - Science", sectionName: "A", isActive: true },
-  {
-    id: 18,
-    className: "Class 11 - Commerce",
-    sectionName: "A",
-    isActive: true,
-  },
-  { id: 19, className: "Class 12 - Science", sectionName: "A", isActive: true },
-  {
-    id: 20,
-    className: "Class 12 - Commerce",
-    sectionName: "A",
-    isActive: true,
-  },
-];
-
-const mockClasses = [
-  "Class 1",
-  "Class 2",
-  "Class 3",
-  "Class 4",
-  "Class 5",
-  "Class 6",
-  "Class 7",
-  "Class 8",
-  "Class 9",
-  "Class 10",
-  "Class 11 - Science",
-  "Class 11 - Commerce",
-  "Class 12 - Science",
-  "Class 12 - Commerce",
-];
-const mockAllTeachers = [
-  { id: 1, name: "John Smith" },
-  { id: 2, name: "Sarah Johnson" },
-  { id: 3, name: "Robert Williams" },
-  { id: 4, name: "Lisa Brown" },
-  { id: 5, name: "Michael Davis" },
-  { id: 6, name: "James Wilson" },
-  { id: 7, name: "Emily Taylor" },
-];
-const mockAdmins = [
-  { id: 1, name: "Priya Admin" },
-  { id: 2, name: "Ravi Admin" },
-];
+import type { SelectChangeEvent } from "@mui/material";
+import type { Class } from "../services/classService";
+import type { Section } from "../services/sectionService";
 
 const Sections = () => {
   const navigate = useNavigate();
@@ -108,31 +52,104 @@ const Sections = () => {
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedSection, setSelectedSection] = useState<Section | null>(null);
-  const [sections, setSections] = useState<Section[]>(mockSections);
-  const [toastOpen, setToastOpen] = useState(false);
-  const [toastMessage, setToastMessage] = useState("");
-  const [toastSeverity, setToastSeverity] = useState<
-    "success" | "info" | "warning" | "error"
-  >("success");
+  const [sections, setSections] = useState<Section[]>([]);
+  const [classes, setClasses] = useState<Class[]>([]);
+  const [totalRecords, setTotalRecords] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Filter state
+  const [filterClassId, setFilterClassId] = useState<string>("");
 
   // Modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [formData, setFormData] = useState({
-    className: "",
+    classId: "",
     sectionName: "",
-    classTeacher: "",
-    classAdmin: "",
   });
+  const [formErrors, setFormErrors] = useState({
+    classId: "",
+    sectionName: "",
+  });
+
   // Delete modal state
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [sectionToDelete, setSectionToDelete] = useState<Section | null>(null);
 
+  // Notification state
+  const [notification, setNotification] = useState({
+    open: false,
+    message: "",
+    severity: "success" as "success" | "info" | "warning" | "error",
+    timestamp: Date.now(),
+  });
+
+  // Fetch sections and classes on component mount
+  useEffect(() => {
+    fetchClasses().then((classData) => {
+      // If there's class data and no filter is set, set the first class as active
+      if (classData && classData.length > 0 && !filterClassId) {
+        setFilterClassId(classData[0].id.toString());
+      }
+    });
+  }, []);
+
+  // Fetch sections when page, rowsPerPage, or filterClassId changes
+  useEffect(() => {
+    if (filterClassId) {
+      fetchSections();
+    }
+  }, [page, rowsPerPage, filterClassId]);
+
+  const fetchClasses = async () => {
+    try {
+      const response = await getAllActiveClasses();
+      if (response && response.data) {
+        setClasses(response.data);
+        return response.data;
+      }
+      return [];
+    } catch (err) {
+      console.error("Error fetching classes:", err);
+      setNotification({
+        open: true,
+        message: "Failed to load classes",
+        severity: "error",
+        timestamp: Date.now(),
+      });
+      return [];
+    }
+  };
+
+  const fetchSections = async () => {
+    setLoading(true);
+    try {
+      const classId = filterClassId ? parseInt(filterClassId) : undefined;
+      const response = await getSections(page, rowsPerPage, classId);
+
+      setSections(response.data);
+      setTotalRecords(response.total_records || response.data.length);
+      setError(null);
+    } catch (err) {
+      setError("Failed to load sections. Please try again later.");
+      setNotification({
+        open: true,
+        message: "Failed to load sections",
+        severity: "error",
+        timestamp: Date.now(),
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Filter sections based on search query
   const filteredSections = sections.filter(
     (section) =>
-      section.className.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      section.sectionName.toLowerCase().includes(searchQuery.toLowerCase())
+      section.section.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (section.className &&
+        section.className.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
   const handleChangePage = (_: unknown, newPage: number) => {
@@ -151,148 +168,273 @@ const Sections = () => {
     setPage(0);
   };
 
+  const handleFilterClassChange = (event: SelectChangeEvent) => {
+    setFilterClassId(event.target.value);
+    setPage(0);
+  };
+
   // Add/Edit handlers
   const handleAddSection = () => {
     setFormData({
-      className: "",
+      classId: "",
       sectionName: "",
-      classTeacher: "",
-      classAdmin: "",
+    });
+    setFormErrors({
+      classId: "",
+      sectionName: "",
     });
     setIsEditMode(false);
     setIsModalOpen(true);
   };
+
   const handleEditSection = (id: number) => {
     const section = sections.find((s) => s.id === id);
     if (section) {
       setFormData({
-        className: section.className,
-        sectionName: section.sectionName,
-        classTeacher: section.classTeacher ?? "",
-        classAdmin: section.classAdmin ?? "",
+        classId: section.classid.toString(),
+        sectionName: section.section,
+      });
+      setFormErrors({
+        classId: "",
+        sectionName: "",
       });
       setSelectedSection(section);
       setIsEditMode(true);
       setIsModalOpen(true);
     }
   };
+
   // Delete handlers
-  const handleDeleteSection = (id: number) => {
+  const handleDeleteClick = (id: number) => {
     const section = sections.find((s) => s.id === id);
     setSectionToDelete(section || null);
     setIsDeleteModalOpen(true);
   };
-  const handleConfirmDelete = () => {
+
+  const handleConfirmDelete = async () => {
     if (sectionToDelete) {
-      setSections(sections.filter((s) => s.id !== sectionToDelete.id));
-      setToastMessage(
-        `Section ${sectionToDelete.className} ${sectionToDelete.sectionName} deleted`
-      );
-      setToastSeverity("success");
-      setToastOpen(true);
+      try {
+        await deleteSection(sectionToDelete.id);
+
+        // Update the UI
+        setSections((prevSections) =>
+          prevSections.filter((s) => s.id !== sectionToDelete.id)
+        );
+
+        setNotification({
+          open: true,
+          message: `Section ${sectionToDelete.section} deleted successfully`,
+          severity: "success",
+          timestamp: Date.now(),
+        });
+      } catch (error) {
+        setNotification({
+          open: true,
+          message: "Failed to delete section",
+          severity: "error",
+          timestamp: Date.now(),
+        });
+      }
+
       setIsDeleteModalOpen(false);
       setSectionToDelete(null);
     }
   };
+
   const handleCancelDelete = () => {
     setIsDeleteModalOpen(false);
     setSectionToDelete(null);
   };
+
   // Form field change
   const handleFormChange = (
-    e:
-      | React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-      | React.ChangeEvent<{ name?: string; value: unknown }>
+    e: React.ChangeEvent<HTMLInputElement | { name?: string; value: unknown }>
   ) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name as string]: value }));
-  };
-  // Save section (add or edit)
-  const handleSaveSection = () => {
-    if (!formData.className || !formData.sectionName) {
-      setToastMessage("Class and Section are required");
-      setToastSeverity("error");
-      setToastOpen(true);
-      return;
+    const { name, value } = e.target as { name?: string; value: unknown };
+    if (name) {
+      setFormData((prev) => ({ ...prev, [name]: value }));
+
+      // Clear any errors for this field
+      setFormErrors((prev) => ({ ...prev, [name]: "" }));
     }
-    if (isEditMode && selectedSection) {
-      setSections(
-        sections.map((s) =>
-          s.id === selectedSection.id ? { ...s, ...formData } : s
+  };
+
+  // Validate form before submission
+  const validateForm = (): boolean => {
+    const errors = {
+      classId: "",
+      sectionName: "",
+    };
+    let isValid = true;
+
+    if (!formData.classId) {
+      errors.classId = "Class is required";
+      isValid = false;
+    }
+
+    if (!formData.sectionName) {
+      errors.sectionName = "Section name is required";
+      isValid = false;
+    }
+
+    setFormErrors(errors);
+    return isValid;
+  };
+
+  // Save section (add or edit)
+  const handleSaveSection = async () => {
+    if (!validateForm()) return;
+
+    try {
+      const school_id = parseInt(localStorage.getItem("schoolId") || "4");
+      const payload = {
+        schoolid: school_id,
+        classid: parseInt(formData.classId),
+        section: formData.sectionName,
+        isactive: true,
+      };
+
+      if (isEditMode && selectedSection) {
+        // Update existing section
+        const response = await updateSection({
+          ...payload,
+          id: selectedSection.id,
+        });
+
+        // Update the UI
+        setSections((prevSections) =>
+          prevSections.map((s) =>
+            s.id === selectedSection.id
+              ? {
+                  ...response,
+                  className:
+                    classes.find((c) => c.id === parseInt(formData.classId))
+                      ?.name || `Class ${formData.classId}`,
+                }
+              : s
+          )
+        );
+
+        setNotification({
+          open: true,
+          message: "Section updated successfully",
+          severity: "success",
+          timestamp: Date.now(),
+        });
+      } else {
+        // Add new section
+        const response = await createSection(payload);
+
+        // Add class name before adding to state
+        const newSection = {
+          ...response,
+          className:
+            classes.find((c) => c.id === parseInt(formData.classId))?.name ||
+            `Class ${formData.classId}`,
+        };
+
+        // Update the UI
+        setSections((prevSections) => [...prevSections, newSection]);
+
+        setNotification({
+          open: true,
+          message: "Section added successfully",
+          severity: "success",
+          timestamp: Date.now(),
+        });
+      }
+
+      setIsModalOpen(false);
+      setSelectedSection(null);
+    } catch (error) {
+      setNotification({
+        open: true,
+        message: isEditMode
+          ? "Failed to update section"
+          : "Failed to add section",
+        severity: "error",
+        timestamp: Date.now(),
+      });
+    }
+  };
+
+  const handleToggleStatus = async (id: number, currentStatus: boolean) => {
+    try {
+      const updatedSection = await toggleSectionStatus(id, currentStatus);
+
+      // Update the UI
+      setSections((prevSections) =>
+        prevSections.map((section) =>
+          section.id === id ? { ...section, isactive: !currentStatus } : section
         )
       );
-      setToastMessage("Section updated successfully");
-      setToastSeverity("success");
-    } else {
-      const newId = Math.max(...sections.map((s) => s.id), 0) + 1;
-      setSections([...sections, { id: newId, isActive: true, ...formData }]);
-      setToastMessage("Section added successfully");
-      setToastSeverity("success");
-    }
-    setIsModalOpen(false);
-    setSelectedSection(null);
-    setToastOpen(true); // Move here to ensure toast is visible after modal closes
-  };
 
-  // Navigate to teachers screen instead of opening a modal
-  const handleViewTeacher = (id: number) => {
-    navigate(`/sections/${id}/teachers`, {
-      state: {
-        sectionId: id,
-        className: sections.find((s) => s.id === id)?.className,
-        sectionName: sections.find((s) => s.id === id)?.sectionName,
-      },
-    });
-  };
+      // Show toast notification with section details
+      const toggledSection = sections.find((section) => section.id === id);
+      if (toggledSection) {
+        const newStatus = !currentStatus;
+        const actionText = newStatus ? "enabled" : "disabled";
 
-  // Navigate to students screen instead of opening a modal
-  const handleViewStudents = (id: number) => {
-    navigate(`/sections/${id}/students`, {
-      state: {
-        sectionId: id,
-        className: sections.find((s) => s.id === id)?.className,
-        sectionName: sections.find((s) => s.id === id)?.sectionName,
-      },
-    });
-  };
-
-  const handleToggleStatus = (id: number, currentStatus: boolean) => {
-    const updatedSections = sections.map((section) => {
-      if (section.id === id) {
-        return { ...section, isActive: !currentStatus };
+        setNotification({
+          open: true,
+          message: `Section ${toggledSection.section} has been ${actionText}`,
+          severity: newStatus ? "success" : "info",
+          timestamp: Date.now(),
+        });
       }
-      return section;
-    });
-
-    setSections(updatedSections);
-
-    // Show toast notification with section details
-    const toggledSection = sections.find((section) => section.id === id);
-    if (toggledSection) {
-      const newStatus = !currentStatus;
-      const actionText = newStatus ? "enabled" : "disabled";
-
-      setToastMessage(
-        `Section ${toggledSection.className} ${toggledSection.sectionName} has been ${actionText}`
-      );
-      setToastSeverity(newStatus ? "success" : "info");
-      setToastOpen(true);
+    } catch (error) {
+      setNotification({
+        open: true,
+        message: "Failed to update section status",
+        severity: "error",
+        timestamp: Date.now(),
+      });
     }
   };
 
-  const handleCloseToast = (
-    _?: React.SyntheticEvent | Event,
-    reason?: string
-  ) => {
-    if (reason === "clickaway") {
-      return;
+  // Navigate to teachers screen
+  const handleViewTeacher = (id: number) => {
+    const section = sections.find((s) => s.id === id);
+    if (section) {
+      navigate(`/sections/${id}/teachers`, {
+        state: {
+          sectionId: id,
+          className: section.className || `Class ${section.classid}`,
+          sectionName: section.section,
+        },
+      });
     }
-    setToastOpen(false);
+  };
+
+  // Navigate to students screen
+  const handleViewStudents = (id: number) => {
+    const section = sections.find((s) => s.id === id);
+    if (section) {
+      navigate(`/sections/${id}/students`, {
+        state: {
+          sectionId: id,
+          className: section.className || `Class ${section.classid}`,
+          sectionName: section.section,
+        },
+      });
+    }
   };
 
   const handleDownloadSection = (id: number) => {
-    console.log("Download section data for", id);
-    // Implement download functionality
+    // Implement actual download functionality if needed
+    const section = sections.find((s) => s.id === id);
+    if (section) {
+      setNotification({
+        open: true,
+        message: `Downloading data for ${section.className} ${section.section}`,
+        severity: "info",
+        timestamp: Date.now(),
+      });
+    }
+  };
+
+  const handleCloseNotification = () => {
+    setNotification((prev) => ({ ...prev, open: false }));
   };
 
   return (
@@ -303,10 +445,10 @@ const Sections = () => {
         borderRadius: 0.5,
         border: 1,
         borderColor: "grey.200",
-        height: "calc(100% - 16px)", // Account for the parent padding
+        height: "calc(100% - 16px)",
         display: "flex",
         flexDirection: "column",
-        overflow: "hidden", // Prevent the Paper component from scrolling
+        overflow: "hidden",
       }}
     >
       {/* Fixed Header Section */}
@@ -329,29 +471,52 @@ const Sections = () => {
             gap: 2,
           }}
         >
-          <TextField
-            placeholder="Search sections..."
-            variant="outlined"
-            size="medium"
-            value={searchQuery}
-            onChange={handleSearchChange}
-            sx={{
-              minWidth: 250,
-              flex: 1,
-              maxWidth: 400,
-              outline: "none",
-              "&:focus": {
+          <Box sx={{ display: "flex", alignItems: "center", gap: 2, flex: 1 }}>
+            <TextField
+              placeholder="Search sections..."
+              variant="outlined"
+              size="medium"
+              value={searchQuery}
+              onChange={handleSearchChange}
+              sx={{
+                minWidth: 250,
+                maxWidth: 400,
                 outline: "none",
-              },
-            }}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <SearchIcon color="action" />
-                </InputAdornment>
-              ),
-            }}
-          />
+                "&:focus": {
+                  outline: "none",
+                },
+              }}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon color="action" />
+                  </InputAdornment>
+                ),
+              }}
+            />
+
+            <FormControl sx={{ minWidth: 200 }}>
+              <Select
+                displayEmpty
+                value={filterClassId}
+                onChange={handleFilterClassChange}
+                size="medium"
+                sx={{ minWidth: 200 }}
+              >
+                {classes.length > 0 ? (
+                  classes.map((cls) => (
+                    <MenuItem key={cls.id} value={cls.id.toString()}>
+                      {cls.classname}
+                    </MenuItem>
+                  ))
+                ) : (
+                  <MenuItem value="">No classes available</MenuItem>
+                )}
+              </Select>
+              {/* <FormHelperText>Filter by Class</FormHelperText> */}
+            </FormControl>
+          </Box>
+
           <Button
             variant="contained"
             disableElevation
@@ -390,43 +555,60 @@ const Sections = () => {
           maxHeight: "calc(100% - 120px)",
         }}
       >
-        <Table stickyHeader sx={{ minWidth: 650 }}>
-          <TableHead>
-            <TableRow sx={{ backgroundColor: "grey.50" }}>
-              <TableCell
-                sx={{ fontWeight: 600, bgcolor: "grey.50", width: "20%" }}
-              >
-                Class
-              </TableCell>
-              <TableCell
-                sx={{ fontWeight: 600, bgcolor: "grey.50", width: "10%" }}
-              >
-                Section
-              </TableCell>
-              <TableCell
-                sx={{ fontWeight: 600, bgcolor: "grey.50", width: "20%" }}
-              >
-                Class Teacher
-              </TableCell>
-
-              <TableCell
-                sx={{ fontWeight: 600, bgcolor: "grey.50", width: "10%" }}
-                align="center"
-              >
-                Status
-              </TableCell>
-              <TableCell
-                sx={{ fontWeight: 600, bgcolor: "grey.50", width: "20%" }}
-                align="center"
-              >
-                Actions
-              </TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {filteredSections
-              .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-              .map((section) => (
+        {loading ? (
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              height: "100%",
+              p: 4,
+            }}
+          >
+            <CircularProgress />
+          </Box>
+        ) : error ? (
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              height: "100%",
+              p: 4,
+            }}
+          >
+            <Typography color="error">{error}</Typography>
+          </Box>
+        ) : (
+          <Table stickyHeader sx={{ minWidth: 650 }}>
+            <TableHead>
+              <TableRow sx={{ backgroundColor: "grey.50" }}>
+                <TableCell
+                  sx={{ fontWeight: 600, bgcolor: "grey.50", width: "20%" }}
+                >
+                  Class
+                </TableCell>
+                <TableCell
+                  sx={{ fontWeight: 600, bgcolor: "grey.50", width: "10%" }}
+                >
+                  Section
+                </TableCell>
+                <TableCell
+                  sx={{ fontWeight: 600, bgcolor: "grey.50", width: "10%" }}
+                  align="center"
+                >
+                  Status
+                </TableCell>
+                <TableCell
+                  sx={{ fontWeight: 600, bgcolor: "grey.50", width: "20%" }}
+                  align="center"
+                >
+                  Actions
+                </TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {filteredSections.map((section) => (
                 <TableRow
                   key={section.id}
                   hover
@@ -435,9 +617,10 @@ const Sections = () => {
                     transition: "none",
                   }}
                 >
-                  <TableCell>{section.className}</TableCell>
-                  <TableCell>{section.sectionName}</TableCell>
-                  <TableCell>{section.classTeacher ?? "-"}</TableCell>
+                  <TableCell>
+                    {section.className || `Class ${section.classid}`}
+                  </TableCell>
+                  <TableCell>{section.section}</TableCell>
                   <TableCell align="center">
                     <Box sx={{ display: "flex", justifyContent: "center" }}>
                       <Box
@@ -449,9 +632,9 @@ const Sections = () => {
                       >
                         <input
                           type="checkbox"
-                          checked={section.isActive}
+                          checked={section.isactive}
                           onChange={() =>
-                            handleToggleStatus(section.id, section.isActive)
+                            handleToggleStatus(section.id, section.isactive)
                           }
                           style={{
                             appearance: "none",
@@ -460,7 +643,7 @@ const Sections = () => {
                             width: "30px",
                             height: "18px",
                             borderRadius: "10px",
-                            background: section.isActive
+                            background: section.isactive
                               ? "#0cb5bf"
                               : "#e0e0e0",
                             outline: "none",
@@ -468,7 +651,7 @@ const Sections = () => {
                             position: "relative",
                             transition: "background 0.25s ease",
                             border: "1px solid",
-                            borderColor: section.isActive
+                            borderColor: section.isactive
                               ? "#0cb5bf"
                               : "#d0d0d0",
                           }}
@@ -476,7 +659,7 @@ const Sections = () => {
                         <span
                           style={{
                             position: "absolute",
-                            left: section.isActive ? "18px" : "2px",
+                            left: section.isactive ? "18px" : "2px",
                             width: "14px",
                             height: "14px",
                             borderRadius: "50%",
@@ -563,7 +746,7 @@ const Sections = () => {
                       </IconButton>
                       <IconButton
                         size="small"
-                        onClick={() => handleDeleteSection(section.id)}
+                        onClick={() => handleDeleteClick(section.id)}
                         color="error"
                         sx={{
                           transition: "none",
@@ -582,22 +765,23 @@ const Sections = () => {
                   </TableCell>
                 </TableRow>
               ))}
-            {filteredSections.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={6} align="center" sx={{ py: 3 }}>
-                  No sections found.
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
+              {filteredSections.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={4} align="center" sx={{ py: 3 }}>
+                    No sections found.
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        )}
       </TableContainer>
 
       {/* Fixed Pagination Section */}
       <TablePagination
         component="div"
         rowsPerPageOptions={[5, 10, 25]}
-        count={filteredSections.length}
+        count={totalRecords}
         rowsPerPage={rowsPerPage}
         page={page}
         onPageChange={handleChangePage}
@@ -617,11 +801,241 @@ const Sections = () => {
         }}
       />
 
-      {/* Toast Notification */}
+      {/* Add/Edit Section Modal */}
+      <Modal
+        open={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        aria-labelledby="section-modal"
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <Paper
+          elevation={0}
+          sx={{
+            width: 400,
+            maxWidth: "95%",
+            borderRadius: 2,
+            p: 3,
+            outline: "none",
+          }}
+        >
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              mb: 2,
+            }}
+          >
+            <Typography variant="h6" sx={{ fontWeight: 600 }}>
+              {isEditMode ? "Edit Section" : "Add New Section"}
+            </Typography>
+            <IconButton onClick={() => setIsModalOpen(false)}>
+              <CloseIcon />
+            </IconButton>
+          </Box>
+          <Divider sx={{ mb: 2 }} />
+
+          <Box sx={{ mb: 2 }}>
+            <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
+              Class
+            </Typography>
+            <FormControl fullWidth error={!!formErrors.classId}>
+              <Select
+                name="classId"
+                value={formData.classId}
+                onChange={handleFormChange as any}
+                displayEmpty
+                size="small"
+              >
+                <MenuItem value="" disabled>
+                  Select class
+                </MenuItem>
+                {Array.isArray(classes) && classes.length > 0 ? (
+                  classes.map((cls) => (
+                    <MenuItem key={cls.id} value={cls.id.toString()}>
+                      {cls.name}
+                    </MenuItem>
+                  ))
+                ) : (
+                  <MenuItem value="" disabled>
+                    No classes available
+                  </MenuItem>
+                )}
+              </Select>
+              {formErrors.classId && (
+                <FormHelperText>{formErrors.classId}</FormHelperText>
+              )}
+            </FormControl>
+          </Box>
+
+          <Box sx={{ mb: 3 }}>
+            <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
+              Section Name
+            </Typography>
+            <TextField
+              fullWidth
+              name="sectionName"
+              value={formData.sectionName}
+              onChange={handleFormChange}
+              placeholder="Enter section name"
+              size="small"
+              error={!!formErrors.sectionName}
+              helperText={formErrors.sectionName}
+            />
+          </Box>
+
+          <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 1 }}>
+            <Button
+              variant="outlined"
+              onClick={() => setIsModalOpen(false)}
+              sx={{
+                textTransform: "none",
+                transition: "none",
+                borderRadius: 0.5,
+                "&:hover": {
+                  bgcolor: "transparent",
+                  borderColor: "primary.main",
+                  opacity: 0.9,
+                },
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="contained"
+              disableElevation
+              onClick={handleSaveSection}
+              sx={{
+                textTransform: "none",
+                backgroundImage: "none",
+                borderRadius: 0.5,
+                transition: "none",
+                background: "primary.main",
+                "&:hover": {
+                  backgroundImage: "none",
+                  background: "primary.main",
+                  opacity: 0.9,
+                },
+              }}
+            >
+              {isEditMode ? "Update" : "Add"}
+            </Button>
+          </Box>
+        </Paper>
+      </Modal>
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        open={isDeleteModalOpen}
+        onClose={handleCancelDelete}
+        aria-labelledby="delete-confirmation-modal"
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <Paper
+          elevation={0}
+          sx={{
+            width: 400,
+            maxWidth: "95%",
+            bgcolor: "background.paper",
+            borderRadius: 2,
+            boxShadow: 24,
+            p: 0,
+            outline: "none",
+          }}
+        >
+          <Box
+            sx={{
+              p: 3,
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+            }}
+          >
+            <Typography
+              variant="h6"
+              component="h2"
+              sx={{ fontWeight: 600, mb: 2 }}
+            >
+              Confirm Deletion
+            </Typography>
+            <Typography variant="body1" sx={{ mb: 3, textAlign: "center" }}>
+              Are you sure you want to delete{" "}
+              <strong>
+                {sectionToDelete?.className ||
+                  `Class ${sectionToDelete?.classid}`}{" "}
+                {sectionToDelete?.section}
+              </strong>
+              ? This action cannot be undone.
+            </Typography>
+
+            <Box
+              sx={{
+                display: "flex",
+                justifyContent: "center",
+                gap: 2,
+                width: "100%",
+              }}
+            >
+              <Button
+                variant="outlined"
+                onClick={handleCancelDelete}
+                disableRipple
+                sx={{
+                  flex: 1,
+                  textTransform: "none",
+                  borderRadius: 0.5,
+                  backgroundColor: "transparent",
+                  outline: "none",
+                  border: "1px solid",
+                  borderColor: "grey.300",
+                  color: "text.primary",
+                  transition: "none",
+                  "&:hover": {
+                    backgroundColor: "transparent",
+                    borderColor: "grey.400",
+                  },
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="contained"
+                onClick={handleConfirmDelete}
+                disableElevation
+                disableRipple
+                sx={{
+                  flex: 1,
+                  textTransform: "none",
+                  borderRadius: 0.5,
+                  background: "error.main",
+                  color: "white",
+                  transition: "none",
+                  "&:hover": {
+                    background: "error.dark",
+                  },
+                }}
+              >
+                Delete
+              </Button>
+            </Box>
+          </Box>
+        </Paper>
+      </Modal>
+
+      {/* Notification Snackbar */}
       <Snackbar
-        open={toastOpen}
+        key={notification.timestamp}
+        open={notification.open}
         autoHideDuration={4000}
-        onClose={handleCloseToast}
+        onClose={handleCloseNotification}
         anchorOrigin={{ vertical: "top", horizontal: "right" }}
         sx={{
           "& .MuiSnackbarContent-root": {
@@ -630,19 +1044,19 @@ const Sections = () => {
         }}
       >
         <Alert
-          onClose={handleCloseToast}
-          severity={toastSeverity}
+          onClose={handleCloseNotification}
+          severity={notification.severity}
           variant="standard"
           sx={{
             width: "100%",
             boxShadow: "0 2px 10px rgba(0,0,0,0.08)",
             border: "1px solid",
             borderColor:
-              toastSeverity === "success"
+              notification.severity === "success"
                 ? "rgba(46, 125, 50, 0.2)"
-                : toastSeverity === "info"
+                : notification.severity === "info"
                 ? "rgba(2, 136, 209, 0.2)"
-                : toastSeverity === "warning"
+                : notification.severity === "warning"
                 ? "rgba(237, 108, 2, 0.2)"
                 : "rgba(211, 47, 47, 0.2)",
             borderRadius: 1,
@@ -658,236 +1072,9 @@ const Sections = () => {
             },
           }}
         >
-          {toastMessage}
+          {notification.message}
         </Alert>
       </Snackbar>
-
-      {/* Add/Edit Section Modal */}
-      {isModalOpen && (
-        <Box
-          sx={{
-            position: "fixed",
-            top: 0,
-            left: 0,
-            width: "100vw",
-            height: "100vh",
-            bgcolor: "rgba(0,0,0,0.5)",
-            zIndex: 1300,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
-          <Paper
-            elevation={0}
-            sx={{
-              width: 400,
-              maxWidth: "95%",
-              borderRadius: 2,
-              p: 3,
-              outline: "none",
-            }}
-          >
-            <Box
-              sx={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                mb: 2,
-              }}
-            >
-              <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                {isEditMode ? "Edit Section" : "Add New Section"}
-              </Typography>
-              <IconButton onClick={() => setIsModalOpen(false)}>
-                <CloseIcon />
-              </IconButton>
-            </Box>
-            <Divider sx={{ mb: 2 }} />
-            <Box sx={{ mb: 2 }}>
-              <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
-                Class
-              </Typography>
-              <TextField
-                select
-                fullWidth
-                name="className"
-                value={formData.className}
-                onChange={handleFormChange}
-                size="small"
-              >
-                <option value="">Select class</option>
-                {mockClasses.map((cls) => (
-                  <option key={cls} value={cls}>
-                    {cls}
-                  </option>
-                ))}
-              </TextField>
-            </Box>
-            <Box sx={{ mb: 2 }}>
-              <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
-                Section Name
-              </Typography>
-              <TextField
-                fullWidth
-                name="sectionName"
-                value={formData.sectionName}
-                onChange={handleFormChange}
-                placeholder="Enter section name"
-                size="small"
-              />
-            </Box>
-            <Box sx={{ mb: 2 }}>
-              <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
-                Class Teacher
-              </Typography>
-              <TextField
-                select
-                fullWidth
-                name="classTeacher"
-                value={formData.classTeacher}
-                onChange={handleFormChange}
-                size="small"
-              >
-                <option value="">Select class teacher</option>
-                {mockAllTeachers.map((t) => (
-                  <option key={t.id} value={t.name}>
-                    {t.name}
-                  </option>
-                ))}
-              </TextField>
-            </Box>
-            <Box sx={{ mb: 3 }}>
-              <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
-                Class Admin
-              </Typography>
-              <TextField
-                select
-                fullWidth
-                name="classAdmin"
-                value={formData.classAdmin}
-                onChange={handleFormChange}
-                size="small"
-              >
-                <option value="">Select class admin</option>
-                {mockAdmins.map((a) => (
-                  <option key={a.id} value={a.name}>
-                    {a.name}
-                  </option>
-                ))}
-              </TextField>
-            </Box>
-            <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 1 }}>
-              <Button
-                variant="outlined"
-                onClick={() => setIsModalOpen(false)}
-                sx={{
-                  textTransform: "none",
-                  transition: "none",
-                  borderRadius: 0.5,
-                  "&:hover": {
-                    bgcolor: "transparent",
-                    borderColor: "primary.main",
-                    opacity: 0.9,
-                  },
-                }}
-              >
-                Cancel
-              </Button>
-              <Button
-                variant="contained"
-                disableElevation
-                onClick={handleSaveSection}
-                sx={{
-                  textTransform: "none",
-                  backgroundImage: "none",
-                  borderRadius: 0.5,
-                  transition: "none",
-                  background: "primary.main",
-                  "&:hover": {
-                    backgroundImage: "none",
-                    background: "primary.main",
-                    opacity: 0.9,
-                  },
-                }}
-              >
-                {isEditMode ? "Update" : "Add"}
-              </Button>
-            </Box>
-          </Paper>
-        </Box>
-      )}
-      {/* Delete Confirmation Modal */}
-      {isDeleteModalOpen && (
-        <Box
-          sx={{
-            position: "fixed",
-            top: 0,
-            left: 0,
-            width: "100vw",
-            height: "100vh",
-            bgcolor: "rgba(0,0,0,0.5)",
-            zIndex: 1300,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
-          <Paper
-            elevation={0}
-            sx={{
-              width: 400,
-              maxWidth: "95%",
-              borderRadius: 2,
-              p: 3,
-              outline: "none",
-            }}
-          >
-            <Box
-              sx={{
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-              }}
-            >
-              <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
-                Confirm Deletion
-              </Typography>
-              <Typography variant="body1" sx={{ mb: 3, textAlign: "center" }}>
-                Are you sure you want to delete
-                <strong>
-                  {sectionToDelete?.className} {sectionToDelete?.sectionName}
-                </strong>
-                ? This action cannot be undone.
-              </Typography>
-              <Box
-                sx={{
-                  display: "flex",
-                  justifyContent: "center",
-                  gap: 2,
-                  width: "100%",
-                }}
-              >
-                <Button
-                  variant="outlined"
-                  onClick={handleCancelDelete}
-                  sx={{ flex: 1 }}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  variant="contained"
-                  color="error"
-                  onClick={handleConfirmDelete}
-                  sx={{ flex: 1 }}
-                >
-                  Delete
-                </Button>
-              </Box>
-            </Box>
-          </Paper>
-        </Box>
-      )}
     </Paper>
   );
 };
