@@ -1,5 +1,4 @@
 import AddIcon from "@mui/icons-material/Add";
-import DeleteIcon from "@mui/icons-material/Delete";
 import DownloadIcon from "@mui/icons-material/Download";
 import EditIcon from "@mui/icons-material/Edit";
 import FileUploadIcon from "@mui/icons-material/FileUpload";
@@ -31,7 +30,7 @@ import {
   getEmployees,
   createEmployee,
   updateEmployee,
-  deleteEmployee as apiDeleteEmployee,
+  toggleEmployeeStatus,
   bulkUploadEmployees,
   downloadEmployeeExcel,
 } from "../services/employeeService";
@@ -52,12 +51,6 @@ const Employees = () => {
   const [isEditMode, setIsEditMode] = useState(false);
   const [currentEmployee, setCurrentEmployee] = useState<Employee | undefined>(
     undefined
-  );
-
-  // Delete confirmation modal state
-  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [employeeToDelete, setEmployeeToDelete] = useState<Employee | null>(
-    null
   );
 
   // Notification state
@@ -127,7 +120,7 @@ const Employees = () => {
   };
 
   const handleEditEmployee = (id: number) => {
-    const employeeToEdit = employees.find((emp) => emp.id === id);
+    const employeeToEdit = employees.find((emp) => emp.empId === id);
     if (employeeToEdit) {
       setCurrentEmployee(employeeToEdit);
       setIsEditMode(true);
@@ -135,41 +128,30 @@ const Employees = () => {
     }
   };
 
-  const handleDeleteClick = (employee: Employee) => {
-    setEmployeeToDelete(employee);
-    setIsDeleteModalOpen(true);
-  };
+  const handleToggleStatus = async (id: number, currentStatus: boolean) => {
+    try {
+      await toggleEmployeeStatus(id, currentStatus);
 
-  const handleConfirmDelete = async () => {
-    if (employeeToDelete) {
-      try {
-        await apiDeleteEmployee(employeeToDelete.id);
+      // Refetch the latest employee list after successful toggle
+      await fetchEmployees();
 
-        setEmployees(employees.filter((emp) => emp.id !== employeeToDelete.id));
-
-        setNotification({
-          open: true,
-          message: "Employee deleted successfully",
-          severity: "success",
-          timestamp: Date.now(),
-        });
-      } catch (error) {
-        setNotification({
-          open: true,
-          message: "Failed to delete employee",
-          severity: "error",
-          timestamp: Date.now(),
-        });
-      }
-
-      setIsDeleteModalOpen(false);
-      setEmployeeToDelete(null);
+      // Show success notification
+      setNotification({
+        open: true,
+        message: `Employee status has been ${
+          !currentStatus ? "activated" : "deactivated"
+        }`,
+        severity: "success",
+        timestamp: Date.now(),
+      });
+    } catch (error) {
+      setNotification({
+        open: true,
+        message: "Failed to update employee status",
+        severity: "error",
+        timestamp: Date.now(),
+      });
     }
-  };
-
-  const handleCancelDelete = () => {
-    setIsDeleteModalOpen(false);
-    setEmployeeToDelete(null);
   };
 
   const handleCloseModal = () => {
@@ -490,6 +472,12 @@ const Employees = () => {
                   sx={{ fontWeight: 600, bgcolor: "grey.50" }}
                   align="center"
                 >
+                  Status
+                </TableCell>
+                <TableCell
+                  sx={{ fontWeight: 600, bgcolor: "grey.50" }}
+                  align="center"
+                >
                   Actions
                 </TableCell>
               </TableRow>
@@ -497,7 +485,7 @@ const Employees = () => {
             <TableBody>
               {employees.map((employee) => (
                 <TableRow
-                  key={employee.id}
+                  key={employee.empId}
                   hover
                   sx={{
                     "&:hover": {
@@ -513,9 +501,68 @@ const Employees = () => {
                   <TableCell>{employee.mobileNo || "-"}</TableCell>
                   <TableCell align="center">
                     <Box sx={{ display: "flex", justifyContent: "center" }}>
+                      <Box
+                        sx={{
+                          position: "relative",
+                          display: "inline-flex",
+                          alignItems: "center",
+                        }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={employee.deletedAt === null}
+                          onChange={() =>
+                            handleToggleStatus(
+                              employee.empId,
+                              employee.deletedAt === null
+                            )
+                          }
+                          style={{
+                            appearance: "none",
+                            WebkitAppearance: "none",
+                            MozAppearance: "none",
+                            width: "30px",
+                            height: "18px",
+                            borderRadius: "10px",
+                            background:
+                              employee.deletedAt === null
+                                ? "#0cb5bf"
+                                : "#e0e0e0",
+                            outline: "none",
+                            cursor: "pointer",
+                            position: "relative",
+                            transition: "background 0.25s ease",
+                            border: "1px solid",
+                            borderColor:
+                              employee.deletedAt === null
+                                ? "#0cb5bf"
+                                : "#d0d0d0",
+                            pointerEvents: loading ? "none" : "auto", // Disable during loading
+                          }}
+                        />
+                        <span
+                          style={{
+                            position: "absolute",
+                            left: employee.deletedAt === null ? "18px" : "2px",
+                            width: "14px",
+                            height: "14px",
+                            borderRadius: "50%",
+                            background: "#ffffff",
+                            boxShadow: "0 1px 2px rgba(0,0,0,0.1)",
+                            transition: "left 0.25s ease",
+                            pointerEvents: "none",
+                            top: "50%",
+                            marginTop: "-7px",
+                          }}
+                        />
+                      </Box>
+                    </Box>
+                  </TableCell>
+                  <TableCell align="center">
+                    <Box sx={{ display: "flex", justifyContent: "center" }}>
                       <IconButton
                         size="small"
-                        onClick={() => handleEditEmployee(employee.id)}
+                        onClick={() => handleEditEmployee(employee.empId)}
                         color="primary"
                         sx={{
                           transition: "none",
@@ -530,30 +577,13 @@ const Employees = () => {
                       >
                         <EditIcon fontSize="small" />
                       </IconButton>
-                      <IconButton
-                        size="small"
-                        onClick={() => handleDeleteClick(employee)}
-                        color="error"
-                        sx={{
-                          transition: "none",
-                          outline: "none",
-                          "&:hover": {
-                            bgcolor: "rgba(211, 47, 47, 0.04)",
-                          },
-                          "&:focus": {
-                            outline: "none",
-                          },
-                        }}
-                      >
-                        <DeleteIcon fontSize="small" />
-                      </IconButton>
                     </Box>
                   </TableCell>
                 </TableRow>
               ))}
               {employees.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={6} align="center" sx={{ py: 3 }}>
+                  <TableCell colSpan={7} align="center" sx={{ py: 3 }}>
                     No employees found.
                   </TableCell>
                 </TableRow>
@@ -601,105 +631,6 @@ const Employees = () => {
         onUploadSuccess={handleBulkUploadSuccess}
         entityType="Employees"
       />
-
-      <Modal
-        open={isDeleteModalOpen}
-        onClose={handleCancelDelete}
-        aria-labelledby="delete-confirmation-modal"
-        sx={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-        }}
-      >
-        <Paper
-          elevation={0}
-          sx={{
-            width: 400,
-            maxWidth: "95%",
-            bgcolor: "background.paper",
-            borderRadius: 2,
-            boxShadow: 24,
-            p: 0,
-            outline: "none",
-          }}
-        >
-          <Box
-            sx={{
-              p: 3,
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-            }}
-          >
-            <Typography
-              variant="h6"
-              component="h2"
-              sx={{ fontWeight: 600, mb: 2 }}
-            >
-              Confirm Deletion
-            </Typography>
-            <Typography variant="body1" sx={{ mb: 3, textAlign: "center" }}>
-              Are you sure you want to delete{" "}
-              <strong>
-                {employeeToDelete?.firstName} {employeeToDelete?.lastName}
-              </strong>
-              ? This action cannot be undone.
-            </Typography>
-
-            <Box
-              sx={{
-                display: "flex",
-                justifyContent: "center",
-                gap: 2,
-                width: "100%",
-              }}
-            >
-              <Button
-                variant="outlined"
-                onClick={handleCancelDelete}
-                disableRipple
-                sx={{
-                  flex: 1,
-                  textTransform: "none",
-                  borderRadius: 0.5,
-                  backgroundColor: "transparent",
-                  outline: "none",
-                  border: "1px solid",
-                  borderColor: "grey.300",
-                  color: "text.primary",
-                  transition: "none",
-                  "&:hover": {
-                    backgroundColor: "transparent",
-                    borderColor: "grey.400",
-                  },
-                }}
-              >
-                Cancel
-              </Button>
-              <Button
-                variant="contained"
-                onClick={handleConfirmDelete}
-                disableElevation
-                disableRipple
-                sx={{
-                  flex: 1,
-                  textTransform: "none",
-                  borderRadius: 0.5,
-                  background: "error.main",
-                  color: "white",
-                  transition: "none",
-                  "&:hover": {
-                    background: "error.dark",
-                  },
-                }}
-              >
-                Delete
-              </Button>
-            </Box>
-          </Box>
-        </Paper>
-      </Modal>
 
       <Snackbar
         key={notification.timestamp}

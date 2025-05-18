@@ -2,7 +2,7 @@ import api from "./api";
 import AuthService from "./auth";
 
 export interface Employee {
-  id: number;
+  empId: number;
   empNo: string;
   firstName: string;
   lastName: string;
@@ -14,6 +14,7 @@ export interface Employee {
   middleName?: string;
   userId?: number;
   schoolId?: number;
+  deletedAt?: string;
 }
 
 // Updated getEmployees function to support pagination
@@ -45,8 +46,8 @@ export const createEmployee = async (
     const school_id = AuthService.getSchoolId() || 4;
 
     // Map the fields to ensure proper naming
-    const empNo = employee.employeeNo || employee.empNo;
-    const mobileNo = employee.mobileNumber || employee.mobileNo;
+    const empNo = employee.empNo;
+    const mobileNo = employee.mobileNo;
 
     // Prepare the payload according to the API requirements
     const payload = {
@@ -104,11 +105,11 @@ export const createEmployee = async (
 export const updateEmployee = async (employee: Employee): Promise<Employee> => {
   try {
     const user_id = AuthService.getUserId() || 14; // Fallback to 14 if not available
-    
+
     // Map fields from our interface to the API expected format
-    const empNo = employee.employeeNo || employee.empNo;
-    const mobileNo = employee.mobileNumber || employee.mobileNo;
-    
+    const empNo = employee.empNo;
+    const mobileNo = employee.mobileNo;
+
     // Prepare payload for the API's expected format
     const payload = {
       emp_id: employee.id,
@@ -118,7 +119,7 @@ export const updateEmployee = async (employee: Employee): Promise<Employee> => {
       middle_name: employee.middleName || "",
       last_name: employee.lastName || "",
       email: employee.email || "",
-      mobile_no: mobileNo || ""
+      mobile_no: mobileNo || "",
     };
 
     // Use the correct endpoint format with query parameter
@@ -255,5 +256,37 @@ export const validateEmployeePhone = async (mobileNumber: string) => {
       error
     );
     return { status: "error", message: "Phone number not found" };
+  }
+};
+
+export const toggleEmployeeStatus = async (
+  id: number,
+  currentStatus: boolean
+): Promise<Employee> => {
+  try {
+    const user_id = AuthService.getUserId() || 14;
+    const school_id = AuthService.getSchoolId() || 4;
+
+    // Log the id to verify it's not undefined
+    console.log("Toggle status for employee ID:", id);
+
+    // Use query parameters instead of body for the toggle endpoint
+    // This ensures emp_id is properly passed even if the API expects it in a different format
+    const response = await api.post(
+      `/employee/status/toggle?user_id=${user_id}&school_id=${school_id}&emp_id=${id}&activate=${!currentStatus}`,
+      {} // Empty body
+    );
+
+    if (response.data && response.data.status === "success") {
+      // Return updated employee data
+      return response.data.data;
+    }
+
+    throw new Error(
+      response.data?.message || "Failed to update employee status"
+    );
+  } catch (error) {
+    console.error("Error toggling employee status:", error);
+    throw error;
   }
 };

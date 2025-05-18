@@ -1,128 +1,24 @@
 import CalendarTodayIcon from "@mui/icons-material/CalendarToday";
 import {
+  Alert,
   Box,
   Button,
-  Chip,
-  Divider,
+  CircularProgress,
   FormControl,
   Grid,
   InputAdornment,
   MenuItem,
   Paper,
   Select,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
+  Snackbar,
   TextField,
   Typography,
 } from "@mui/material";
 import { useEffect, useState } from "react";
-
-// Mock data for classes
-const mockClasses = [
-  { id: 1, name: "Class 1" },
-  { id: 2, name: "Class 2" },
-  { id: 3, name: "Class 3" },
-  { id: 4, name: "Class 4" },
-  { id: 5, name: "Class 5" },
-  { id: 6, name: "Class 6" },
-  { id: 7, name: "Class 7" },
-  { id: 8, name: "Class 8" },
-  { id: 9, name: "Class 9" },
-  { id: 10, name: "Class 10" },
-];
-
-// Mock data for sections
-const mockSectionsMap: Record<number, { id: number; name: string }[]> = {
-  1: [
-    { id: 1, name: "A" },
-    { id: 2, name: "B" },
-  ],
-  2: [
-    { id: 3, name: "A" },
-    { id: 4, name: "B" },
-  ],
-  3: [
-    { id: 5, name: "A" },
-    { id: 6, name: "B" },
-    { id: 7, name: "C" },
-  ],
-  4: [{ id: 8, name: "A" }],
-  5: [
-    { id: 9, name: "A" },
-    { id: 10, name: "B" },
-  ],
-  6: [{ id: 11, name: "A" }],
-  7: [{ id: 12, name: "A" }],
-  8: [{ id: 13, name: "A" }],
-  9: [{ id: 14, name: "A" }],
-  10: [
-    { id: 15, name: "A" },
-    { id: 16, name: "B" },
-  ],
-};
-
-// Student attendance interface
-interface StudentAttendance {
-  id: number;
-  name: string;
-  rollNumber: string;
-  daysPresent: number;
-  daysAbsent: number;
-  totalWorkingDays: number;
-  attendancePercentage: number;
-}
-
-// Mock function to generate attendance data
-const generateMockAttendanceData = (
-  classId: number,
-  sectionId: number,
-  monthYear: string
-): StudentAttendance[] => {
-  // Parse the month and year
-  const [year, month] = monthYear.split("-").map(Number);
-
-  // Calculate total working days (mock data)
-  const totalDays = new Date(year, month, 0).getDate();
-  const workingDays = Math.min(totalDays - 4, 22); // Exclude weekends and some holidays
-
-  // Generate 10-15 students with random attendance records
-  const numberOfStudents = Math.floor(Math.random() * 6) + 10;
-
-  return Array.from({ length: numberOfStudents }, (_, i) => {
-    const daysPresent = Math.floor(Math.random() * (workingDays + 1));
-    const daysAbsent = workingDays - daysPresent;
-    const attendancePercentage = Math.round((daysPresent / workingDays) * 100);
-
-    return {
-      id: i + 1,
-      name: `Student ${i + 1}`,
-      rollNumber: `${classId}${sectionId}${(i + 1)
-        .toString()
-        .padStart(2, "0")}`,
-      daysPresent,
-      daysAbsent,
-      totalWorkingDays: workingDays,
-      attendancePercentage,
-    };
-  });
-};
-
-// Format date for display
-const formatMonthYear = (monthYearString: string): string => {
-  if (!monthYearString) return "";
-
-  const [year, month] = monthYearString.split("-");
-  const date = new Date(parseInt(year), parseInt(month) - 1);
-
-  return date.toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "long",
-  });
-};
+import api from "../services/api";
+import AuthService from "../services/auth";
+import { getAllActiveClasses } from "../services/classService";
+import { getSections } from "../services/sectionService";
 
 // Get current month-year in YYYY-MM format
 const getCurrentMonthYear = (): string => {
@@ -139,73 +35,164 @@ const AttendanceReport = () => {
   const [selectedMonthYear, setSelectedMonthYear] = useState<string>(
     getCurrentMonthYear()
   );
-  const [sections, setSections] = useState<{ id: number; name: string }[]>([]);
 
-  // Report state
-  const [reportGenerated, setReportGenerated] = useState(false);
-  const [attendanceData, setAttendanceData] = useState<StudentAttendance[]>([]);
-  const [reportDetails, setReportDetails] = useState({
-    className: "",
-    sectionName: "",
-    monthYear: "",
+  // Data state
+  const [classes, setClasses] = useState<any[]>([]);
+  const [sections, setSections] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [exporting, setExporting] = useState(false);
+
+  // Notification state
+  const [notification, setNotification] = useState({
+    open: false,
+    message: "",
+    severity: "success" as "success" | "error" | "info" | "warning",
+    timestamp: Date.now(),
   });
 
-  // Update sections when class changes
+  // Fetch classes when component mounts
+  useEffect(() => {
+    fetchClasses();
+  }, []);
+
+  // Fetch sections when class changes
   useEffect(() => {
     if (selectedClass) {
-      const classId = parseInt(selectedClass);
-      setSections(mockSectionsMap[classId] || []);
+      fetchSections(parseInt(selectedClass));
     } else {
       setSections([]);
     }
     setSelectedSection("");
   }, [selectedClass]);
 
+  // Fetch classes from API
+  const fetchClasses = async () => {
+    setLoading(true);
+    try {
+      const response = await getAllActiveClasses();
+      if (response && response.data) {
+        setClasses(response.data);
+      } else {
+        setClasses([]);
+      }
+    } catch (error) {
+      console.error("Error fetching classes:", error);
+      setNotification({
+        open: true,
+        message: "Failed to load classes",
+        severity: "error",
+        timestamp: Date.now(),
+      });
+      setClasses([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Fetch sections from API
+  const fetchSections = async (classId: number) => {
+    setLoading(true);
+    try {
+      const response = await getSections(0, 100, classId);
+      if (response && response.data) {
+        setSections(response.data);
+      } else {
+        setSections([]);
+      }
+    } catch (error) {
+      console.error("Error fetching sections:", error);
+      setNotification({
+        open: true,
+        message: "Failed to load sections",
+        severity: "error",
+        timestamp: Date.now(),
+      });
+      setSections([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Handle form input changes
   const handleClassChange = (event: React.ChangeEvent<{ value: unknown }>) => {
     setSelectedClass(event.target.value as string);
-    setReportGenerated(false);
   };
 
   const handleSectionChange = (
     event: React.ChangeEvent<{ value: unknown }>
   ) => {
     setSelectedSection(event.target.value as string);
-    setReportGenerated(false);
   };
 
   const handleMonthYearChange = (
     event: React.ChangeEvent<HTMLInputElement>
   ) => {
     setSelectedMonthYear(event.target.value);
-    setReportGenerated(false);
   };
 
-  // Handle form submission
-  const handleSubmit = () => {
-    if (!selectedClass || !selectedSection || !selectedMonthYear) return;
+  // Generate and download attendance report
+  const handleSubmit = async () => {
+    if (!selectedSection || !selectedMonthYear) return;
 
-    const classId = parseInt(selectedClass);
     const sectionId = parseInt(selectedSection);
+    const [year, month] = selectedMonthYear.split("-");
 
-    // Get class and section names for display
-    const className = mockClasses.find((c) => c.id === classId)?.name || "";
-    const sectionName = sections.find((s) => s.id === sectionId)?.name || "";
+    setExporting(true);
+    try {
+      const user_id = AuthService.getUserId() || 14;
+      const school_id = AuthService.getSchoolId() || 4;
 
-    // Generate attendance data
-    const data = generateMockAttendanceData(
-      classId,
-      sectionId,
-      selectedMonthYear
-    );
+      // Call the API to get the Excel file as blob
+      const response = await api.get(
+        `/section/attendance/export?section_id=${sectionId}&month=${month}&year=${year}`,
+        { responseType: "blob" }
+      );
 
-    setAttendanceData(data);
-    setReportDetails({
-      className,
-      sectionName,
-      monthYear: formatMonthYear(selectedMonthYear),
-    });
-    setReportGenerated(true);
+      // Create a URL for the blob
+      const blob = new Blob([response.data], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+      const url = URL.createObjectURL(blob);
+
+      // Find class and section names for the filename
+      const className =
+        classes.find((c) => c.id === parseInt(selectedClass))?.classname ||
+        "Class";
+      const sectionName =
+        sections.find((s) => s.id === sectionId)?.section || "Section";
+
+      // Create a hidden link element and trigger download
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `Attendance_${className}_${sectionName}_${month}_${year}.xlsx`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      // Clean up the URL object
+      URL.revokeObjectURL(url);
+
+      setNotification({
+        open: true,
+        message: "Attendance report downloaded successfully",
+        severity: "success",
+        timestamp: Date.now(),
+      });
+    } catch (error) {
+      console.error("Error downloading attendance report:", error);
+      setNotification({
+        open: true,
+        message: "No attendance data found for this section",
+        severity: "error",
+        timestamp: Date.now(),
+      });
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const handleCloseNotification = () => {
+    setNotification((prev) => ({ ...prev, open: false }));
   };
 
   return (
@@ -231,291 +218,216 @@ const AttendanceReport = () => {
         Attendance Report
       </Typography>
 
-      <Box sx={{ mb: 3 }}>
-        <Grid container spacing={3}>
-          <Grid item xs={12} sm={4}>
-            <Box sx={{ mb: 1 }}>
-              <Typography variant="body2" color="text.secondary">
-                Class
-              </Typography>
-            </Box>
-            <FormControl fullWidth size="medium" sx={{ minWidth: "100%" }}>
-              <Select
-                labelId="class-select-label"
-                id="class-select"
-                value={selectedClass}
-                displayEmpty
-                notched={false}
-                onChange={handleClassChange}
-                MenuProps={{
-                  PaperProps: {
-                    sx: {
-                      maxHeight: 300,
-                      width: "auto",
-                      minWidth: "100%",
-                    },
-                  },
-                  anchorOrigin: {
-                    vertical: "bottom",
-                    horizontal: "left",
-                  },
-                  transformOrigin: {
-                    vertical: "top",
-                    horizontal: "left",
-                  },
-                }}
-                sx={{
-                  transition: "none",
-                  paddingRight: 2,
-                  "& .MuiSelect-select": {
-                    paddingRight: 4,
-                  },
-                  "&:hover .MuiOutlinedInput-notchedOutline": {
-                    borderColor: "rgba(0, 0, 0, 0.23)",
-                  },
-                }}
-              >
-                <MenuItem value="" disabled>
-                  <em>Select a class</em>
-                </MenuItem>
-                {mockClasses.map((cls) => (
-                  <MenuItem key={cls.id} value={cls.id}>
-                    {cls.name}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          </Grid>
-          <Grid item xs={12} sm={4}>
-            <Box sx={{ mb: 1 }}>
-              <Typography variant="body2" color="text.secondary">
-                Section
-              </Typography>
-            </Box>
-            <FormControl
-              fullWidth
-              disabled={!selectedClass}
-              size="medium"
-              sx={{ minWidth: "100%" }}
-            >
-              <Select
-                labelId="section-select-label"
-                id="section-select"
-                value={selectedSection}
-                displayEmpty
-                notched={false}
-                onChange={handleSectionChange}
-                MenuProps={{
-                  PaperProps: {
-                    sx: {
-                      maxHeight: 300,
-                      width: "auto",
-                      minWidth: "100%",
-                    },
-                  },
-                  anchorOrigin: {
-                    vertical: "bottom",
-                    horizontal: "left",
-                  },
-                  transformOrigin: {
-                    vertical: "top",
-                    horizontal: "left",
-                  },
-                }}
-                sx={{
-                  transition: "none",
-                  paddingRight: 2,
-                  "& .MuiSelect-select": {
-                    paddingRight: 4,
-                  },
-                  "&:hover .MuiOutlinedInput-notchedOutline": {
-                    borderColor: "rgba(0, 0, 0, 0.23)",
-                  },
-                }}
-              >
-                <MenuItem value="" disabled>
-                  <em>Select a section</em>
-                </MenuItem>
-                {sections.map((section) => (
-                  <MenuItem key={section.id} value={section.id}>
-                    {section.name}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          </Grid>
-          <Grid item xs={12} sm={4}>
-            <Box sx={{ mb: 1 }}>
-              <Typography variant="body2" color="text.secondary">
-                Month and Year
-              </Typography>
-            </Box>
-            <TextField
-              value={selectedMonthYear}
-              onChange={handleMonthYearChange}
-              fullWidth
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <CalendarTodayIcon fontSize="small" />
-                  </InputAdornment>
-                ),
-              }}
-              sx={{
-                transition: "none",
-                "& .MuiOutlinedInput-root": {
-                  "&:hover .MuiOutlinedInput-notchedOutline": {
-                    borderColor: "rgba(0, 0, 0, 0.23)",
-                  },
-                },
-              }}
-              inputProps={{
-                type: "month",
-              }}
-              placeholder="Select month and year"
-            />
-          </Grid>
-        </Grid>
+      {/* Information text moved above the form */}
+      <Box
+        sx={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          textAlign: "center",
+          mb: 4,
+          mt: 2,
+        }}
+      >
+        <CalendarTodayIcon sx={{ fontSize: 60, opacity: 0.2, mb: 2 }} />
+        <Typography variant="h6" color="text.secondary">
+          Download Attendance Reports
+        </Typography>
+        <Typography
+          variant="body2"
+          color="text.secondary"
+          sx={{ maxWidth: 500, mt: 1 }}
+        >
+          Select a class, section, and month from the form to generate and
+          download attendance reports in Excel format. These reports contain
+          detailed student attendance data for the selected period.
+        </Typography>
+      </Box>
 
-        <Box sx={{ mt: 3, display: "flex", justifyContent: "flex-end" }}>
-          <Button
-            variant="contained"
-            disableElevation
-            onClick={handleSubmit}
-            disabled={!selectedClass || !selectedSection || !selectedMonthYear}
-            sx={{
-              textTransform: "none",
-              borderRadius: 0.5,
-              transition: "none",
-              backgroundImage: "none",
-              background: "primary.main",
-              boxShadow: "none",
-              "&:hover": {
-                backgroundImage: "none",
-                background: "primary.main",
-                opacity: 0.9,
-              },
-            }}
-          >
-            Generate Report
-          </Button>
+      {/* Form centered on page */}
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "center",
+          flex: 1,
+        }}
+      >
+        <Box sx={{ width: "100%", maxWidth: 800 }}>
+          <Grid container spacing={2} direction="column">
+            <Grid item xs={12}>
+              <Box sx={{ mb: 1 }}>
+                <Typography variant="body2" color="text.secondary">
+                  Class
+                </Typography>
+              </Box>
+              <FormControl fullWidth size="medium">
+                <Select
+                  labelId="class-select-label"
+                  id="class-select"
+                  value={selectedClass}
+                  displayEmpty
+                  onChange={handleClassChange}
+                  disabled={loading}
+                  MenuProps={{
+                    PaperProps: {
+                      sx: {
+                        maxHeight: 300,
+                        width: "auto",
+                        minWidth: "100%",
+                      },
+                    },
+                  }}
+                >
+                  <MenuItem value="" disabled>
+                    <em>Select a class</em>
+                  </MenuItem>
+                  {classes.map((cls) => (
+                    <MenuItem key={cls.id} value={cls.id.toString()}>
+                      {cls.classname}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12}>
+              <Box sx={{ mb: 1 }}>
+                <Typography variant="body2" color="text.secondary">
+                  Section
+                </Typography>
+              </Box>
+              <FormControl
+                fullWidth
+                disabled={!selectedClass || loading}
+                size="medium"
+              >
+                <Select
+                  labelId="section-select-label"
+                  id="section-select"
+                  value={selectedSection}
+                  displayEmpty
+                  onChange={handleSectionChange}
+                  MenuProps={{
+                    PaperProps: {
+                      sx: {
+                        maxHeight: 300,
+                        width: "auto",
+                        minWidth: "100%",
+                      },
+                    },
+                  }}
+                >
+                  <MenuItem value="" disabled>
+                    <em>Select a section</em>
+                  </MenuItem>
+                  {sections.map((section) => (
+                    <MenuItem key={section.id} value={section.id.toString()}>
+                      {section.section}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12}>
+              <Box sx={{ mb: 1 }}>
+                <Typography variant="body2" color="text.secondary">
+                  Month and Year
+                </Typography>
+              </Box>
+              <TextField
+                value={selectedMonthYear}
+                onChange={handleMonthYearChange}
+                fullWidth
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <CalendarTodayIcon fontSize="small" />
+                    </InputAdornment>
+                  ),
+                }}
+                inputProps={{
+                  type: "month",
+                }}
+                placeholder="Select month and year"
+                disabled={loading}
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <Button
+                variant="contained"
+                fullWidth
+                disableElevation
+                onClick={handleSubmit}
+                disabled={
+                  !selectedClass ||
+                  !selectedSection ||
+                  !selectedMonthYear ||
+                  loading ||
+                  exporting
+                }
+                sx={{
+                  mt: 1,
+                  textTransform: "none",
+                  borderRadius: 0.5,
+                  transition: "none",
+                  backgroundImage: "none",
+                  background: "primary.main",
+                  boxShadow: "none",
+                  py: 1.5,
+                  "&:hover": {
+                    backgroundImage: "none",
+                    background: "primary.main",
+                    opacity: 0.9,
+                  },
+                }}
+              >
+                {exporting ? (
+                  <>
+                    <CircularProgress
+                      size={20}
+                      color="inherit"
+                      sx={{ mr: 1 }}
+                    />
+                    Downloading...
+                  </>
+                ) : (
+                  "Download Report"
+                )}
+              </Button>
+            </Grid>
+          </Grid>
         </Box>
       </Box>
 
-      {reportGenerated && (
-        <>
-          <Divider sx={{ my: 3 }} />
-
-          <Box mb={2} display="flex" alignItems="center" gap={1}>
-            <Typography variant="h6" fontWeight={500}>
-              Monthly Attendance Report:
-            </Typography>
-            <Chip
-              label={`${reportDetails.className} ${reportDetails.sectionName}`}
-              color="primary"
-              size="small"
-              sx={{ fontWeight: 500 }}
-            />
-            <Typography variant="body1" sx={{ ml: 1 }}>
-              {reportDetails.monthYear}
-            </Typography>
-          </Box>
-
-          <TableContainer
-            component={Paper}
-            elevation={0}
-            variant="outlined"
-            sx={{
-              flex: 1,
-              overflow: "auto",
-              borderRadius: 0.5,
-            }}
-          >
-            <Table stickyHeader>
-              <TableHead>
-                <TableRow>
-                  <TableCell sx={{ fontWeight: 600, bgcolor: "grey.50" }}>
-                    Roll No.
-                  </TableCell>
-                  <TableCell sx={{ fontWeight: 600, bgcolor: "grey.50" }}>
-                    Name
-                  </TableCell>
-                  <TableCell
-                    sx={{ fontWeight: 600, bgcolor: "grey.50", width: 130 }}
-                    align="center"
-                  >
-                    Days Present
-                  </TableCell>
-                  <TableCell
-                    sx={{ fontWeight: 600, bgcolor: "grey.50", width: 130 }}
-                    align="center"
-                  >
-                    Days Absent
-                  </TableCell>
-                  <TableCell
-                    sx={{ fontWeight: 600, bgcolor: "grey.50", width: 130 }}
-                    align="center"
-                  >
-                    Working Days
-                  </TableCell>
-                  <TableCell
-                    sx={{ fontWeight: 600, bgcolor: "grey.50", width: 150 }}
-                    align="center"
-                  >
-                    Attendance %
-                  </TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {attendanceData.map((student) => (
-                  <TableRow
-                    key={student.id}
-                    hover
-                    sx={{
-                      "&:hover": {
-                        backgroundColor: "rgba(0, 0, 0, 0.02)",
-                      },
-                      transition: "none",
-                    }}
-                  >
-                    <TableCell>{student.rollNumber}</TableCell>
-                    <TableCell>{student.name}</TableCell>
-                    <TableCell align="center">{student.daysPresent}</TableCell>
-                    <TableCell align="center">{student.daysAbsent}</TableCell>
-                    <TableCell align="center">
-                      {student.totalWorkingDays}
-                    </TableCell>
-                    <TableCell align="center">
-                      <Chip
-                        label={`${student.attendancePercentage}%`}
-                        size="small"
-                        color={
-                          student.attendancePercentage >= 75
-                            ? "success"
-                            : student.attendancePercentage >= 50
-                            ? "warning"
-                            : "error"
-                        }
-                        sx={{
-                          minWidth: 60,
-                          transition: "none",
-                        }}
-                      />
-                    </TableCell>
-                  </TableRow>
-                ))}
-                {attendanceData.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={6} align="center" sx={{ py: 3 }}>
-                      No attendance data found for the selected criteria.
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        </>
-      )}
+      {/* Notification Snackbar */}
+      <Snackbar
+        key={notification.timestamp}
+        open={notification.open}
+        autoHideDuration={4000}
+        onClose={handleCloseNotification}
+        anchorOrigin={{ vertical: "top", horizontal: "right" }}
+      >
+        <Alert
+          onClose={handleCloseNotification}
+          severity={notification.severity}
+          variant="standard"
+          sx={{
+            width: "100%",
+            boxShadow: "0 2px 10px rgba(0,0,0,0.08)",
+            border: "1px solid",
+            borderColor:
+              notification.severity === "success"
+                ? "rgba(46, 125, 50, 0.2)"
+                : notification.severity === "info"
+                ? "rgba(2, 136, 209, 0.2)"
+                : notification.severity === "warning"
+                ? "rgba(237, 108, 2, 0.2)"
+                : "rgba(211, 47, 47, 0.2)",
+            borderRadius: 1,
+          }}
+        >
+          {notification.message}
+        </Alert>
+      </Snackbar>
     </Paper>
   );
 };

@@ -318,6 +318,27 @@ let theme = createTheme({
         },
       },
     },
+    MuiAlert: {
+      styleOverrides: {
+        root: {},
+        standard: {},
+        filled: {
+          color: "#ffffff", // Make text white for filled variant alerts (used in toasts)
+          "& .MuiAlert-icon": {
+            color: "#ffffff", // Make icon white too
+          },
+          "& .MuiAlert-message": {
+            color: "#ffffff",
+          },
+          "& .MuiAlert-action": {
+            color: "#ffffff",
+            "& .MuiIconButton-root": {
+              color: "#ffffff",
+            },
+          },
+        },
+      },
+    },
   },
 });
 
