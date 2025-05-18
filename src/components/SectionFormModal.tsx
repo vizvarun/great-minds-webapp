@@ -16,7 +16,7 @@ import {
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import { getAllActiveClasses } from "../services/classService";
-import { getTeachersBySection } from "../services/teacherService";
+import { getActiveEmployees } from "../services/teacherService";
 import type { Class } from "../services/classService";
 import type { Teacher } from "../services/teacherService";
 import type { Section } from "../services/sectionService";
@@ -27,7 +27,7 @@ interface SectionFormModalProps {
   onSubmit: (section: Partial<Section>) => void;
   section?: Section;
   isEditMode?: boolean;
-  sectionId?: number; // Add sectionId prop
+  sectionId?: number;
 }
 
 interface ExtendedSection extends Section {
@@ -52,11 +52,11 @@ const SectionFormModal = ({
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [classes, setClasses] = useState<Class[]>([]);
-  const [teachers, setTeachers] = useState<Teacher[]>([]);
+  const [employees, setEmployees] = useState<Teacher[]>([]);
   const [loading, setLoading] = useState(false);
-  const [teachersLoading, setTeachersLoading] = useState(false);
+  const [employeesLoading, setEmployeesLoading] = useState(false);
 
-  // Fetch all classes and teachers when the modal opens
+  // Fetch all classes and employees when the modal opens
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
@@ -77,20 +77,17 @@ const SectionFormModal = ({
           setClasses([]);
         }
 
-        // Fetch all teachers
-        setTeachersLoading(true);
-        // Pass the sectionId when available (either from prop or from section object)
-        const sectionIdToUse = sectionId || (section ? section.id : undefined);
-        const teachersResponse = await getTeachersBySection(sectionIdToUse);
-        console.log("Teachers data:", teachersResponse); // Log teachers data for debugging
-        setTeachers(teachersResponse || []);
+        // For section form, we'll disable employee selection since we'll only allow deletion
+        // of teachers and students inside section view
+        setEmployees([]);
+        setEmployeesLoading(false);
       } catch (error) {
         console.error("Failed to fetch data:", error);
         setClasses([]);
-        setTeachers([]);
+        setEmployees([]);
       } finally {
         setLoading(false);
-        setTeachersLoading(false);
+        setEmployeesLoading(false);
       }
     };
 
@@ -98,16 +95,16 @@ const SectionFormModal = ({
       // Only fetch when modal is opened
       fetchData();
     }
-  }, [open, isEditMode, sectionId, section]);
+  }, [open, isEditMode]);
 
   // Set initial form data when section prop changes
   useEffect(() => {
     if (section && isEditMode) {
       setFormData({
         ...section,
-        // Add default values for new fields if they don't exist in the section object
-        classTeacherId: section.classTeacherId || undefined,
-        classAdminId: section.classAdminId || undefined,
+        // Use existing values if available in the section object
+        classTeacherId: section.classTeacherId,
+        classAdminId: section.classAdminId,
       });
     } else if (classes.length > 0) {
       // Default to first class in the list for new sections
@@ -268,88 +265,15 @@ const SectionFormModal = ({
                 />
               </Box>
 
+              {/* Remove Class Teacher and Class Admin fields since they'll be managed in section view */}
               <Box sx={{ mb: 2 }}>
-                <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
-                  Class Teacher
+                <Typography
+                  variant="body2"
+                  sx={{ mb: 1, fontWeight: 500, color: "text.secondary" }}
+                >
+                  Note: Teachers and students can be managed after creating the
+                  section
                 </Typography>
-                <FormControl fullWidth size="small">
-                  <Select
-                    id="classTeacherId"
-                    name="classTeacherId"
-                    value={formData.classTeacherId || ""}
-                    onChange={handleChange as any}
-                    displayEmpty
-                    disabled={teachersLoading}
-                    endAdornment={
-                      teachersLoading ? (
-                        <CircularProgress size={20} sx={{ mr: 2 }} />
-                      ) : null
-                    }
-                  >
-                    <MenuItem value="">
-                      <em>None</em>
-                    </MenuItem>
-                    {teachers && teachers.length > 0 ? (
-                      teachers.map((teacher) => (
-                        <MenuItem key={teacher.id} value={teacher.id}>
-                          {teacher.fullName ||
-                            `${teacher.firstName || ""} ${
-                              teacher.lastName || ""
-                            }`.trim() ||
-                            `Teacher ${teacher.id}`}
-                        </MenuItem>
-                      ))
-                    ) : (
-                      <MenuItem value="" disabled>
-                        {teachersLoading
-                          ? "Loading teachers..."
-                          : "No teachers available"}
-                      </MenuItem>
-                    )}
-                  </Select>
-                </FormControl>
-              </Box>
-
-              <Box sx={{ mb: 2 }}>
-                <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
-                  Class Admin
-                </Typography>
-                <FormControl fullWidth size="small">
-                  <Select
-                    id="classAdminId"
-                    name="classAdminId"
-                    value={formData.classAdminId || ""}
-                    onChange={handleChange as any}
-                    displayEmpty
-                    disabled={teachersLoading}
-                    endAdornment={
-                      teachersLoading ? (
-                        <CircularProgress size={20} sx={{ mr: 2 }} />
-                      ) : null
-                    }
-                  >
-                    <MenuItem value="">
-                      <em>None</em>
-                    </MenuItem>
-                    {teachers && teachers.length > 0 ? (
-                      teachers.map((teacher) => (
-                        <MenuItem key={teacher.id} value={teacher.id}>
-                          {teacher.fullName ||
-                            `${teacher.firstName || ""} ${
-                              teacher.lastName || ""
-                            }`.trim() ||
-                            `Teacher ${teacher.id}`}
-                        </MenuItem>
-                      ))
-                    ) : (
-                      <MenuItem value="" disabled>
-                        {teachersLoading
-                          ? "Loading teachers..."
-                          : "No teachers available"}
-                      </MenuItem>
-                    )}
-                  </Select>
-                </FormControl>
               </Box>
 
               <Divider sx={{ my: 2 }} />

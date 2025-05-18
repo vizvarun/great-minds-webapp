@@ -16,76 +16,14 @@ import {
   TextField,
   InputAdornment,
   Divider,
+  CircularProgress,
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
-import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import SearchIcon from "@mui/icons-material/Search";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
-
-// Import the mock data from the sections page
-interface Teacher {
-  id: number;
-  name: string;
-  subject: string;
-  contactNumber: string;
-}
-
-// Mock teachers data - in a real app this would come from an API
-const mockTeachers: Record<number, Teacher[]> = {
-  1: [
-    {
-      id: 1,
-      name: "John Smith",
-      subject: "Mathematics",
-      contactNumber: "9876543210",
-    },
-    {
-      id: 2,
-      name: "Sarah Johnson",
-      subject: "English",
-      contactNumber: "9876543211",
-    },
-  ],
-  2: [
-    {
-      id: 3,
-      name: "Robert Williams",
-      subject: "Science",
-      contactNumber: "9876543212",
-    },
-  ],
-  3: [
-    {
-      id: 4,
-      name: "Lisa Brown",
-      subject: "Hindi",
-      contactNumber: "9876543213",
-    },
-    {
-      id: 5,
-      name: "Michael Davis",
-      subject: "Social Studies",
-      contactNumber: "9876543214",
-    },
-  ],
-  5: [
-    {
-      id: 6,
-      name: "James Wilson",
-      subject: "Computer Science",
-      contactNumber: "9876543215",
-    },
-  ],
-  8: [
-    {
-      id: 7,
-      name: "Emily Taylor",
-      subject: "Art",
-      contactNumber: "9876543216",
-    },
-  ],
-};
+import { getTeachersBySection } from "../services/teacherService";
+import type { Teacher } from "../services/teacherService";
 
 const SectionTeachers = () => {
   const location = useLocation();
@@ -93,25 +31,45 @@ const SectionTeachers = () => {
   const { sectionId, className, sectionName } = location.state || {};
 
   const [teachers, setTeachers] = useState<Teacher[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
-    // Fetch teachers for the section - using mock data for now
-    if (sectionId && mockTeachers[sectionId]) {
-      setTeachers(mockTeachers[sectionId] || []);
-    } else {
-      setTeachers([]);
-    }
+    const fetchTeachers = async () => {
+      if (!sectionId) {
+        setError("Section ID is missing");
+        setLoading(false);
+        return;
+      }
+
+      try {
+        setLoading(true);
+        const teachersData = await getTeachersBySection(sectionId);
+        setTeachers(teachersData);
+        setError(null);
+      } catch (err) {
+        console.error("Failed to fetch teachers:", err);
+        setError("Failed to load teachers. Please try again later.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchTeachers();
   }, [sectionId]);
 
   // Filter teachers based on search query
   const filteredTeachers = teachers.filter(
     (teacher) =>
-      teacher.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      teacher.subject.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      teacher.contactNumber.includes(searchQuery)
+      teacher.firstName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      teacher.lastName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (teacher.fullName &&
+        teacher.fullName.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      teacher.designation?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      teacher.email?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const handleChangePage = (_: unknown, newPage: number) => {
@@ -137,11 +95,6 @@ const SectionTeachers = () => {
   const handleAddTeacher = () => {
     console.log("Add teacher clicked for section", sectionId);
     // Implement add teacher functionality
-  };
-
-  const handleEditTeacher = (id: number) => {
-    console.log("Edit teacher", id);
-    // Implement edit teacher functionality
   };
 
   const handleDeleteTeacher = (id: number) => {
@@ -254,81 +207,106 @@ const SectionTeachers = () => {
           overflow: "auto",
         }}
       >
-        <Table stickyHeader>
-          <TableHead>
-            <TableRow sx={{ backgroundColor: "grey.50" }}>
-              <TableCell sx={{ fontWeight: 600, bgcolor: "grey.50" }}>
-                Name
-              </TableCell>
-              <TableCell sx={{ fontWeight: 600, bgcolor: "grey.50" }}>
-                Subject
-              </TableCell>
-              <TableCell sx={{ fontWeight: 600, bgcolor: "grey.50" }}>
-                Contact Number
-              </TableCell>
-              <TableCell
-                sx={{ fontWeight: 600, bgcolor: "grey.50", width: "15%" }}
-                align="center"
-              >
-                Actions
-              </TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {filteredTeachers
-              .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-              .map((teacher) => (
-                <TableRow
-                  key={teacher.id}
-                  hover
-                  sx={{
-                    "&:hover": {
-                      backgroundColor: "rgba(0, 0, 0, 0.02)",
-                    },
-                  }}
+        {loading ? (
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              height: "100%",
+              p: 4,
+            }}
+          >
+            <CircularProgress />
+          </Box>
+        ) : error ? (
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              height: "100%",
+              p: 4,
+            }}
+          >
+            <Typography color="error">{error}</Typography>
+          </Box>
+        ) : (
+          <Table stickyHeader>
+            <TableHead>
+              <TableRow sx={{ backgroundColor: "grey.50" }}>
+                <TableCell sx={{ fontWeight: 600, bgcolor: "grey.50" }}>
+                  Name
+                </TableCell>
+                <TableCell sx={{ fontWeight: 600, bgcolor: "grey.50" }}>
+                  Designation
+                </TableCell>
+                <TableCell sx={{ fontWeight: 600, bgcolor: "grey.50" }}>
+                  Email
+                </TableCell>
+                <TableCell
+                  sx={{ fontWeight: 600, bgcolor: "grey.50", width: "15%" }}
+                  align="center"
                 >
-                  <TableCell>{teacher.name}</TableCell>
-                  <TableCell>{teacher.subject}</TableCell>
-                  <TableCell>{teacher.contactNumber}</TableCell>
-                  <TableCell align="center">
-                    <Box sx={{ display: "flex", justifyContent: "center" }}>
-                      <IconButton
-                        size="small"
-                        onClick={() => handleEditTeacher(teacher.id)}
-                        color="primary"
-                        sx={{
-                          "&:hover": {
-                            bgcolor: "rgba(25, 118, 210, 0.04)",
-                          },
-                        }}
-                      >
-                        <EditIcon fontSize="small" />
-                      </IconButton>
-                      <IconButton
-                        size="small"
-                        onClick={() => handleDeleteTeacher(teacher.id)}
-                        color="error"
-                        sx={{
-                          "&:hover": {
-                            bgcolor: "rgba(211, 47, 47, 0.04)",
-                          },
-                        }}
-                      >
-                        <DeleteIcon fontSize="small" />
-                      </IconButton>
-                    </Box>
-                  </TableCell>
-                </TableRow>
-              ))}
-            {filteredTeachers.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={4} align="center" sx={{ py: 3 }}>
-                  No teachers found for this section.
+                  Actions
                 </TableCell>
               </TableRow>
-            )}
-          </TableBody>
-        </Table>
+            </TableHead>
+            <TableBody>
+              {filteredTeachers
+                .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+                .map((teacher) => (
+                  <TableRow
+                    key={teacher.id}
+                    hover
+                    sx={{
+                      "&:hover": {
+                        backgroundColor: "rgba(0, 0, 0, 0.02)",
+                      },
+                    }}
+                  >
+                    <TableCell>
+                      {teacher.fullName ||
+                        `${teacher.firstName || ""} ${
+                          teacher.lastName || ""
+                        }`.trim() ||
+                        "-"}
+                    </TableCell>
+                    <TableCell>{teacher.designation || "-"}</TableCell>
+                    <TableCell>{teacher.email || "-"}</TableCell>
+                    <TableCell align="center">
+                      <Box sx={{ display: "flex", justifyContent: "center" }}>
+                        <IconButton
+                          size="small"
+                          onClick={() => handleDeleteTeacher(teacher.id)}
+                          color="error"
+                          sx={{
+                            transition: "none",
+                            outline: "none",
+                            "&:hover": {
+                              bgcolor: "rgba(211, 47, 47, 0.04)",
+                            },
+                            "&:focus": {
+                              outline: "none",
+                            },
+                          }}
+                        >
+                          <DeleteIcon fontSize="small" />
+                        </IconButton>
+                      </Box>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              {filteredTeachers.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={4} align="center" sx={{ py: 3 }}>
+                    No teachers found for this section.
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        )}
       </TableContainer>
 
       {/* Pagination */}

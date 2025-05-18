@@ -23,7 +23,12 @@ import {
   Typography,
 } from "@mui/material";
 import { useState, useEffect } from "react";
-import { getSubjects, createSubject, updateSubject, deleteSubject } from "../services/subjectService";
+import {
+  getSubjects,
+  createSubject,
+  updateSubject,
+  deleteSubject,
+} from "../services/subjectService";
 import type { Subject } from "../services/subjectService";
 
 const Subjects = () => {
@@ -71,7 +76,7 @@ const Subjects = () => {
 
   // Filter subjects based on search query
   const filteredSubjects = subjects.filter((subject) =>
-    subject && subject.subjectName 
+    subject && subject.subjectName
       ? subject.subjectName.toLowerCase().includes(searchQuery.toLowerCase())
       : false
   );
@@ -121,10 +126,13 @@ const Subjects = () => {
     if (subjectToDelete) {
       try {
         await deleteSubject(subjectToDelete.id);
-        
+
         // Update local state to remove the deleted subject
         setSubjects(subjects.filter((s) => s.id !== subjectToDelete.id));
-        showToast(`Subject "${subjectToDelete.subjectName}" deleted`, "success");
+        showToast(
+          `Subject "${subjectToDelete.subjectName}" deleted`,
+          "success"
+        );
       } catch (error) {
         showToast("Failed to delete subject", "error");
       } finally {
@@ -156,34 +164,34 @@ const Subjects = () => {
       if (isEditMode && editSubjectId !== null) {
         // Update existing subject
         const updatedSubject = await updateSubject(
-          editSubjectId, 
-          subjectName, 
+          editSubjectId,
+          subjectName,
           fetchSubjects // Pass fetchSubjects as a callback to refresh data
         );
-        
+
         // Also update the local state to ensure the UI stays consistent
-        setSubjects(prevSubjects => 
-          prevSubjects.map(subject => 
-            subject.id === editSubjectId 
-              ? { ...subject, subjectName: updatedSubject.subjectName } 
+        setSubjects((prevSubjects) =>
+          prevSubjects.map((subject) =>
+            subject.id === editSubjectId
+              ? { ...subject, subjectName: updatedSubject.subjectName }
               : subject
           )
         );
-        
+
         showToast("Subject updated successfully", "success");
       } else {
         // Add new subject
         const newSubject = await createSubject(
-          subjectName, 
+          subjectName,
           fetchSubjects // Pass fetchSubjects as a callback to refresh data
         );
-        
+
         // Also update local state
-        setSubjects(prevSubjects => [...prevSubjects, newSubject]);
-        
+        setSubjects((prevSubjects) => [...prevSubjects, newSubject]);
+
         showToast("Subject added successfully", "success");
       }
-      
+
       // Close modal and reset state
       setModalOpen(false);
       setSubjectName("");
@@ -197,7 +205,10 @@ const Subjects = () => {
     }
   };
 
-  const showToast = (message: string, severity: "success" | "info" | "warning" | "error") => {
+  const showToast = (
+    message: string,
+    severity: "success" | "info" | "warning" | "error"
+  ) => {
     setToastMessage(message);
     setToastSeverity(severity);
     setToastOpen(true);
@@ -595,8 +606,8 @@ const Subjects = () => {
             </Typography>
             <Typography variant="body1" sx={{ mb: 3, textAlign: "center" }}>
               Are you sure you want to delete{" "}
-              <strong>{subjectToDelete?.subjectName}</strong>? This action cannot be
-              undone.
+              <strong>{subjectToDelete?.subjectName}</strong>? This action
+              cannot be undone.
             </Typography>
             <Box sx={{ display: "flex", justifyContent: "center", gap: 2 }}>
               <Button

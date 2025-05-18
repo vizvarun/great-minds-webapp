@@ -77,9 +77,16 @@ const Sections = () => {
 
   // Fetch sections and classes on component mount
   useEffect(() => {
+    // Get stored filter class ID from localStorage if available
+    const storedFilterClassId = localStorage.getItem("sectionFilterClassId");
+
     fetchClasses().then((classData) => {
-      // If there's class data and no filter is set, set the first class as active
-      if (classData && classData.length > 0 && !filterClassId) {
+      // If there's stored filter, use it
+      if (storedFilterClassId) {
+        setFilterClassId(storedFilterClassId);
+      }
+      // Otherwise, if there's class data and no filter is set, set the first class as active
+      else if (classData && classData.length > 0 && !filterClassId) {
         setFilterClassId(classData[0].id.toString());
       }
     });
@@ -88,6 +95,8 @@ const Sections = () => {
   // Fetch sections when page, rowsPerPage, or filterClassId changes
   useEffect(() => {
     if (filterClassId) {
+      // Store the selected filter class ID in localStorage whenever it changes
+      localStorage.setItem("sectionFilterClassId", filterClassId);
       fetchSections();
     }
   }, [page, rowsPerPage, filterClassId]);
@@ -135,9 +144,12 @@ const Sections = () => {
   // Filter sections based on search query
   const filteredSections = sections.filter(
     (section) =>
-      section.section.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (section.className &&
-        section.className.toLowerCase().includes(searchQuery.toLowerCase()))
+      (section.section?.toLowerCase() || "").includes(
+        searchQuery.toLowerCase()
+      ) ||
+      (section.className || "")
+        .toLowerCase()
+        .includes(searchQuery.toLowerCase())
   );
 
   const handleChangePage = (_: unknown, newPage: number) => {
@@ -157,7 +169,10 @@ const Sections = () => {
   };
 
   const handleFilterClassChange = (event: SelectChangeEvent) => {
-    setFilterClassId(event.target.value);
+    const newClassId = event.target.value;
+    setFilterClassId(newClassId);
+    // Store the updated filter class ID
+    localStorage.setItem("sectionFilterClassId", newClassId);
     setPage(0);
   };
 

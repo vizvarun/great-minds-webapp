@@ -42,7 +42,7 @@ export const getTeachersBySection = async (
         typeId: teacher.typeid, // This might indicate the teacher's role (teacher/admin)
       }));
     }
-    
+
     // Return empty array if no data found
     return [];
   } catch (error) {
@@ -99,6 +99,42 @@ export const getAllTeachers = async (): Promise<Teacher[]> => {
     return [];
   } catch (error) {
     console.error("Error fetching all teachers:", error);
+    return [];
+  }
+};
+
+export const getActiveEmployees = async (): Promise<Teacher[]> => {
+  try {
+    const user_id = AuthService.getUserId() || 14;
+    const school_id = AuthService.getSchoolId() || 4;
+
+    const response = await api.get(
+      `/employee/active-list?user_id=${user_id}&school_id=${school_id}`
+    );
+
+    // Handle the actual response structure where data is in response.data.data
+    if (response.data && Array.isArray(response.data.data)) {
+      return response.data.data.map((employee: any) => ({
+        id: employee.empId, // Use empId as the primary id
+        userId: employee.userId,
+        firstName: employee.firstName || "",
+        lastName: employee.lastName || "",
+        middleName: employee.middleName || "",
+        fullName:
+          `${employee.firstName || ""} ${
+            employee.middleName ? employee.middleName + " " : ""
+          }${employee.lastName || ""}`.trim() || `Employee ${employee.empId}`,
+        designation: employee.designation || "",
+        email: employee.email || "",
+        empNo: employee.empNo || "", // Include employee number
+        mobileNo: employee.mobileNo || "", // Include mobile number
+      }));
+    }
+
+    console.log("Unexpected response format:", response.data);
+    return [];
+  } catch (error) {
+    console.error("Error fetching active employees:", error);
     return [];
   }
 };
