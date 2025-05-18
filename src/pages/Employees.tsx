@@ -33,6 +33,7 @@ import {
   updateEmployee,
   deleteEmployee as apiDeleteEmployee,
   bulkUploadEmployees,
+  downloadEmployeeExcel,
 } from "../services/employeeService";
 import type { Employee } from "../services/employeeService";
 
@@ -246,27 +247,53 @@ const Employees = () => {
     }
   };
 
-  const handleDownloadList = () => {
-    const header =
-      "Employee ID,First Name,Last Name,Designation,Mobile Number\n";
-    const csvContent =
-      header +
-      employees
-        .map(
-          (emp) =>
-            `${emp.employeeNo},${emp.firstName},${emp.lastName},${emp.designation},${emp.mobileNumber}`
-        )
-        .join("\n");
+  const handleDownloadList = async () => {
+    try {
+      // Show loading notification
+      setNotification({
+        open: true,
+        message: "Downloading employee data...",
+        severity: "success",
+        timestamp: Date.now(),
+      });
 
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.setAttribute("href", url);
-    link.setAttribute("download", "employees.csv");
-    link.style.visibility = "hidden";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+      // Call the API to get the Excel file as blob
+      const blob = await downloadEmployeeExcel();
+
+      // Create a URL for the blob
+      const url = URL.createObjectURL(blob);
+
+      // Create a hidden link element and trigger download with .xlsx extension
+      const link = document.createElement("a");
+      link.setAttribute("href", url);
+      link.setAttribute(
+        "download",
+        `employees_${new Date().toISOString().split("T")[0]}.xlsx`
+      );
+      link.style.visibility = "hidden";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      // Clean up the URL object
+      URL.revokeObjectURL(url);
+
+      // Show success notification
+      setNotification({
+        open: true,
+        message: "Employee data downloaded successfully",
+        severity: "success",
+        timestamp: Date.now(),
+      });
+    } catch (error) {
+      // Show error notification
+      setNotification({
+        open: true,
+        message: "Failed to download employee data",
+        severity: "error",
+        timestamp: Date.now(),
+      });
+    }
   };
 
   const handleCloseNotification = () => {

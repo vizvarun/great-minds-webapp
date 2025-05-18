@@ -132,12 +132,37 @@ export const getEmployeeById = async (id: number): Promise<Employee> => {
 // Method for downloading employee data
 export const downloadEmployeeCSV = async (): Promise<Blob> => {
   try {
-    const response = await api.get("/web/employees/export", {
-      responseType: "blob",
-    });
-    return new Blob([response.data], { type: "text/csv" });
+    const user_id = AuthService.getUserId() || 14;
+    const school_id = AuthService.getSchoolId() || 4;
+
+    const response = await api.get(
+      `/employee/list/export?user_id=${user_id}&school_id=${school_id}`,
+      { responseType: "blob" }
+    );
+
+    return response.data;
   } catch (error) {
-    console.error("Error downloading employees CSV:", error);
+    console.error("Error downloading employee CSV:", error);
+    throw error;
+  }
+};
+
+// Method for downloading employee data as Excel
+export const downloadEmployeeExcel = async (): Promise<Blob> => {
+  try {
+    const user_id = AuthService.getUserId() || 14;
+    const school_id = AuthService.getSchoolId() || 4;
+
+    const response = await api.get(
+      `/employee/list/export?user_id=${user_id}&school_id=${school_id}&format=excel`,
+      { responseType: "blob" }
+    );
+
+    return new Blob([response.data], {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    });
+  } catch (error) {
+    console.error("Error downloading employee Excel:", error);
     throw error;
   }
 };
@@ -158,7 +183,7 @@ export const validateEmployeePhone = async (
     const school_id = AuthService.getSchoolId() || 4;
 
     const response = await api.get(
-      `/employee/validate-phone?user_id=${user_id}&school_id=${school_id}&mobile_no=${mobileNo}`
+      `/employee/validate?&school_id=${school_id}&mobile_number=${mobileNo}`
     );
 
     if (response.data && response.data.status === "success") {
