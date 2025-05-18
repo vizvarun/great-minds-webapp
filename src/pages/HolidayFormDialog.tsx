@@ -14,33 +14,12 @@ import {
   ListItemText,
   OutlinedInput,
   Chip,
+  CircularProgress,
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
-
-interface Holiday {
-  id?: number;
-  name: string;
-  date: string;
-  endDate?: string;
-  classes: string[];
-}
-
-const ALL_CLASSES = [
-  "Class 1",
-  "Class 2",
-  "Class 3",
-  "Class 4",
-  "Class 5",
-  "Class 6",
-  "Class 7",
-  "Class 8",
-  "Class 9",
-  "Class 10",
-  "Class 11 - Science",
-  "Class 11 - Commerce",
-  "Class 12 - Science",
-  "Class 12 - Commerce",
-];
+import type { Holiday } from "../services/holidayService";
+import { getAllActiveClasses } from "../services/classService";
+import type { Class } from "../services/classService";
 
 interface HolidayFormDialogProps {
   open: boolean;
@@ -56,18 +35,49 @@ const HolidayFormDialog: React.FC<HolidayFormDialogProps> = ({
   holiday,
 }) => {
   const [name, setName] = useState(holiday?.name || "");
-  const [date, setDate] = useState(holiday?.date || "");
+  const [startDate, setStartDate] = useState(holiday?.startDate || "");
   const [endDate, setEndDate] = useState(
-    holiday?.endDate || holiday?.date || ""
+    holiday?.endDate || holiday?.startDate || ""
   );
   const [classes, setClasses] = useState<string[]>(holiday?.classes || []);
+  const [availableClasses, setAvailableClasses] = useState<string[]>([]);
+  const [loading, setLoading] = useState(false);
 
+  // Fetch available classes when the dialog opens
+  useEffect(() => {
+    if (open) {
+      fetchActiveClasses();
+    }
+  }, [open]);
+
+  // Reset form data when holiday prop changes
   useEffect(() => {
     setName(holiday?.name || "");
-    setDate(holiday?.date || "");
-    setEndDate(holiday?.endDate || holiday?.date || "");
+    setStartDate(holiday?.startDate || "");
+    setEndDate(holiday?.endDate || holiday?.startDate || "");
     setClasses(holiday?.classes || []);
   }, [holiday, open]);
+
+  const fetchActiveClasses = async () => {
+    setLoading(true);
+    try {
+      const response = await getAllActiveClasses();
+      if (response && response.data) {
+        // Extract class names from the API response
+        const classNames = response.data.map(
+          (cls: Class) => cls.classname || cls.name
+        );
+        setAvailableClasses(classNames);
+      } else {
+        setAvailableClasses([]);
+      }
+    } catch (error) {
+      console.error("Error fetching classes:", error);
+      setAvailableClasses([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleClassChange = (event: any) => {
     const value = event.target.value;
@@ -87,13 +97,17 @@ const HolidayFormDialog: React.FC<HolidayFormDialogProps> = ({
   };
 
   const handleSave = () => {
-    if (!name.trim() || !date || !endDate || classes.length === 0) return;
+    if (!name.trim() || !startDate || !endDate || classes.length === 0) return;
+
     onSave({
       id: holiday?.id,
       name: name.trim(),
-      date,
-      endDate,
+      startDate: startDate,
+      endDate: endDate,
       classes: classes.includes("All") ? ["All"] : classes,
+      holidayName: name.trim(),
+      start_date: startDate,
+      end_date: endDate,
     });
   };
 
@@ -161,8 +175,8 @@ const HolidayFormDialog: React.FC<HolidayFormDialogProps> = ({
               </Typography>
               <TextField
                 type="date"
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
                 fullWidth
                 size="small"
                 InputLabelProps={{ shrink: true }}
@@ -187,43 +201,60 @@ const HolidayFormDialog: React.FC<HolidayFormDialogProps> = ({
               Classes
             </Typography>
             <FormControl fullWidth size="small">
-              <Select
-                multiple
-                value={classes}
-                onChange={handleClassChange}
-                input={<OutlinedInput />}
-                renderValue={(selected) =>
-                  selected.includes("All") ? (
-                    "All Classes"
-                  ) : (
-                    <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
-                      {selected.map((value) => (
-                        <Chip key={value} label={value} size="small" />
-                      ))}
-                    </Box>
-                  )
-                }
-                sx={{ minHeight: 40 }}
-              >
-                <MenuItem value="All" onClick={handleSelectAll}>
-                  <Checkbox checked={classes.includes("All")} />
-                  <ListItemText primary="All Classes" />
-                </MenuItem>
-                {ALL_CLASSES.map((cls) => (
-                  <MenuItem
-                    key={cls}
-                    value={cls}
-                    disabled={classes.includes("All")}
-                  >
-                    <Checkbox
-                      checked={
-                        classes.indexOf(cls) > -1 || classes.includes("All")
-                      }
-                    />
-                    <ListItemText primary={cls} />
+              {loading ? (
+                <Box
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    p: 2,
+                  }}
+                >
+                  <CircularProgress size={24} />
+                </Box>
+              ) : (
+                <Select
+                  multiple
+                  value={classes}
+                  onChange={handleClassChange}
+                  input={<OutlinedInput />}
+                  renderValue={(selected) =>
+                    selected.includes("All") ? (
+                      "All Classes"
+                    ) : (
+                      <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
+                        {selected.map((value) => (
+                          <Chip key={value} label={value} size="small" />
+                        ))}
+                      </Box>
+                    )
+                  }
+                  sx={{ minHeight: 40 }}
+                >
+                  <MenuItem value="All" onClick={handleSelectAll}>
+                    <Checkbox checked={classes.includes("All")} />
+                    <ListItemText primary="All Classes" />
                   </MenuItem>
-                ))}
-              </Select>
+                  {availableClasses.length > 0 ? (
+                    availableClasses.map((cls) => (
+                      <MenuItem
+                        key={cls}
+                        value={cls}
+                        disabled={classes.includes("All")}
+                      >
+                        <Checkbox
+                          checked={
+                            classes.indexOf(cls) > -1 || classes.includes("All")
+                          }
+                        />
+                        <ListItemText primary={cls} />
+                      </MenuItem>
+                    ))
+                  ) : (
+                    <MenuItem disabled>No classes available</MenuItem>
+                  )}
+                </Select>
+              )}
             </FormControl>
           </Box>
           {/* Action Buttons */}
@@ -255,7 +286,7 @@ const HolidayFormDialog: React.FC<HolidayFormDialogProps> = ({
                 },
               }}
               disabled={
-                !name.trim() || !date || !endDate || classes.length === 0
+                !name.trim() || !startDate || !endDate || classes.length === 0
               }
             >
               {holiday ? "Update" : "Add"}

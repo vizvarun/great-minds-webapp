@@ -1,14 +1,18 @@
 import AddIcon from "@mui/icons-material/Add";
 import DeleteIcon from "@mui/icons-material/Delete";
+import DownloadIcon from "@mui/icons-material/Download";
 import EditIcon from "@mui/icons-material/Edit";
 import SearchIcon from "@mui/icons-material/Search";
 import {
+  Alert,
   Box,
   Button,
   Chip,
+  CircularProgress,
   IconButton,
   InputAdornment,
   Paper,
+  Snackbar,
   Table,
   TableBody,
   TableCell,
@@ -19,72 +23,16 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import HolidayFormDialog from "./HolidayFormDialog";
-
-// Mock data for holidays
-interface Holiday {
-  id?: number;
-  date: string; // ISO format
-  name: string;
-  classes: string[]; // List of classes affected
-}
-
-const mockHolidays: Holiday[] = [
-  { id: 1, date: "2023-01-26", name: "Republic Day", classes: ["All"] },
-  { id: 2, date: "2023-08-15", name: "Independence Day", classes: ["All"] },
-  { id: 3, date: "2023-10-02", name: "Gandhi Jayanti", classes: ["All"] },
-  { id: 4, date: "2023-10-24", name: "Dussehra", classes: ["All"] },
-  { id: 5, date: "2023-11-12", name: "Diwali", classes: ["All"] },
-  { id: 6, date: "2023-12-25", name: "Christmas", classes: ["All"] },
-  {
-    id: 7,
-    date: "2023-09-05",
-    name: "Teachers' Day",
-    classes: ["Class 6", "Class 7", "Class 8"],
-  },
-  {
-    id: 8,
-    date: "2023-11-14",
-    name: "Children's Day",
-    classes: ["Class 1", "Class 2", "Class 3", "Class 4", "Class 5"],
-  },
-  { id: 9, date: "2023-04-14", name: "Dr. Ambedkar Jayanti", classes: ["All"] },
-  { id: 10, date: "2023-05-01", name: "Labor Day", classes: ["All"] },
-  {
-    id: 11,
-    date: "2023-08-29",
-    name: "Sports Day",
-    classes: ["Class 6", "Class 7", "Class 8", "Class 9", "Class 10"],
-  },
-  { id: 12, date: "2023-09-15", name: "Mid-Term Break", classes: ["All"] },
-  { id: 13, date: "2024-01-01", name: "New Year", classes: ["All"] },
-  { id: 14, date: "2023-03-08", name: "Holi", classes: ["All"] },
-  { id: 15, date: "2023-04-07", name: "Good Friday", classes: ["All"] },
-  {
-    id: 16,
-    date: "2023-12-20",
-    name: "Annual Day Function",
-    classes: [
-      "Class 11 - Science",
-      "Class 11 - Commerce",
-      "Class 12 - Science",
-      "Class 12 - Commerce",
-    ],
-  },
-  {
-    id: 17,
-    date: "2024-02-14",
-    name: "Science Exhibition",
-    classes: [
-      "Class 9",
-      "Class 10",
-      "Class 11 - Science",
-      "Class 12 - Science",
-    ],
-  },
-  { id: 18, date: "2023-12-05", name: "Class Picnic", classes: ["Class 8"] },
-];
+import {
+  getHolidays,
+  createHoliday,
+  updateHoliday,
+  deleteHoliday,
+  downloadHolidays,
+} from "../services/holidayService";
+import type { Holiday } from "../services/holidayService";
 
 // Helper function to get day of the week from date
 const getDayOfWeek = (dateString: string): string => {
@@ -111,29 +59,139 @@ const formatDate = (dateString: string): string => {
   return new Date(dateString).toLocaleDateString(undefined, options);
 };
 
+// Updated helper function to format duration to show range properly
+const formatDuration = (startDate: string, endDate: string): string => {
+  console.log(startDate, endDate);
+  if (!startDate) return "-";
+  if (!endDate || startDate === endDate) return formatDate(startDate);
+
+  // Show as range if end date is different from start date
+  return `${formatDate(startDate)} - ${formatDate(endDate)}`;
+};
+
+// Updated function to format day of the week to show range for multi-day holidays
+const formatDay = (startDate: string, endDate: string): string => {
+  if (!startDate) return "-";
+
+  const startDay = getDayOfWeek(startDate);
+
+  // If no end date or same date, just return the day of the start date
+  if (!endDate || startDate === endDate) return startDay;
+
+  // For multi-day holidays, calculate all days in between
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+
+  // If the difference is just one day, show both days
+  if ((end.getTime() - start.getTime()) / (1000 * 3600 * 24) <= 1) {
+    const endDay = getDayOfWeek(endDate);
+    return startDay === endDay ? startDay : `${startDay} - ${endDay}`;
+  }
+
+  // For longer periods, show "Multiple Days" or the specific range
+  // If spanning a week or more, show "Multiple Days"
+
+  // Otherwise show the specific range
+  const endDay = getDayOfWeek(endDate);
+  return `${startDay} - ${endDay}`;
+};
+
+// Updated this function to handle potentially missing or empty classes array
+const formatClasses = (classes: string[]): JSX.Element => {
+  if (!classes || classes.length === 0) {
+    return (
+      <Chip
+        label="No classes assigned"
+        size="small"
+        color="default"
+        sx={{ height: 24, fontSize: "0.75rem" }}
+      />
+    );
+  }
+
+  if (classes.length === 1 && classes[0] === "All") {
+    return (
+      <Chip
+        label="All Classes"
+        size="small"
+        color="primary"
+        sx={{ height: 24, fontSize: "0.75rem" }}
+      />
+    );
+  }
+
+  return (
+    <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
+      {classes.map((cls, index) => (
+        <Chip
+          key={index}
+          label={cls}
+          size="small"
+          sx={{ height: 24, fontSize: "0.75rem", transition: "none" }}
+        />
+      ))}
+    </Box>
+  );
+};
+
 const Holidays = () => {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [searchQuery, setSearchQuery] = useState("");
-  const [holidays, setHolidays] = useState<Holiday[]>(mockHolidays);
+  const [holidays, setHolidays] = useState<Holiday[]>([]);
   const [editHoliday, setEditHoliday] = useState<Holiday | null>(null);
   const [openEditDialog, setOpenEditDialog] = useState(false);
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
   const [holidayToDelete, setHolidayToDelete] = useState<Holiday | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  // Notification state
+  const [notification, setNotification] = useState({
+    open: false,
+    message: "",
+    severity: "success" as "success" | "error" | "info" | "warning",
+    timestamp: Date.now(),
+  });
+
+  // Fetch holidays when component mounts
+  useEffect(() => {
+    fetchHolidays();
+  }, []);
+
+  const fetchHolidays = async () => {
+    setLoading(true);
+    try {
+      const data = await getHolidays();
+      setHolidays(data);
+    } catch (error) {
+      console.error("Error fetching holidays:", error);
+      setNotification({
+        open: true,
+        message: "Failed to load holidays",
+        severity: "error",
+        timestamp: Date.now(),
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Filter holidays based on search query
   const filteredHolidays = holidays
     .filter(
       (holiday) =>
         holiday.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        formatDate(holiday.date)
+        formatDate(holiday.startDate)
           .toLowerCase()
           .includes(searchQuery.toLowerCase()) ||
-        getDayOfWeek(holiday.date)
+        formatDay(holiday.startDate, holiday.endDate)
           .toLowerCase()
           .includes(searchQuery.toLowerCase())
     )
-    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()); // Sort by date
+    .sort(
+      (a, b) =>
+        new Date(a.startDate).getTime() - new Date(b.startDate).getTime()
+    );
 
   const handleChangePage = (_: unknown, newPage: number) => {
     setPage(newPage);
@@ -174,35 +232,127 @@ const Holidays = () => {
     setOpenDeleteDialog(false);
   };
 
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     if (holidayToDelete) {
-      setHolidays(holidays.filter((h) => h.id !== holidayToDelete.id));
-      setOpenDeleteDialog(false);
+      try {
+        await deleteHoliday(holidayToDelete.id!);
+        setHolidays(holidays.filter((h) => h.id !== holidayToDelete.id));
+        setNotification({
+          open: true,
+          message: "Holiday deleted successfully",
+          severity: "success",
+          timestamp: Date.now(),
+        });
+      } catch (error) {
+        setNotification({
+          open: true,
+          message: "Failed to delete holiday",
+          severity: "error",
+          timestamp: Date.now(),
+        });
+      } finally {
+        setOpenDeleteDialog(false);
+      }
     }
   };
 
-  const handleSaveHoliday = (holiday: Holiday) => {
-    if (editHoliday) {
-      // Edit existing holiday
-      setHolidays(
-        holidays.map((h) =>
-          h.id === editHoliday.id ? { ...holiday, id: h.id } : h
-        )
-      );
-    } else {
-      // Add new holiday
-      setHolidays([
-        ...holidays,
-        {
+  const handleSaveHoliday = async (holiday: Holiday) => {
+    try {
+      if (editHoliday) {
+        // Edit existing holiday
+        const updatedHoliday = await updateHoliday({
           ...holiday,
-          id:
-            holidays.length > 0
-              ? Math.max(...holidays.map((h) => h.id ?? 0)) + 1
-              : 1,
-        },
-      ]);
+          id: editHoliday.id,
+        });
+
+        setHolidays(
+          holidays.map((h) => (h.id === editHoliday.id ? updatedHoliday : h))
+        );
+
+        setNotification({
+          open: true,
+          message: "Holiday updated successfully",
+          severity: "success",
+          timestamp: Date.now(),
+        });
+      } else {
+        // Add new holiday
+        const newHoliday = await createHoliday(holiday);
+        setHolidays([...holidays, newHoliday]);
+
+        setNotification({
+          open: true,
+          message: "Holiday added successfully",
+          severity: "success",
+          timestamp: Date.now(),
+        });
+      }
+
+      setOpenEditDialog(false);
+    } catch (error) {
+      setNotification({
+        open: true,
+        message: editHoliday
+          ? "Failed to update holiday"
+          : "Failed to add holiday",
+        severity: "error",
+        timestamp: Date.now(),
+      });
     }
-    setOpenEditDialog(false);
+  };
+
+  const handleCloseNotification = () => {
+    setNotification((prev) => ({ ...prev, open: false }));
+  };
+
+  // Add handler for downloading holidays
+  const handleDownloadHolidays = async () => {
+    try {
+      // Show loading notification
+      setNotification({
+        open: true,
+        message: "Downloading holidays data...",
+        severity: "info",
+        timestamp: Date.now(),
+      });
+
+      // Call the API to get the Excel file as blob
+      const blob = await downloadHolidays();
+
+      // Create a URL for the blob
+      const url = URL.createObjectURL(blob);
+
+      // Create a hidden link element and trigger download with .xlsx extension
+      const link = document.createElement("a");
+      link.setAttribute("href", url);
+      link.setAttribute(
+        "download",
+        `holidays_${new Date().toISOString().split("T")[0]}.xlsx`
+      );
+      link.style.visibility = "hidden";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      // Clean up the URL object
+      URL.revokeObjectURL(url);
+
+      // Show success notification
+      setNotification({
+        open: true,
+        message: "Holidays data downloaded successfully",
+        severity: "success",
+        timestamp: Date.now(),
+      });
+    } catch (error) {
+      // Show error notification
+      setNotification({
+        open: true,
+        message: "Failed to download holidays data",
+        severity: "error",
+        timestamp: Date.now(),
+      });
+    }
   };
 
   return (
@@ -262,30 +412,53 @@ const Holidays = () => {
               ),
             }}
           />
-          <Button
-            variant="contained"
-            disableElevation
-            startIcon={<AddIcon />}
-            onClick={handleAddHoliday}
-            sx={{
-              textTransform: "none",
-              borderRadius: 0.5,
-              transition: "none",
-              backgroundImage: "none",
-              background: "primary.main",
-              boxShadow: "none",
-              "&:hover": {
+          <Box sx={{ display: "flex", gap: 1 }}>
+            <Button
+              variant="contained"
+              disableElevation
+              startIcon={<AddIcon />}
+              onClick={handleAddHoliday}
+              sx={{
+                textTransform: "none",
+                borderRadius: 0.5,
+                transition: "none",
                 backgroundImage: "none",
                 background: "primary.main",
-                opacity: 0.9,
-              },
-              "&:focus": {
+                boxShadow: "none",
+                "&:hover": {
+                  backgroundImage: "none",
+                  background: "primary.main",
+                  opacity: 0.9,
+                },
+                "&:focus": {
+                  outline: "none",
+                },
+              }}
+            >
+              Add Holiday
+            </Button>
+            <Button
+              variant="outlined"
+              startIcon={<DownloadIcon />}
+              onClick={handleDownloadHolidays}
+              sx={{
+                textTransform: "none",
+                borderRadius: 0.5,
+                transition: "none",
                 outline: "none",
-              },
-            }}
-          >
-            Add Holiday
-          </Button>
+                "&:hover": {
+                  bgcolor: "transparent",
+                  borderColor: "primary.main",
+                  outline: "none",
+                },
+                "&:focus": {
+                  outline: "none",
+                },
+              }}
+            >
+              Download
+            </Button>
+          </Box>
         </Box>
       </Box>
 
@@ -302,133 +475,122 @@ const Holidays = () => {
           maxHeight: "calc(100% - 120px)",
         }}
       >
-        <Table stickyHeader sx={{ minWidth: 700 }}>
-          <TableHead>
-            <TableRow sx={{ backgroundColor: "grey.50" }}>
-              <TableCell
-                sx={{ fontWeight: 600, bgcolor: "grey.50", width: "15%" }}
-              >
-                Date
-              </TableCell>
-              <TableCell
-                sx={{ fontWeight: 600, bgcolor: "grey.50", width: "15%" }}
-              >
-                Day
-              </TableCell>
-              <TableCell
-                sx={{ fontWeight: 600, bgcolor: "grey.50", width: "25%" }}
-              >
-                Holiday
-              </TableCell>
-              <TableCell
-                sx={{ fontWeight: 600, bgcolor: "grey.50", width: "30%" }}
-              >
-                Classes
-              </TableCell>
-              <TableCell
-                sx={{ fontWeight: 600, bgcolor: "grey.50", width: "15%" }}
-                align="center"
-              >
-                Actions
-              </TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {filteredHolidays
-              .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-              .map((holiday) => (
-                <TableRow
-                  key={holiday.id}
-                  hover
-                  sx={{
-                    "&:hover": {
-                      backgroundColor: "rgba(0, 0, 0, 0.02)",
-                    },
-                    transition: "none",
-                  }}
+        {loading ? (
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              height: "100%",
+              p: 4,
+            }}
+          >
+            <CircularProgress />
+          </Box>
+        ) : (
+          <Table stickyHeader sx={{ minWidth: 700 }}>
+            <TableHead>
+              <TableRow sx={{ backgroundColor: "grey.50" }}>
+                <TableCell
+                  sx={{ fontWeight: 600, bgcolor: "grey.50", width: "20%" }}
                 >
-                  <TableCell>{formatDate(holiday.date)}</TableCell>
-                  <TableCell>{getDayOfWeek(holiday.date)}</TableCell>
-                  <TableCell>{holiday.name}</TableCell>
-                  <TableCell>
-                    <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
-                      {holiday.classes.length === 1 &&
-                      holiday.classes[0] === "All" ? (
-                        <Chip
-                          label="All Classes"
-                          size="small"
-                          color="primary"
-                          sx={{
-                            height: 24,
-                            fontSize: "0.75rem",
-                            transition: "none",
-                          }}
-                        />
-                      ) : (
-                        holiday.classes.map((cls, index) => (
-                          <Chip
-                            key={index}
-                            label={cls}
-                            size="small"
-                            sx={{
-                              height: 24,
-                              fontSize: "0.75rem",
-                              transition: "none",
-                            }}
-                          />
-                        ))
-                      )}
-                    </Box>
-                  </TableCell>
-                  <TableCell align="center">
-                    <Box sx={{ display: "flex", justifyContent: "center" }}>
-                      <IconButton
-                        size="small"
-                        onClick={() => handleEditHolidayOpen(holiday)}
-                        color="primary"
-                        sx={{
-                          transition: "none",
-                          outline: "none",
-                          "&:hover": {
-                            bgcolor: "rgba(25, 118, 210, 0.04)",
-                          },
-                          "&:focus": {
-                            outline: "none",
-                          },
-                        }}
-                      >
-                        <EditIcon fontSize="small" />
-                      </IconButton>
-                      <IconButton
-                        size="small"
-                        onClick={() => handleDeleteHolidayOpen(holiday)}
-                        color="error"
-                        sx={{
-                          transition: "none",
-                          outline: "none",
-                          "&:hover": {
-                            bgcolor: "rgba(211, 47, 47, 0.04)",
-                          },
-                          "&:focus": {
-                            outline: "none",
-                          },
-                        }}
-                      >
-                        <DeleteIcon fontSize="small" />
-                      </IconButton>
-                    </Box>
-                  </TableCell>
-                </TableRow>
-              ))}
-            {filteredHolidays.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={5} align="center" sx={{ py: 3 }}>
-                  No holidays found.
+                  Duration
+                </TableCell>
+                <TableCell
+                  sx={{ fontWeight: 600, bgcolor: "grey.50", width: "15%" }}
+                >
+                  Day
+                </TableCell>
+                <TableCell
+                  sx={{ fontWeight: 600, bgcolor: "grey.50", width: "25%" }}
+                >
+                  Holiday
+                </TableCell>
+                <TableCell
+                  sx={{ fontWeight: 600, bgcolor: "grey.50", width: "25%" }}
+                >
+                  Classes
+                </TableCell>
+                <TableCell
+                  sx={{ fontWeight: 600, bgcolor: "grey.50", width: "15%" }}
+                  align="center"
+                >
+                  Actions
                 </TableCell>
               </TableRow>
-            )}
-          </TableBody>
-        </Table>
+            </TableHead>
+            <TableBody>
+              {filteredHolidays
+                .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+                .map((holiday) => (
+                  <TableRow
+                    key={holiday.id}
+                    hover
+                    sx={{
+                      "&:hover": {
+                        backgroundColor: "rgba(0, 0, 0, 0.02)",
+                      },
+                      transition: "none",
+                    }}
+                  >
+                    <TableCell>
+                      {formatDuration(holiday.startDate, holiday.endDate)}
+                    </TableCell>
+                    <TableCell>
+                      {formatDay(holiday.startDate, holiday.endDate)}
+                    </TableCell>
+                    <TableCell>{holiday.name || "-"}</TableCell>
+                    <TableCell>{formatClasses(holiday.classes)}</TableCell>
+                    <TableCell align="center">
+                      <Box sx={{ display: "flex", justifyContent: "center" }}>
+                        <IconButton
+                          size="small"
+                          onClick={() => handleEditHolidayOpen(holiday)}
+                          color="primary"
+                          sx={{
+                            transition: "none",
+                            outline: "none",
+                            "&:hover": {
+                              bgcolor: "rgba(25, 118, 210, 0.04)",
+                            },
+                            "&:focus": {
+                              outline: "none",
+                            },
+                          }}
+                        >
+                          <EditIcon fontSize="small" />
+                        </IconButton>
+                        <IconButton
+                          size="small"
+                          onClick={() => handleDeleteHolidayOpen(holiday)}
+                          color="error"
+                          sx={{
+                            transition: "none",
+                            outline: "none",
+                            "&:hover": {
+                              bgcolor: "rgba(211, 47, 47, 0.04)",
+                            },
+                            "&:focus": {
+                              outline: "none",
+                            },
+                          }}
+                        >
+                          <DeleteIcon fontSize="small" />
+                        </IconButton>
+                      </Box>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              {filteredHolidays.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={5} align="center" sx={{ py: 3 }}>
+                    No holidays found.
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        )}
       </TableContainer>
 
       {/* Fixed Pagination Section */}
@@ -463,7 +625,7 @@ const Holidays = () => {
         holiday={editHoliday as Holiday}
       />
 
-      {/* Delete Confirmation Modal (custom, styled like Sections) */}
+      {/* Delete Confirmation Modal */}
       {openDeleteDialog && (
         <Box
           sx={{
@@ -532,6 +694,37 @@ const Holidays = () => {
           </Paper>
         </Box>
       )}
+
+      {/* Notification Snackbar */}
+      <Snackbar
+        key={notification.timestamp}
+        open={notification.open}
+        autoHideDuration={4000}
+        onClose={handleCloseNotification}
+        anchorOrigin={{ vertical: "top", horizontal: "right" }}
+      >
+        <Alert
+          onClose={handleCloseNotification}
+          severity={notification.severity}
+          variant="standard"
+          sx={{
+            width: "100%",
+            boxShadow: "0 2px 10px rgba(0,0,0,0.08)",
+            border: "1px solid",
+            borderColor:
+              notification.severity === "success"
+                ? "rgba(46, 125, 50, 0.2)"
+                : notification.severity === "info"
+                ? "rgba(2, 136, 209, 0.2)"
+                : notification.severity === "warning"
+                ? "rgba(237, 108, 2, 0.2)"
+                : "rgba(211, 47, 47, 0.2)",
+            borderRadius: 1,
+          }}
+        >
+          {notification.message}
+        </Alert>
+      </Snackbar>
     </Paper>
   );
 };
