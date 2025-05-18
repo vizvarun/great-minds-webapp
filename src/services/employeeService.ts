@@ -41,8 +41,60 @@ export const createEmployee = async (
   employee: Omit<Employee, "id">
 ): Promise<Employee> => {
   try {
-    const response = await api.post("/web/employees", employee);
-    return response.data.data;
+    const user_id = AuthService.getUserId() || 14;
+    const school_id = AuthService.getSchoolId() || 4;
+
+    // Map the fields to ensure proper naming
+    const empNo = employee.employeeNo || employee.empNo;
+    const mobileNo = employee.mobileNumber || employee.mobileNo;
+
+    // Prepare the payload according to the API requirements
+    const payload = {
+      employee: {
+        // If userId is provided (from validation), use it as user_id_of_emp
+        ...(employee.userId && { user_id_of_emp: employee.userId }),
+        school_id: school_id,
+        emp_no: empNo, // Explicitly include emp_no
+        designation: employee.designation,
+      },
+      user: {
+        email: employee.email || "",
+        mobileno: mobileNo, // Explicitly include mobileno
+        first_name: employee.firstName,
+        last_name: employee.lastName || "",
+        middle_name: employee.middleName || "",
+        createdby: user_id,
+      },
+    };
+
+    console.log("Creating employee with payload:", payload); // Debug log
+
+    const response = await api.post(
+      `/employee/create?user_id=${user_id}`,
+      payload
+    );
+
+    // Check if the response status is 200, regardless of the response.data.status
+    if (response.status === 200) {
+      // Return a properly structured Employee object even if response data structure varies
+      const responseData = response.data.data || {};
+
+      // For safety, use fallback values from the original request when API response is incomplete
+      return {
+        id: responseData.empId || responseData.id || 0, // Use 0 as last resort
+        empNo: responseData.empNo || empNo,
+        firstName: responseData.firstName || employee.firstName,
+        lastName: responseData.lastName || employee.lastName || "",
+        middleName: responseData.middleName || employee.middleName || "",
+        designation: responseData.designation || employee.designation,
+        mobileNo: responseData.mobileNo || mobileNo,
+        email: responseData.email || employee.email || "",
+        userId: responseData.userId || employee.userId,
+        schoolId: school_id,
+      };
+    }
+
+    throw new Error(response.data?.message || "Failed to create employee");
   } catch (error) {
     console.error("Error creating employee:", error);
     throw error;
@@ -52,24 +104,26 @@ export const createEmployee = async (
 export const updateEmployee = async (employee: Employee): Promise<Employee> => {
   try {
     const user_id = AuthService.getUserId() || 14; // Fallback to 14 if not available
-    const school_id = AuthService.getSchoolId() || 4; // Fallback to 4 if not available
-
-    // Prepare payload for the API
+    
+    // Map fields from our interface to the API expected format
+    const empNo = employee.employeeNo || employee.empNo;
+    const mobileNo = employee.mobileNumber || employee.mobileNo;
+    
+    // Prepare payload for the API's expected format
     const payload = {
-      user_id,
-      school_id,
       emp_id: employee.id,
-      emp_no: employee.empNo,
+      emp_no: empNo,
       designation: employee.designation,
       first_name: employee.firstName,
       middle_name: employee.middleName || "",
       last_name: employee.lastName || "",
       email: employee.email || "",
-      mobile_no: employee.mobileNo,
+      mobile_no: mobileNo || ""
     };
 
+    // Use the correct endpoint format with query parameter
     const response = await api.put(
-      `/employee/overview?user_id=${user_id}`,
+      `/employee/update?user_id=${user_id}`,
       payload
     );
 
@@ -77,12 +131,12 @@ export const updateEmployee = async (employee: Employee): Promise<Employee> => {
     if (response.data && response.data.status === "success") {
       return {
         id: employee.id,
-        empNo: employee.empNo,
+        empNo: empNo,
         firstName: employee.firstName,
         lastName: employee.lastName,
         middleName: employee.middleName,
         designation: employee.designation,
-        mobileNo: employee.mobileNo,
+        mobileNo: mobileNo,
         email: employee.email,
         address: employee.address,
         joiningDate: employee.joiningDate,
@@ -167,54 +221,39 @@ export const downloadEmployeeExcel = async (): Promise<Blob> => {
   }
 };
 
-export const validateEmployeePhone = async (
-  mobileNo: string
-): Promise<{
-  exists: boolean;
-  employeeNo?: string;
-  firstName?: string;
-  middleName?: string;
-  lastName?: string;
-  designation?: string;
-  email?: string;
-}> => {
+export const validateEmployeePhone = async (mobileNumber: string) => {
   try {
     const user_id = AuthService.getUserId() || 14;
     const school_id = AuthService.getSchoolId() || 4;
 
     const response = await api.get(
-      `/employee/validate?&school_id=${school_id}&mobile_number=${mobileNo}`
+      `/employee/validate?school_id=${school_id}&mobile_number=${mobileNumber}`
     );
 
-    if (response.data && response.data.status === "success") {
-      // If employee exists with this phone number
-      if (response.data.exists) {
-        const employee = response.data.data;
-        return {
-          exists: true,
-          employeeNo: employee.empNo,
-          firstName: employee.firstName,
-          middleName: employee.middleName,
-          lastName: employee.lastName,
-          designation: employee.designation,
-          email: employee.email,
-        };
+    // Return the full response including the emp_no if available
+    if (
+      response.data &&
+      response.data.status === "success" &&
+      response.data.data
+    ) {
+      // Make sure emp_no is included in the returned data
+      if (
+        response.data.data.employee &&
+        !response.data.data.employee.emp_no &&
+        response.data.data.employee.empNo
+      ) {
+        // If emp_no isn't provided but empNo is, map it correctly
+        response.data.data.employee.emp_no = response.data.data.employee.empNo;
       }
-
-      // If no employee exists with this phone number
-      return {
-        exists: false,
-      };
     }
 
-    return { exists: false };
+    return response.data;
   } catch (error) {
-    // Handle errors as "number not found" case
-    // This makes the form fields active instead of showing an error
+    // Handle errors as "number not found" case, which will enable fields for new entry
     console.log(
       "Phone number not found or validation service unavailable:",
       error
     );
-    return { exists: false };
+    return { status: "error", message: "Phone number not found" };
   }
 };

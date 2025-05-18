@@ -63,6 +63,7 @@ const EmployeeFormModal = ({
   const [validateLoading, setValidateLoading] = useState(false);
   const [phoneValidated, setPhoneValidated] = useState(false);
   const [fieldsDisabled, setFieldsDisabled] = useState(true);
+  const [showFullForm, setShowFullForm] = useState(false);
 
   // Common styles for consistent inputs with increased width
   const inputStyles = {
@@ -86,19 +87,43 @@ const EmployeeFormModal = ({
     width: "100%", // Full width container
   };
 
-  // Initialize form data when employee prop changes
+  // Reset form when modal opens
   useEffect(() => {
-    if (employee) {
-      setFormData({ ...employee });
-      setFieldsDisabled(false); // In edit mode, all fields are enabled
-      setPhoneValidated(true); // In edit mode, phone is already validated
-    } else {
-      setFormData(initialFormData);
-      setFieldsDisabled(true); // In add mode, fields are initially disabled
-      setPhoneValidated(false); // In add mode, phone is not yet validated
+    if (open) {
+      if (employee && isEditMode) {
+        // Map the fields correctly for edit mode
+        setFormData({
+          ...employee,
+          // Handle property name differences
+          employeeNo: employee.employeeNo || employee.empNo || "",
+          mobileNumber: employee.mobileNumber || employee.mobileNo || "",
+        });
+        setFieldsDisabled(false);
+        setPhoneValidated(true);
+        setShowFullForm(true);
+      } else {
+        // Reset to initial state for new modal
+        setFormData(initialFormData);
+        setFieldsDisabled(true);
+        setPhoneValidated(false);
+        setShowFullForm(false);
+      }
+      setErrors({});
     }
+  }, [open, employee, isEditMode]);
+
+  // Handle closing modal with proper cleanup
+  const handleModalClose = () => {
+    // Reset state when modal closes
+    setFormData(initialFormData);
     setErrors({});
-  }, [employee, isEditMode]);
+    setPhoneValidated(false);
+    setFieldsDisabled(true);
+    setShowFullForm(false);
+
+    // Call the parent onClose
+    onClose();
+  };
 
   const handleValidatePhone = async () => {
     // Check if the mobile number is valid
@@ -117,32 +142,39 @@ const EmployeeFormModal = ({
     try {
       const result = await validateEmployeePhone(formData.mobileNumber);
 
-      if (result.exists) {
-        // Pre-fill form with existing data
+      // Handle the updated API response format
+      if (result && result.status === "success" && result.data) {
+        const { user, employee: empData } = result.data;
+
+        // Pre-fill form with existing data from the API response
         setFormData({
           ...formData,
-          employeeNo: result.employeeNo || "",
-          firstName: result.firstName || "",
-          middleName: result.middleName || "",
-          lastName: result.lastName || "",
-          designation: result.designation || "",
-          email: result.email || "",
+          employeeNo: empData?.empNo || "",
+          firstName: user?.firstName || "",
+          middleName: user?.middleName || "",
+          lastName: user?.lastName || "",
+          designation: empData?.designation || "",
         });
 
-        // Keep fields disabled as we're using existing data
         setFieldsDisabled(false);
+        setPhoneValidated(true);
+        setShowFullForm(true); // Show all fields after validation
       } else {
-        // Enable fields for new user input
+        // Handle case where no data is returned but validation was successful
         setFieldsDisabled(false);
+        setPhoneValidated(true);
+        setShowFullForm(true); // Show all fields after validation
       }
-
-      setPhoneValidated(true);
     } catch (error) {
       console.error("Error validating phone:", error);
       setErrors({
         ...errors,
         mobileNumber: "Failed to validate phone number",
       });
+      // Even if there's an error, we still show the form fields to allow manual entry
+      setFieldsDisabled(false);
+      setPhoneValidated(true);
+      setShowFullForm(true);
     } finally {
       setValidateLoading(false);
     }
@@ -205,6 +237,7 @@ const EmployeeFormModal = ({
       setPhoneValidated(false);
       if (!isEditMode) {
         setFieldsDisabled(true);
+        setShowFullForm(false);
       }
     }
 
@@ -221,14 +254,38 @@ const EmployeeFormModal = ({
     e.preventDefault();
 
     if (validateForm()) {
-      onSubmit(formData);
+      try {
+        // Transform form data to match API expectations
+        const apiFormattedData = {
+          ...formData,
+          // Ensure these fields are mapped correctly for the API
+          empNo: formData.employeeNo,
+          mobileNo: formData.mobileNumber,
+        };
+
+        onSubmit(apiFormattedData);
+
+        // Close modal on successful submission
+        // This needs to be called here because the onSubmit may not close the modal
+        // if there's an error handling issue in the parent component
+        setTimeout(() => {
+          handleModalClose();
+        }, 500);
+      } catch (error) {
+        console.error("Error submitting form:", error);
+        // Show error in UI if needed
+        setErrors({
+          ...errors,
+          employeeNo: "Error saving employee. Please try again.",
+        });
+      }
     }
   };
 
   return (
     <Modal
       open={open}
-      onClose={onClose}
+      onClose={handleModalClose} // Use our custom close handler instead
       aria-labelledby="employee-form-modal"
       BackdropProps={{
         sx: { backgroundColor: "rgba(0, 0, 0, 0.5)" },
@@ -267,7 +324,7 @@ const EmployeeFormModal = ({
             {isEditMode ? "Edit Employee" : "Add New Employee"}
           </Typography>
           <IconButton
-            onClick={onClose}
+            onClick={handleModalClose} // Use our custom close handler
             sx={{
               color: "white",
               "&:hover": {
@@ -330,130 +387,132 @@ const EmployeeFormModal = ({
               />
             </Grid>
 
-            <Grid item xs={12} sm={6} sx={fieldContainerStyle}>
-              <FormLabel sx={{ mb: 1, display: "block", fontWeight: 500 }}>
-                Employee ID
-              </FormLabel>
-              <TextField
-                name="employeeNo"
-                value={formData.employeeNo}
-                onChange={handleChange}
-                fullWidth
-                variant="outlined"
-                placeholder="Enter employee ID"
-                error={!!errors.employeeNo}
-                helperText={errors.employeeNo}
-                disabled={isEditMode || fieldsDisabled}
-                size="small"
-                InputProps={{
-                  sx:
-                    isEditMode || fieldsDisabled
-                      ? disabledInputStyles
-                      : inputStyles,
-                }}
-              />
-            </Grid>
+            {/* Only show the rest of the form after validation or in edit mode */}
+            {showFullForm && (
+              <>
+                <Grid item xs={12} sm={6} sx={fieldContainerStyle}>
+                  <FormLabel sx={{ mb: 1, display: "block", fontWeight: 500 }}>
+                    Employee ID
+                  </FormLabel>
+                  <TextField
+                    name="employeeNo"
+                    value={formData.employeeNo}
+                    onChange={handleChange}
+                    fullWidth
+                    variant="outlined"
+                    placeholder="Enter employee ID"
+                    error={!!errors.employeeNo}
+                    helperText={errors.employeeNo}
+                    disabled={fieldsDisabled} // Only use fieldsDisabled
+                    size="small"
+                    InputProps={{
+                      sx: fieldsDisabled ? disabledInputStyles : inputStyles,
+                    }}
+                  />
+                </Grid>
 
-            <Grid item xs={12} sm={6} sx={fieldContainerStyle}>
-              <FormLabel sx={{ mb: 1, display: "block", fontWeight: 500 }}>
-                First Name
-              </FormLabel>
-              <TextField
-                name="firstName"
-                value={formData.firstName}
-                onChange={handleChange}
-                fullWidth
-                variant="outlined"
-                placeholder="Enter first name"
-                error={!!errors.firstName}
-                helperText={errors.firstName}
-                disabled={fieldsDisabled}
-                size="small"
-                InputProps={{
-                  sx: fieldsDisabled ? disabledInputStyles : inputStyles,
-                }}
-              />
-            </Grid>
+                <Grid item xs={12} sm={6} sx={fieldContainerStyle}>
+                  <FormLabel sx={{ mb: 1, display: "block", fontWeight: 500 }}>
+                    First Name
+                  </FormLabel>
+                  <TextField
+                    name="firstName"
+                    value={formData.firstName}
+                    onChange={handleChange}
+                    fullWidth
+                    variant="outlined"
+                    placeholder="Enter first name"
+                    error={!!errors.firstName}
+                    helperText={errors.firstName}
+                    disabled={fieldsDisabled}
+                    size="small"
+                    InputProps={{
+                      sx: fieldsDisabled ? disabledInputStyles : inputStyles,
+                    }}
+                  />
+                </Grid>
 
-            <Grid item xs={12} sm={6} sx={fieldContainerStyle}>
-              <FormLabel sx={{ mb: 1, display: "block", fontWeight: 500 }}>
-                Middle Name
-              </FormLabel>
-              <TextField
-                name="middleName"
-                value={formData.middleName || ""}
-                onChange={handleChange}
-                fullWidth
-                variant="outlined"
-                placeholder="Enter middle name (optional)"
-                disabled={fieldsDisabled}
-                size="small"
-                InputProps={{
-                  sx: fieldsDisabled ? disabledInputStyles : inputStyles,
-                }}
-              />
-            </Grid>
+                <Grid item xs={12} sm={6} sx={fieldContainerStyle}>
+                  <FormLabel sx={{ mb: 1, display: "block", fontWeight: 500 }}>
+                    Middle Name
+                  </FormLabel>
+                  <TextField
+                    name="middleName"
+                    value={formData.middleName || ""}
+                    onChange={handleChange}
+                    fullWidth
+                    variant="outlined"
+                    placeholder="Enter middle name (optional)"
+                    disabled={fieldsDisabled}
+                    size="small"
+                    InputProps={{
+                      sx: fieldsDisabled ? disabledInputStyles : inputStyles,
+                    }}
+                  />
+                </Grid>
 
-            <Grid item xs={12} sm={6} sx={fieldContainerStyle}>
-              <FormLabel sx={{ mb: 1, display: "block", fontWeight: 500 }}>
-                Last Name
-              </FormLabel>
-              <TextField
-                name="lastName"
-                value={formData.lastName}
-                onChange={handleChange}
-                fullWidth
-                variant="outlined"
-                placeholder="Enter last name"
-                error={!!errors.lastName}
-                helperText={errors.lastName}
-                disabled={fieldsDisabled}
-                size="small"
-                InputProps={{
-                  sx: fieldsDisabled ? disabledInputStyles : inputStyles,
-                }}
-              />
-            </Grid>
+                <Grid item xs={12} sm={6} sx={fieldContainerStyle}>
+                  <FormLabel sx={{ mb: 1, display: "block", fontWeight: 500 }}>
+                    Last Name
+                  </FormLabel>
+                  <TextField
+                    name="lastName"
+                    value={formData.lastName}
+                    onChange={handleChange}
+                    fullWidth
+                    variant="outlined"
+                    placeholder="Enter last name"
+                    error={!!errors.lastName}
+                    helperText={errors.lastName}
+                    disabled={fieldsDisabled}
+                    size="small"
+                    InputProps={{
+                      sx: fieldsDisabled ? disabledInputStyles : inputStyles,
+                    }}
+                  />
+                </Grid>
 
-            <Grid item xs={12} sm={6} sx={fieldContainerStyle}>
-              <FormLabel sx={{ mb: 1, display: "block", fontWeight: 500 }}>
-                Email
-              </FormLabel>
-              <TextField
-                name="email"
-                value={formData.email || ""}
-                onChange={handleChange}
-                fullWidth
-                variant="outlined"
-                placeholder="Enter email (optional)"
-                disabled={fieldsDisabled}
-                size="small"
-                InputProps={{
-                  sx: fieldsDisabled ? disabledInputStyles : inputStyles,
-                }}
-              />
-            </Grid>
+                <Grid item xs={12} sm={6} sx={fieldContainerStyle}>
+                  <FormLabel sx={{ mb: 1, display: "block", fontWeight: 500 }}>
+                    Email
+                  </FormLabel>
+                  <TextField
+                    name="email"
+                    value={formData.email || ""}
+                    onChange={handleChange}
+                    fullWidth
+                    variant="outlined"
+                    placeholder="Enter email (optional)"
+                    disabled={fieldsDisabled}
+                    size="small"
+                    InputProps={{
+                      sx: fieldsDisabled ? disabledInputStyles : inputStyles,
+                    }}
+                  />
+                </Grid>
 
-            <Grid item xs={12} sm={6} sx={fieldContainerStyle}>
-              <FormLabel sx={{ mb: 1, display: "block", fontWeight: 500 }}>
-                Designation
-              </FormLabel>
-              <TextField
-                name="designation"
-                value={formData.designation}
-                onChange={handleChange}
-                fullWidth
-                variant="outlined"
-                placeholder="Enter designation"
-                error={!!errors.designation}
-                helperText={errors.designation}
-                disabled={fieldsDisabled}
-                size="small"
-                InputProps={{
-                  sx: fieldsDisabled ? disabledInputStyles : inputStyles,
-                }}
-              />
-            </Grid>
+                <Grid item xs={12} sm={6} sx={fieldContainerStyle}>
+                  <FormLabel sx={{ mb: 1, display: "block", fontWeight: 500 }}>
+                    Designation
+                  </FormLabel>
+                  <TextField
+                    name="designation"
+                    value={formData.designation}
+                    onChange={handleChange}
+                    fullWidth
+                    variant="outlined"
+                    placeholder="Enter designation"
+                    error={!!errors.designation}
+                    helperText={errors.designation}
+                    disabled={fieldsDisabled}
+                    size="small"
+                    InputProps={{
+                      sx: fieldsDisabled ? disabledInputStyles : inputStyles,
+                    }}
+                  />
+                </Grid>
+              </>
+            )}
           </Grid>
 
           <Divider sx={{ my: 4 }} />
@@ -467,7 +526,7 @@ const EmployeeFormModal = ({
           >
             <Button
               variant="outlined"
-              onClick={onClose}
+              onClick={handleModalClose} // Use our custom close handler
               disableRipple
               sx={{
                 px: 3,
@@ -503,7 +562,7 @@ const EmployeeFormModal = ({
               variant="contained"
               disableElevation
               disableRipple
-              disabled={!isEditMode && !phoneValidated}
+              disabled={!isEditMode && (!phoneValidated || !showFullForm)}
               sx={{
                 px: 3,
                 py: 1,

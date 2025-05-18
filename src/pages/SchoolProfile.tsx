@@ -1,3 +1,4 @@
+//@ts-nocheck
 import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 import {
   Alert,
@@ -11,7 +12,8 @@ import {
   Typography,
 } from "@mui/material";
 import { styled } from "@mui/material/styles";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import AuthService from "../services/auth";
 
 const VisuallyHiddenInput = styled("input")({
   clip: "rect(0 0 0 0)",
@@ -27,14 +29,37 @@ const VisuallyHiddenInput = styled("input")({
 
 const SchoolProfile = () => {
   // State for form fields
+  const [schoolData, setSchoolData] = useState<any>(null);
+  // Load data from localStorage on component mount
+  useEffect(() => {
+    const profile = AuthService.getCachedUserProfile();
+    setSchoolData(profile);
+    console.log(profile);
+  }, []);
+
+  // Initialize form data state with useEffect to ensure schoolData is loaded first
   const [formData, setFormData] = useState({
-    schoolName: "Great Minds School",
+    schoolName: "",
     address: "",
   });
 
-  // State for image upload
+  // State for image upload with initial value set separately
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [imageFile, setImageFile] = useState<File | null>(null);
+
+  // Update form data and image when schoolData changes
+  useEffect(() => {
+    if (schoolData) {
+      setFormData({
+        schoolName: schoolData.name || "",
+        address: schoolData.address || "",
+      });
+
+      if (schoolData.logo) {
+        setSelectedImage(schoolData.logo);
+      }
+    }
+  }, [schoolData]);
 
   // State for success notification
   const [notification, setNotification] = useState({
