@@ -96,8 +96,8 @@ const formatDay = (startDate: string, endDate: string): string => {
   return `${startDay} - ${endDay}`;
 };
 
-// Updated this function to handle potentially missing or empty classes array
-const formatClasses = (classes: string[]): JSX.Element => {
+// Updated this function to handle classes as either string arrays or object arrays
+const formatClasses = (classes: any[]): JSX.Element => {
   if (!classes || classes.length === 0) {
     return (
       <Chip
@@ -109,7 +109,10 @@ const formatClasses = (classes: string[]): JSX.Element => {
     );
   }
 
-  if (classes.length === 1 && classes[0] === "All") {
+  if (
+    classes.length === 1 &&
+    (classes[0] === "All" || classes[0].id === "All")
+  ) {
     return (
       <Chip
         label="All Classes"
@@ -122,14 +125,23 @@ const formatClasses = (classes: string[]): JSX.Element => {
 
   return (
     <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
-      {classes.map((cls, index) => (
-        <Chip
-          key={index}
-          label={cls}
-          size="small"
-          sx={{ height: 24, fontSize: "0.75rem", transition: "none" }}
-        />
-      ))}
+      {classes.map((cls, index) => {
+        // Handle both string values and object values with name/id properties
+        const label =
+          typeof cls === "string"
+            ? cls
+            : cls.classname || cls.name || `Class ${cls.id}`;
+        const key = typeof cls === "string" ? index : cls.id || index;
+
+        return (
+          <Chip
+            key={key}
+            label={label}
+            size="small"
+            sx={{ height: 24, fontSize: "0.75rem", transition: "none" }}
+          />
+        );
+      })}
     </Box>
   );
 };
@@ -235,14 +247,18 @@ const Holidays = () => {
   const handleConfirmDelete = async () => {
     if (holidayToDelete) {
       try {
+        setLoading(true);
         await deleteHoliday(holidayToDelete.id!);
-        setHolidays(holidays.filter((h) => h.id !== holidayToDelete.id));
+
         setNotification({
           open: true,
           message: "Holiday deleted successfully",
           severity: "success",
           timestamp: Date.now(),
         });
+
+        // Fetch updated list instead of just updating the local state
+        await fetchHolidays();
       } catch (error) {
         setNotification({
           open: true,
@@ -250,6 +266,7 @@ const Holidays = () => {
           severity: "error",
           timestamp: Date.now(),
         });
+        setLoading(false);
       } finally {
         setOpenDeleteDialog(false);
       }
@@ -258,16 +275,15 @@ const Holidays = () => {
 
   const handleSaveHoliday = async (holiday: Holiday) => {
     try {
+      // Start showing loader
+      setLoading(true);
+
       if (editHoliday) {
         // Edit existing holiday
-        const updatedHoliday = await updateHoliday({
+        await updateHoliday({
           ...holiday,
           id: editHoliday.id,
         });
-
-        setHolidays(
-          holidays.map((h) => (h.id === editHoliday.id ? updatedHoliday : h))
-        );
 
         setNotification({
           open: true,
@@ -277,8 +293,7 @@ const Holidays = () => {
         });
       } else {
         // Add new holiday
-        const newHoliday = await createHoliday(holiday);
-        setHolidays([...holidays, newHoliday]);
+        await createHoliday(holiday);
 
         setNotification({
           open: true,
@@ -289,6 +304,9 @@ const Holidays = () => {
       }
 
       setOpenEditDialog(false);
+
+      // Fetch the updated list of holidays
+      await fetchHolidays();
     } catch (error) {
       setNotification({
         open: true,
@@ -298,6 +316,7 @@ const Holidays = () => {
         severity: "error",
         timestamp: Date.now(),
       });
+      setLoading(false); // Stop showing loader if there's an error
     }
   };
 

@@ -1,12 +1,13 @@
 import api from "./api";
 import AuthService from "./auth";
+import { getAllActiveClasses } from "./classService";
 
 export interface Holiday {
   id?: number;
   name: string;
   startDate: string;
   endDate: string;
-  classes: string[];
+  classes: any[]; // Updated to accept both strings and objects
   holidayName?: string; // For API compatibility
   start_date?: string; // For API compatibility
   end_date?: string; // For API compatibility
@@ -44,16 +45,48 @@ export const createHoliday = async (holiday: Holiday): Promise<Holiday> => {
     const school_id = AuthService.getSchoolId() || 4;
 
     // Transform the classes array to ensure it contains only IDs
-    // If "All" is selected, convert it to empty array (server will interpret as all classes)
-    const classIds = holiday.classes.includes("All")
-      ? []
-      : holiday.classes
+    let classIds = [];
+
+    // If "All" is selected, we need to include ALL class IDs
+    if (holiday.classes && holiday.classes.length > 0) {
+      if (holiday.classes.includes("All")) {
+        // Get all available classes
+        try {
+          const classesResponse = await getAllActiveClasses();
+          if (classesResponse && classesResponse.data) {
+            // Extract all class IDs
+            classIds = classesResponse.data.map((cls: any) => cls.id);
+          }
+        } catch (err) {
+          console.error(
+            "Failed to fetch all classes for holiday creation:",
+            err
+          );
+        }
+      } else {
+        // Convert class values to numeric IDs as before
+        classIds = holiday.classes
           .map((cls) => {
-            // If the class is already a number or string number, use it
-            // Otherwise, it might be a class name which needs to be mapped to an ID
-            return typeof cls === "number" ? cls : parseInt(cls, 10);
+            // If the class is already a number, use it
+            if (typeof cls === "number") {
+              return cls;
+            }
+
+            // Extract ID from the class object if it's an object with id property
+            if (typeof cls === "object" && cls !== null && "id" in cls) {
+              return cls.id;
+            }
+
+            // If it's a string that could be a number, try to parse as integer
+            if (typeof cls === "string" && /^\d+$/.test(cls)) {
+              return parseInt(cls, 10);
+            }
+
+            return null; // Return null for values we can't convert
           })
-          .filter((id) => !isNaN(id)); // Filter out any invalid IDs
+          .filter((id) => id !== null); // Filter out null values
+      }
+    }
 
     const payload = {
       holiday_name: holiday.name,
@@ -64,7 +97,13 @@ export const createHoliday = async (holiday: Holiday): Promise<Holiday> => {
       classes: classIds, // Send array of IDs
     };
 
+    // Log the payload for debugging
+    console.log("Holiday create payload:", payload);
+
     const response = await api.post("/holiday/create", payload);
+
+    // Log the response for debugging
+    console.log("Holiday create response:", response.data);
 
     if (response.data && response.data.status === "success") {
       return {
@@ -72,7 +111,7 @@ export const createHoliday = async (holiday: Holiday): Promise<Holiday> => {
         name: holiday.name,
         startDate: holiday.startDate,
         endDate: holiday.endDate,
-        classes: holiday.classes,
+        classes: holiday.classes, // Keep the original classes array for UI
       };
     }
 
@@ -88,16 +127,59 @@ export const updateHoliday = async (holiday: Holiday): Promise<Holiday> => {
     const user_id = AuthService.getUserId() || 14;
     const school_id = AuthService.getSchoolId() || 4;
 
+    // Transform the classes array to extract IDs
+    let classIds = [];
+
+    // Handle the "All" case properly
+    if (holiday.classes && holiday.classes.length > 0) {
+      if (holiday.classes.includes("All")) {
+        // Get all available classes
+        try {
+          const classesResponse = await getAllActiveClasses();
+          if (classesResponse && classesResponse.data) {
+            // Extract all class IDs
+            classIds = classesResponse.data.map((cls: any) => cls.id);
+          }
+        } catch (err) {
+          console.error("Failed to fetch all classes for holiday update:", err);
+        }
+      } else {
+        // Convert class values to IDs similar to createHoliday function
+        classIds = holiday.classes
+          .map((cls) => {
+            if (typeof cls === "number") {
+              return cls;
+            }
+
+            if (typeof cls === "object" && cls !== null && "id" in cls) {
+              return cls.id;
+            }
+
+            if (typeof cls === "string" && /^\d+$/.test(cls)) {
+              return parseInt(cls, 10);
+            }
+
+            return null;
+          })
+          .filter((id) => id !== null);
+      }
+    }
+
     const payload = {
       holiday_name: holiday.name,
+      holiday_id: holiday.id,
       start_date: holiday.startDate,
       end_date: holiday.endDate,
       school_id: school_id,
       updated_by: user_id,
-      classes: holiday.classes,
+      created_by: user_id,
+      classes: classIds, // Send array of IDs
     };
 
-    const response = await api.put(`/holiday/${holiday.id}`, payload);
+    // Log the payload for debugging
+    console.log("Holiday update payload:", payload);
+
+    const response = await api.put(`/holiday/update`, payload);
 
     if (response.data && response.data.status === "success") {
       return {
