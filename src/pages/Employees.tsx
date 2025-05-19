@@ -33,6 +33,7 @@ import {
   toggleEmployeeStatus,
   bulkUploadEmployees,
   downloadEmployeeExcel,
+  getEmployeeTemplate,
 } from "../services/employeeService";
 import type { Employee } from "../services/employeeService";
 
@@ -44,6 +45,7 @@ const Employees = () => {
   const [totalRecords, setTotalRecords] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [templateUrl, setTemplateUrl] = useState<string | null>(null);
 
   // Modal states
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -61,9 +63,10 @@ const Employees = () => {
     timestamp: Date.now(),
   });
 
-  // Fetch employees on component mount
+  // Fetch employees and template on component mount
   useEffect(() => {
     fetchEmployees();
+    fetchTemplateUrl();
   }, [page, rowsPerPage]);
 
   const fetchEmployees = async () => {
@@ -94,6 +97,17 @@ const Employees = () => {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Get template URL for download
+  const fetchTemplateUrl = async () => {
+    try {
+      const blob = await getEmployeeTemplate();
+      const url = URL.createObjectURL(blob);
+      setTemplateUrl(url);
+    } catch (error) {
+      console.error("Error getting template:", error);
     }
   };
 
@@ -215,25 +229,29 @@ const Employees = () => {
     setIsBulkUploadModalOpen(false);
   };
 
-  const handleBulkUploadSuccess = async (uploadedEmployees: any[]) => {
+  const handleBulkUploadSuccess = async (file: File) => {
     try {
-      const newEmployees = await bulkUploadEmployees(uploadedEmployees);
+      setLoading(true);
+      await bulkUploadEmployees(file);
 
-      setEmployees([...employees, ...newEmployees]);
+      // Refresh employee list after successful upload
+      await fetchEmployees();
 
       setNotification({
         open: true,
-        message: `Successfully added ${newEmployees.length} employees`,
+        message: `Employees uploaded successfully`,
         severity: "success",
         timestamp: Date.now(),
       });
     } catch (error) {
       setNotification({
         open: true,
-        message: "Failed to bulk upload employees",
+        message: "Failed to upload employees",
         severity: "error",
         timestamp: Date.now(),
       });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -638,6 +656,7 @@ const Employees = () => {
         onClose={handleCloseBulkUploadModal}
         onUploadSuccess={handleBulkUploadSuccess}
         entityType="Employees"
+        templateUrl={templateUrl || undefined}
       />
 
       <Snackbar

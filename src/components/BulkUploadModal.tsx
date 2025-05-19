@@ -15,7 +15,7 @@ import { useState, useRef } from "react";
 interface BulkUploadModalProps {
   open: boolean;
   onClose: () => void;
-  onUploadSuccess: (data: any[]) => void;
+  onUploadSuccess: (file: File) => void;
   entityType: string; // Add entityType to make the component generic
   templateUrl?: string; // Optional URL for downloading the template
 }
@@ -59,6 +59,21 @@ const BulkUploadModal = ({
     setFile(selectedFile);
   };
 
+  const handleDownloadTemplate = async () => {
+    if (!templateUrl) return;
+
+    try {
+      const link = document.createElement("a");
+      link.href = templateUrl;
+      link.download = `${entityType.toLowerCase()}_template.xlsx`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (error) {
+      setError(`Failed to download template: ${error}`);
+    }
+  };
+
   // Handle file upload
   const handleUpload = async () => {
     if (!file) {
@@ -69,33 +84,11 @@ const BulkUploadModal = ({
     setUploading(true);
 
     try {
-      // Mock successful file parsing
-      // In a real application, you would use a library like Papa Parse for CSV
-      // or xlsx for Excel files to parse the uploaded file
-
-      setTimeout(() => {
-        // Mock data that would come from parsing the file
-        const mockUploadedData = [
-          {
-            id: "MOCK001",
-            firstName: "Jane",
-            lastName: "Doe",
-            // Other generic fields
-          },
-          {
-            id: "MOCK002",
-            firstName: "John",
-            lastName: "Smith",
-            // Other generic fields
-          },
-          // Add more mock data as needed
-        ];
-
-        onUploadSuccess(mockUploadedData);
-        setUploading(false);
-        setFile(null);
-        onClose();
-      }, 1000);
+      // Send the actual file to the parent component for processing
+      await onUploadSuccess(file);
+      setUploading(false);
+      setFile(null);
+      onClose();
     } catch (err) {
       setError(
         "Failed to process file. Please check the format and try again."
@@ -164,44 +157,56 @@ const BulkUploadModal = ({
         </Box>
 
         <Box sx={{ p: 3 }}>
-          <Box
-            sx={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              mb: 2,
-            }}
-          >
-            <Typography variant="body1">
-              Upload a CSV or Excel file containing {entityType.toLowerCase()}{" "}
-              details.
-            </Typography>
-
-            {/* Add template download button if templateUrl is provided */}
-            {templateUrl && (
-              <Button
-                variant="text"
-                href={templateUrl}
-                download
-                sx={{
-                  textTransform: "none",
-                  fontSize: "0.875rem",
-                  color: "primary.main",
-                  "&:hover": {
-                    backgroundColor: "transparent",
-                    textDecoration: "underline",
-                  },
-                }}
-              >
-                Download Template
-              </Button>
-            )}
-          </Box>
+          <Typography variant="body1" sx={{ mb: 2 }}>
+            Upload an Excel file containing {entityType.toLowerCase()} details.
+          </Typography>
 
           {error && (
             <Alert severity="error" sx={{ mb: 3 }}>
               {error}
             </Alert>
+          )}
+
+          {/* Template download link section */}
+          {templateUrl && (
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                flexDirection: "column",
+                mt: 2,
+                mb: 3,
+                py: 1,
+                backgroundColor: "rgba(0, 0, 0, 0.02)",
+                borderRadius: 1,
+              }}
+            >
+              <Typography
+                variant="body2"
+                color="text.secondary"
+                sx={{ mb: 1, px: 4, pt: 2 }}
+              >
+                Not sure about the format? Use our template to ensure your data
+                is correctly formatted.
+              </Typography>
+              <Button
+                variant="text"
+                onClick={handleDownloadTemplate}
+                sx={{
+                  textTransform: "none",
+                  color: "primary.main",
+                  fontSize: "0.875rem",
+                  fontWeight: 500,
+                  "&:hover": {
+                    backgroundColor: "none",
+                    textDecoration: "underline",
+                  },
+                }}
+              >
+                Download Template File
+              </Button>
+            </Box>
           )}
 
           <Box
@@ -215,12 +220,12 @@ const BulkUploadModal = ({
               alignItems: "center",
               justifyContent: "center",
               bgcolor: "grey.50",
-              mb: 3,
+              mb: 2,
             }}
           >
             <input
               type="file"
-              accept=".csv,.xls,.xlsx"
+              accept=".xls,.xlsx"
               ref={fileInputRef}
               onChange={handleFileChange}
               style={{ display: "none" }}
@@ -235,7 +240,7 @@ const BulkUploadModal = ({
             </Typography>
 
             <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              Supports CSV and Excel files
+              Supports Excel files
             </Typography>
 
             <Button
@@ -255,7 +260,7 @@ const BulkUploadModal = ({
             </Button>
           </Box>
 
-          <Divider sx={{ my: 3 }} />
+          <Divider sx={{ my: 2 }} />
 
           <Box
             sx={{

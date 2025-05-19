@@ -162,12 +162,41 @@ export const deleteEmployee = async (id: number): Promise<void> => {
   }
 };
 
-export const bulkUploadEmployees = async (
-  employees: Omit<Employee, "id">[]
-): Promise<Employee[]> => {
+export const getEmployeeTemplate = async (): Promise<Blob> => {
   try {
-    const response = await api.post("/web/employees/bulk", employees);
-    return response.data.data || [];
+    const response = await api.get("/employee/import/template", {
+      responseType: "blob",
+    });
+
+    return new Blob([response.data], {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    });
+  } catch (error) {
+    console.error("Error downloading employee template:", error);
+    throw error;
+  }
+};
+
+export const bulkUploadEmployees = async (file: File): Promise<any> => {
+  try {
+    const user_id = AuthService.getUserId() || 14;
+    const school_id = AuthService.getSchoolId() || 4;
+
+    // Create FormData and append the file
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const response = await api.post(
+      `/employee/import?user_id=${user_id}&school_id=${school_id}`,
+      formData,
+      {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      }
+    );
+
+    return response.data;
   } catch (error) {
     console.error("Error bulk uploading employees:", error);
     throw error;
