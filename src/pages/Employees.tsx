@@ -159,17 +159,18 @@ const Employees = () => {
   };
 
   const handleEmployeeSubmit = async (employeeData: Employee) => {
+    setLoading(true); // Start showing loader
     try {
       if (isEditMode && currentEmployee) {
-        const updatedEmployee = await updateEmployee({
+        // Edit existing employee
+        await updateEmployee({
           ...employeeData,
-          id: currentEmployee.id,
+          id: currentEmployee.empId,
         });
-        setEmployees(
-          employees.map((emp) =>
-            emp.id === currentEmployee.id ? updatedEmployee : emp
-          )
-        );
+
+        // Refetch the entire list to ensure we have the latest data
+        await fetchEmployees();
+
         setNotification({
           open: true,
           message: "Employee updated successfully",
@@ -177,8 +178,12 @@ const Employees = () => {
           timestamp: Date.now(),
         });
       } else {
-        const newEmployee = await createEmployee(employeeData);
-        setEmployees([...employees, newEmployee]);
+        // Add new employee
+        await createEmployee(employeeData);
+
+        // Refetch the entire list to ensure we have the latest data
+        await fetchEmployees();
+
         setNotification({
           open: true,
           message: "Employee added successfully",
@@ -186,6 +191,8 @@ const Employees = () => {
           timestamp: Date.now(),
         });
       }
+
+      // Close modal only after successful refresh
       setIsModalOpen(false);
     } catch (error) {
       setNotification({
@@ -196,6 +203,7 @@ const Employees = () => {
         severity: "error",
         timestamp: Date.now(),
       });
+      setLoading(false); // Stop loader on error
     }
   };
 

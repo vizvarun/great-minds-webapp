@@ -101,12 +101,16 @@ const EmployeeFormModal = ({
         setFieldsDisabled(false);
         setPhoneValidated(true);
         setShowFullForm(true);
+        // Make sure validateLoading is reset to false in edit mode
+        setValidateLoading(false);
       } else {
         // Reset to initial state for new modal
         setFormData(initialFormData);
         setFieldsDisabled(true);
         setPhoneValidated(false);
         setShowFullForm(false);
+        // Reset loading state for new entries as well
+        setValidateLoading(false);
       }
       setErrors({});
     }
@@ -263,21 +267,23 @@ const EmployeeFormModal = ({
           mobileNo: formData.mobileNumber,
         };
 
+        // Don't close modal immediately - let parent component handle it
+        // Show loading state while API call is in progress
+        setValidateLoading(true);
+
+        // Pass the formatted data to parent component
         onSubmit(apiFormattedData);
 
-        // Close modal on successful submission
-        // This needs to be called here because the onSubmit may not close the modal
-        // if there's an error handling issue in the parent component
-        setTimeout(() => {
-          handleModalClose();
-        }, 500);
+        // The parent component (Employees.tsx) will handle closing the modal
+        // after successfully refreshing the list
       } catch (error) {
         console.error("Error submitting form:", error);
-        // Show error in UI if needed
+        // Show error in UI
         setErrors({
           ...errors,
           employeeNo: "Error saving employee. Please try again.",
         });
+        setValidateLoading(false);
       }
     }
   };
@@ -371,6 +377,19 @@ const EmployeeFormModal = ({
                           minWidth: "70px",
                           height: "30px",
                           fontSize: "0.75rem",
+                          borderRadius: 0.5,
+                          transition: "none",
+                          backgroundImage: "none", // Remove gradient
+                          background: "primary.main", // Use solid color
+                          boxShadow: "none",
+                          "&:hover": {
+                            backgroundImage: "none",
+                            background: "primary.main",
+                            opacity: 0.9,
+                          },
+                          "&:focus": {
+                            outline: "none",
+                          },
                         }}
                       >
                         {validateLoading ? (
