@@ -88,7 +88,7 @@ export const updateClass = async (classData: Class): Promise<Class> => {
     const response = await api.put(`/classes/update?class_id=${classData.id}`, {
       classname: classData.classname,
       schoolid: schoolId,
-      created_by: userId,
+      createdby: classData.createdby || userId, // Use provided createdby or default to userId
       isactive: classData.isactive !== undefined ? classData.isactive : true,
     });
 
@@ -114,6 +114,21 @@ export const deleteClass = async (classId: number): Promise<void> => {
     );
   } catch (error) {
     console.error("Error deleting class:", error);
+    throw error;
+  }
+};
+
+// Add a new function to toggle class status
+export const toggleClassStatus = async (classId: number): Promise<void> => {
+  try {
+    const user_id = AuthService.getUserId() || 14;
+    const school_id = AuthService.getSchoolId() || 4;
+
+    await api.put(
+      `/classes/toggle-status?class_id=${classId}&user_id=${user_id}&school_id=${school_id}`
+    );
+  } catch (error) {
+    console.error("Error toggling class status:", error);
     throw error;
   }
 };

@@ -65,6 +65,76 @@ export const getSubjects = async (
   }
 };
 
+/**
+ * Get subjects assigned to a specific class
+ */
+export const getClassSubjects = async (classId: number): Promise<Subject[]> => {
+  try {
+    const user_id = AuthService.getUserId() || 14;
+    const school_id = AuthService.getSchoolId() || 4;
+
+    const response = await api.get(
+      `/class/subjects?class_id=${classId}&school_id=${school_id}&user_id=${user_id}`
+    );
+
+    // Transform the API response to match our expected format
+    if (
+      response.data &&
+      response.data.subjects &&
+      Array.isArray(response.data.subjects)
+    ) {
+      return response.data.subjects.map((subject: any) => ({
+        id: subject.id,
+        schoolId: subject.schoolId || subject.school_id,
+        subjectName:
+          subject.subjectName || subject.subject_name || subject.name || "",
+        createdAt: subject.createdAt || subject.created_at,
+        updatedAt: subject.updatedAt || subject.updated_at,
+      }));
+    }
+
+    return [];
+  } catch (error) {
+    console.error(`Error fetching subjects for class ${classId}:`, error);
+    return [];
+  }
+};
+
+/**
+ * Update the subjects assigned to a specific class
+ */
+export const updateClassSubjects = async (
+  classId: number,
+  subjectIds: number[],
+  refreshCallback?: () => void
+): Promise<boolean> => {
+  try {
+    const user_id = AuthService.getUserId() || 14;
+    const school_id = AuthService.getSchoolId() || 4;
+
+    // Prepare the payload for the API
+    const payload = {
+      class_id: classId,
+      subject_ids: subjectIds,
+      school_id: school_id,
+      user_id: user_id,
+    };
+
+    // Make the API call to update class subjects
+    const response = await api.post("/class/update-subjects", payload);
+
+    // Call the refresh callback if provided
+    if (refreshCallback) {
+      refreshCallback();
+    }
+
+    return response.data && response.data.status === "success";
+  } catch (error) {
+    console.error(`Error updating subjects for class ${classId}:`, error);
+    throw error;
+  }
+};
+
 export const createSubject = async (
   subjectName: string,
   refreshCallback?: () => void

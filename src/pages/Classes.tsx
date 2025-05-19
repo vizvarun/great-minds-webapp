@@ -2,7 +2,6 @@
 
 import AddIcon from "@mui/icons-material/Add";
 import CloseIcon from "@mui/icons-material/Close";
-import DeleteIcon from "@mui/icons-material/Delete";
 import DownloadIcon from "@mui/icons-material/Download";
 import EditIcon from "@mui/icons-material/Edit";
 import MenuBookIcon from "@mui/icons-material/MenuBook";
@@ -29,38 +28,19 @@ import {
   Typography,
   Alert,
   Snackbar,
+  CircularProgress,
 } from "@mui/material";
 import { useState, useEffect } from "react";
+import { getClasses, createClass, updateClass } from "../services/classService";
 import {
-  getClasses,
-  createClass,
-  updateClass,
-  deleteClass,
-} from "../services/classService";
+  getSubjects,
+  getClassSubjects,
+  updateClassSubjects,
+} from "../services/subjectService";
 import type { Class } from "../services/classService";
-
-// Mock data for classes
-interface Subject {
-  id: number;
-  name: string;
-}
-
-const mockSubjects: Subject[] = [
-  { id: 1, name: "English" },
-  { id: 2, name: "Hindi" },
-  { id: 3, name: "Mathematics" },
-  { id: 4, name: "Science" },
-  { id: 5, name: "Social Studies" },
-  { id: 6, name: "Physics" },
-  { id: 7, name: "Chemistry" },
-  { id: 8, name: "Biology" },
-  { id: 9, name: "Accountancy" },
-  { id: 10, name: "Business Studies" },
-  { id: 11, name: "Economics" },
-  { id: 12, name: "History" },
-  { id: 13, name: "Political Science" },
-  { id: 14, name: "Geography" },
-];
+import type { Subject } from "../services/subjectService";
+import api from "../services/api";
+import AuthService from "../services/auth";
 
 const Classes = () => {
   const [page, setPage] = useState(0);
@@ -70,14 +50,15 @@ const Classes = () => {
   const [selectedClass, setSelectedClass] = useState<Class | null>(null);
   const [selectedSubjects, setSelectedSubjects] = useState<number[]>([]);
 
+  // New states for handling subjects
+  const [allSubjects, setAllSubjects] = useState<Subject[]>([]);
+  const [classSubjects, setClassSubjects] = useState<number[]>([]);
+  const [subjectsLoading, setSubjectsLoading] = useState(false);
+
   // New states for handling class operations
   const [classes, setClasses] = useState<Class[]>([]);
   const [loading, setLoading] = useState(true);
   const [totalRecords, setTotalRecords] = useState(0);
-
-  // State for delete confirmation
-  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [classToDelete, setClassToDelete] = useState<Class | null>(null);
 
   // State for notifications
   const [notification, setNotification] = useState({
@@ -94,9 +75,10 @@ const Classes = () => {
     name: "",
   });
 
-  // Fetch classes when component mounts
+  // Fetch classes and subjects when component mounts
   useEffect(() => {
     fetchClasses();
+    fetchAllSubjects();
   }, []);
 
   const fetchClasses = async () => {
@@ -114,6 +96,32 @@ const Classes = () => {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchAllSubjects = async () => {
+    try {
+      const subjects = await getSubjects();
+      setAllSubjects(subjects);
+    } catch (error) {
+      console.error("Error fetching all subjects:", error);
+    }
+  };
+
+  const fetchClassSubjects = async (classId: number) => {
+    setSubjectsLoading(true);
+    try {
+      const subjects = await getClassSubjects(classId);
+      // Extract just the IDs for the checkboxes
+      const subjectIds = subjects.map((subject) => subject.id);
+      setClassSubjects(subjectIds);
+      setSelectedSubjects(subjectIds);
+    } catch (error) {
+      console.error("Error fetching class subjects:", error);
+      setClassSubjects([]);
+      setSelectedSubjects([]);
+    } finally {
+      setSubjectsLoading(false);
     }
   };
 
@@ -169,47 +177,6 @@ const Classes = () => {
     setSelectedClass(null);
   };
 
-  // Prepare to delete a class - show confirmation modal
-  const handleDeleteClick = (cls: Class) => {
-    setClassToDelete(cls);
-    setIsDeleteModalOpen(true);
-  };
-
-  // Cancel deletion
-  const handleCancelDelete = () => {
-    setIsDeleteModalOpen(false);
-    setClassToDelete(null);
-  };
-
-  // Confirm and perform deletion
-  const handleConfirmDelete = async () => {
-    if (classToDelete) {
-      try {
-        await deleteClass(classToDelete.id);
-
-        // Refresh classes after delete
-        fetchClasses();
-
-        setNotification({
-          open: true,
-          message: `${classToDelete.classname} has been deleted`,
-          severity: "success",
-          timestamp: Date.now(),
-        });
-
-        setIsDeleteModalOpen(false);
-        setClassToDelete(null);
-      } catch (error) {
-        setNotification({
-          open: true,
-          message: "Failed to delete class",
-          severity: "error",
-          timestamp: Date.now(),
-        });
-      }
-    }
-  };
-
   // Save new class or update existing one
   const handleSaveClass = async () => {
     if (!classFormData.name.trim()) {
@@ -223,11 +190,14 @@ const Classes = () => {
     }
 
     try {
+      const user_id = AuthService.getUserId() || 14;
+
       if (isEditMode && selectedClass) {
-        // Update existing class
+        // Update existing class with proper createdby
         await updateClass({
           ...selectedClass,
           classname: classFormData.name,
+          createdby: user_id, // Include createdby in the payload
         });
 
         // Refresh classes after update
@@ -281,15 +251,48 @@ const Classes = () => {
     // Implement actual download functionality if needed
   };
 
-  const handleOpenSubjectMapping = (cls: Class) => {
+  const handleOpenSubjectMapping = async (cls: Class) => {
     setSelectedClass(cls);
-    setSelectedSubjects([...cls.subjectIds]);
     setModalOpen(true);
+    setSubjectsLoading(true);
+
+    try {
+      // First fetch all subjects
+      const allSubjectsResponse = await getSubjects(0, 1000);
+      if (allSubjectsResponse && allSubjectsResponse.subjects) {
+        setAllSubjects(allSubjectsResponse.subjects);
+      }
+
+      // Then fetch subjects assigned to the class
+      const classSubjectsResponse = await getClassSubjects(cls.id);
+      if (classSubjectsResponse) {
+        // Extract just the IDs for the checkboxes
+        const subjectIds = classSubjectsResponse.map((subject) => subject.id);
+        setClassSubjects(subjectIds);
+        setSelectedSubjects(subjectIds);
+      } else {
+        setClassSubjects([]);
+        setSelectedSubjects([]);
+      }
+    } catch (error) {
+      console.error("Error fetching subjects for mapping:", error);
+      setNotification({
+        open: true,
+        message: "Failed to load subjects",
+        severity: "error",
+        timestamp: Date.now(),
+      });
+      setClassSubjects([]);
+      setSelectedSubjects([]);
+    } finally {
+      setSubjectsLoading(false);
+    }
   };
 
   const handleCloseSubjectMapping = () => {
     setModalOpen(false);
     setSelectedClass(null);
+    setSelectedSubjects([]);
   };
 
   const handleSubjectCheckboxChange = (subjectId: number) => {
@@ -302,26 +305,67 @@ const Classes = () => {
     });
   };
 
-  const handleSaveSubjectMapping = () => {
+  const handleSaveSubjectMapping = async () => {
     if (selectedClass) {
-      // Update the class data with new subject mapping
-      const updatedClasses = classes.map((cls) => {
-        if (cls.id === selectedClass.id) {
-          return { ...cls, subjectIds: selectedSubjects };
-        }
-        return cls;
-      });
+      setSubjectsLoading(true);
 
-      setClasses(updatedClasses);
+      try {
+        // Call API to update class subject mapping
+        await updateClassSubjects(selectedClass.id, selectedSubjects);
 
+        setNotification({
+          open: true,
+          message: `Subjects updated for ${selectedClass.classname}`,
+          severity: "success",
+          timestamp: Date.now(),
+        });
+
+        // Update local state if needed
+        handleCloseSubjectMapping();
+      } catch (error) {
+        setNotification({
+          open: true,
+          message: "Failed to update subjects",
+          severity: "error",
+          timestamp: Date.now(),
+        });
+      } finally {
+        setSubjectsLoading(false);
+      }
+    }
+  };
+
+  const handleToggleStatus = async (id: number, currentStatus: boolean) => {
+    try {
+      const user_id = AuthService.getUserId() || 14;
+      const school_id = AuthService.getSchoolId() || 4;
+
+      // Call the toggle status endpoint
+      await api.put(
+        `/classes/toggle-status?class_id=${id}&user_id=${user_id}&school_id=${school_id}`
+      );
+
+      // Refresh classes to get updated status
+      await fetchClasses();
+
+      // Show success notification
       setNotification({
         open: true,
-        message: `Subjects updated for ${selectedClass.classname}`,
+        message: `Class status has been ${
+          currentStatus ? "deactivated" : "activated"
+        }`,
         severity: "success",
         timestamp: Date.now(),
       });
+    } catch (error) {
+      console.error("Error toggling class status:", error);
+      setNotification({
+        open: true,
+        message: "Failed to update class status",
+        severity: "error",
+        timestamp: Date.now(),
+      });
     }
-    handleCloseSubjectMapping();
   };
 
   const handleCloseNotification = () => {
@@ -429,12 +473,18 @@ const Classes = () => {
           <TableHead>
             <TableRow sx={{ backgroundColor: "grey.50" }}>
               <TableCell
-                sx={{ fontWeight: 600, bgcolor: "grey.50", width: "70%" }}
+                sx={{ fontWeight: 600, bgcolor: "grey.50", width: "60%" }}
               >
                 Class
               </TableCell>
               <TableCell
-                sx={{ fontWeight: 600, bgcolor: "grey.50", width: "30%" }}
+                sx={{ fontWeight: 600, bgcolor: "grey.50", width: "20%" }}
+                align="center"
+              >
+                Status
+              </TableCell>
+              <TableCell
+                sx={{ fontWeight: 600, bgcolor: "grey.50", width: "20%" }}
                 align="center"
               >
                 Actions
@@ -456,6 +506,58 @@ const Classes = () => {
                   }}
                 >
                   <TableCell>{cls.classname || "-"}</TableCell>
+                  <TableCell align="center">
+                    <Box sx={{ display: "flex", justifyContent: "center" }}>
+                      <Box
+                        sx={{
+                          position: "relative",
+                          display: "inline-flex",
+                          alignItems: "center",
+                        }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={cls.isactive === true}
+                          onChange={() =>
+                            handleToggleStatus(cls.id, cls.isactive === true)
+                          }
+                          style={{
+                            appearance: "none",
+                            WebkitAppearance: "none",
+                            MozAppearance: "none",
+                            width: "30px",
+                            height: "18px",
+                            borderRadius: "10px",
+                            background:
+                              cls.isactive === true ? "#0cb5bf" : "#e0e0e0",
+                            outline: "none",
+                            cursor: "pointer",
+                            position: "relative",
+                            transition: "background 0.25s ease",
+                            border: "1px solid",
+                            borderColor:
+                              cls.isactive === true ? "#0cb5bf" : "#d0d0d0",
+                            pointerEvents: loading ? "none" : "auto",
+                          }}
+                        />
+                        <span
+                          style={{
+                            position: "absolute",
+                            left: cls.isactive === true ? "18px" : "2px",
+                            width: "14px",
+                            height: "14px",
+                            borderRadius: "50%",
+                            background: "#ffffff",
+                            boxShadow: "0 1px 2px rgba(0,0,0,0.1)",
+                            transition: "left 0.25s ease",
+                            pointerEvents: "none",
+                            top: "50%",
+                            marginTop: "-7px",
+                          }}
+                        />
+                      </Box>
+                    </Box>
+                  </TableCell>
                   <TableCell align="center">
                     <Box sx={{ display: "flex", justifyContent: "center" }}>
                       <IconButton
@@ -509,30 +611,13 @@ const Classes = () => {
                       >
                         <DownloadIcon fontSize="small" />
                       </IconButton>
-                      <IconButton
-                        size="small"
-                        onClick={() => handleDeleteClick(cls)}
-                        color="error"
-                        sx={{
-                          transition: "none",
-                          outline: "none",
-                          "&:hover": {
-                            bgcolor: "rgba(211, 47, 47, 0.04)",
-                          },
-                          "&:focus": {
-                            outline: "none",
-                          },
-                        }}
-                      >
-                        <DeleteIcon fontSize="small" />
-                      </IconButton>
                     </Box>
                   </TableCell>
                 </TableRow>
               ))}
             {filteredClasses.length === 0 && (
               <TableRow>
-                <TableCell colSpan={2} align="center" sx={{ py: 3 }}>
+                <TableCell colSpan={3} align="center" sx={{ py: 3 }}>
                   No classes found.
                 </TableCell>
               </TableRow>
@@ -605,7 +690,7 @@ const Classes = () => {
                 transition: "none",
                 "&:hover": {
                   bgcolor: "transparent",
-                  opacity: 0.9, // More subtle opacity change (was 0.7)
+                  opacity: 0.9,
                 },
               }}
             >
@@ -614,27 +699,126 @@ const Classes = () => {
           </Box>
           <Divider sx={{ mb: 2 }} />
 
-          <Box sx={{ maxHeight: 300, overflow: "auto", mb: 2 }}>
-            <FormGroup>
-              {mockSubjects.map((subject) => (
-                <FormControlLabel
-                  key={subject.id}
-                  control={
-                    <Checkbox
-                      checked={selectedSubjects.includes(subject.id)}
-                      onChange={() => handleSubjectCheckboxChange(subject.id)}
-                      sx={{
-                        transition: "none",
-                        "&:hover": { bgcolor: "transparent" },
-                      }}
-                    />
+          {subjectsLoading ? (
+            <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
+              <CircularProgress size={24} />
+            </Box>
+          ) : allSubjects.length > 0 ? (
+            <Box sx={{ maxHeight: 300, overflow: "auto", mb: 2 }}>
+              {/* Select All option */}
+              <Box
+                sx={{
+                  p: 1,
+                  mb: 1,
+                  borderRadius: 1,
+                  "&:hover": { bgcolor: "rgba(0, 0, 0, 0.04)" },
+                }}
+                onClick={() => {
+                  if (selectedSubjects.length === allSubjects.length) {
+                    setSelectedSubjects([]);
+                  } else {
+                    setSelectedSubjects(allSubjects.map((s) => s.id));
                   }
-                  label={subject.name}
-                  sx={{ mb: 1 }}
-                />
-              ))}
-            </FormGroup>
-          </Box>
+                }}
+              >
+                <Box sx={{ display: "flex", alignItems: "center" }}>
+                  <Box
+                    sx={{
+                      width: 20,
+                      height: 20,
+                      border: "1px solid",
+                      borderColor:
+                        selectedSubjects.length === allSubjects.length
+                          ? "primary.main"
+                          : "grey.400",
+                      borderRadius: 0.5,
+                      mr: 2,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      bgcolor:
+                        selectedSubjects.length === allSubjects.length
+                          ? "primary.main"
+                          : "transparent",
+                    }}
+                  >
+                    {selectedSubjects.length === allSubjects.length && (
+                      <Box
+                        component="span"
+                        sx={{ color: "white", fontSize: "0.8rem" }}
+                      >
+                        ✓
+                      </Box>
+                    )}
+                  </Box>
+                  <Typography sx={{ fontWeight: 500 }}>
+                    Select All Subjects
+                  </Typography>
+                </Box>
+              </Box>
+
+              <Divider sx={{ my: 1 }} />
+
+              {allSubjects.map((subject) => {
+                const isChecked = selectedSubjects.includes(subject.id);
+
+                return (
+                  <Box
+                    key={subject.id}
+                    sx={{
+                      p: 1,
+                      borderRadius: 1,
+                      cursor: "pointer",
+                      mb: 0.5,
+                      bgcolor: isChecked
+                        ? "rgba(25, 118, 210, 0.08)"
+                        : "transparent",
+                      "&:hover": {
+                        bgcolor: isChecked
+                          ? "rgba(25, 118, 210, 0.12)"
+                          : "rgba(0, 0, 0, 0.04)",
+                      },
+                    }}
+                    onClick={() => handleSubjectCheckboxChange(subject.id)}
+                  >
+                    <Box sx={{ display: "flex", alignItems: "center" }}>
+                      <Box
+                        sx={{
+                          width: 20,
+                          height: 20,
+                          border: "1px solid",
+                          borderColor: isChecked ? "primary.main" : "grey.400",
+                          borderRadius: 0.5,
+                          mr: 2,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          bgcolor: isChecked ? "primary.main" : "transparent",
+                        }}
+                      >
+                        {isChecked && (
+                          <Box
+                            component="span"
+                            sx={{ color: "white", fontSize: "0.8rem" }}
+                          >
+                            ✓
+                          </Box>
+                        )}
+                      </Box>
+                      <Typography>{subject.subjectName}</Typography>
+                    </Box>
+                  </Box>
+                );
+              })}
+            </Box>
+          ) : (
+            <Typography
+              color="text.secondary"
+              sx={{ py: 2, textAlign: "center" }}
+            >
+              No subjects available. Please add subjects first.
+            </Typography>
+          )}
 
           <Divider sx={{ mb: 2 }} />
 
@@ -645,10 +829,10 @@ const Classes = () => {
               sx={{
                 textTransform: "none",
                 transition: "none",
-                borderRadius: 0.5, // Consistent with other buttons
+                borderRadius: 0.5,
                 "&:hover": {
                   bgcolor: "transparent",
-                  borderColor: "primary.main", // Keep border color consistent
+                  borderColor: "primary.main",
                   opacity: 0.9,
                 },
               }}
@@ -659,20 +843,25 @@ const Classes = () => {
               variant="contained"
               disableElevation
               onClick={handleSaveSubjectMapping}
+              disabled={subjectsLoading || allSubjects.length === 0}
               sx={{
                 textTransform: "none",
                 backgroundImage: "none",
-                borderRadius: 0.5, // Consistent with other buttons
+                borderRadius: 0.5,
                 transition: "none",
                 background: "primary.main",
                 "&:hover": {
                   backgroundImage: "none",
-                  background: "primary.main", // Keep background consistent
+                  background: "primary.main",
                   opacity: 0.9,
                 },
               }}
             >
-              Save
+              {subjectsLoading ? (
+                <CircularProgress size={24} color="inherit" />
+              ) : (
+                "Save"
+              )}
             </Button>
           </Box>
         </Paper>
@@ -784,104 +973,6 @@ const Classes = () => {
             >
               Save
             </Button>
-          </Box>
-        </Paper>
-      </Modal>
-
-      {/* Delete Confirmation Modal */}
-      <Modal
-        open={isDeleteModalOpen}
-        onClose={handleCancelDelete}
-        aria-labelledby="delete-confirmation-modal"
-        sx={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-        }}
-      >
-        <Paper
-          elevation={0}
-          sx={{
-            width: 400,
-            maxWidth: "95%",
-            bgcolor: "background.paper",
-            borderRadius: 2,
-            boxShadow: 24,
-            p: 0,
-            outline: "none",
-          }}
-        >
-          <Box
-            sx={{
-              p: 3,
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-            }}
-          >
-            <Typography
-              variant="h6"
-              component="h2"
-              sx={{ fontWeight: 600, mb: 2 }}
-            >
-              Confirm Deletion
-            </Typography>
-            <Typography variant="body1" sx={{ mb: 3, textAlign: "center" }}>
-              Are you sure you want to delete{" "}
-              <strong>{classToDelete?.classname}</strong>? This action cannot be
-              undone.
-            </Typography>
-
-            <Box
-              sx={{
-                display: "flex",
-                justifyContent: "center",
-                gap: 2,
-                width: "100%",
-              }}
-            >
-              <Button
-                variant="outlined"
-                onClick={handleCancelDelete}
-                disableRipple
-                sx={{
-                  flex: 1,
-                  textTransform: "none",
-                  borderRadius: 0.5,
-                  backgroundColor: "transparent",
-                  outline: "none",
-                  border: "1px solid",
-                  borderColor: "grey.300",
-                  color: "text.primary",
-                  transition: "none",
-                  "&:hover": {
-                    backgroundColor: "transparent",
-                    borderColor: "grey.400",
-                  },
-                }}
-              >
-                Cancel
-              </Button>
-              <Button
-                variant="contained"
-                onClick={handleConfirmDelete}
-                disableElevation
-                disableRipple
-                sx={{
-                  flex: 1,
-                  textTransform: "none",
-                  borderRadius: 0.5,
-                  background: "error.main",
-                  color: "white",
-                  transition: "none",
-                  "&:hover": {
-                    background: "error.dark",
-                  },
-                }}
-              >
-                Delete
-              </Button>
-            </Box>
           </Box>
         </Paper>
       </Modal>
