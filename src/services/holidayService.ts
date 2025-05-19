@@ -130,9 +130,17 @@ export const updateHoliday = async (holiday: Holiday): Promise<Holiday> => {
     // Transform the classes array to extract IDs
     let classIds = [];
 
+    // Debug the received holiday classes
+    console.log("Classes received for update:", holiday.classes);
+
     // Handle the "All" case properly
     if (holiday.classes && holiday.classes.length > 0) {
-      if (holiday.classes.includes("All")) {
+      if (
+        holiday.classes.includes("All") ||
+        (holiday.classes[0] &&
+          typeof holiday.classes[0] === "object" &&
+          holiday.classes[0].name === "All")
+      ) {
         // Get all available classes
         try {
           const classesResponse = await getAllActiveClasses();
@@ -164,6 +172,9 @@ export const updateHoliday = async (holiday: Holiday): Promise<Holiday> => {
           .filter((id) => id !== null);
       }
     }
+
+    // Log the extracted class IDs for debugging
+    console.log("Class IDs extracted for API:", classIds);
 
     const payload = {
       holiday_name: holiday.name,

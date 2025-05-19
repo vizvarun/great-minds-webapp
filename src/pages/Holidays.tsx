@@ -61,7 +61,6 @@ const formatDate = (dateString: string): string => {
 
 // Updated helper function to format duration to show range properly
 const formatDuration = (startDate: string, endDate: string): string => {
-  console.log(startDate, endDate);
   if (!startDate) return "-";
   if (!endDate || startDate === endDate) return formatDate(startDate);
 
@@ -96,9 +95,10 @@ const formatDay = (startDate: string, endDate: string): string => {
   return `${startDay} - ${endDay}`;
 };
 
-// Updated this function to handle classes as either string arrays or object arrays
+// Completely rewritten function to properly handle class data structure
 const formatClasses = (classes: any[]): JSX.Element => {
-  if (!classes || classes.length === 0) {
+  // Handle empty/undefined classes
+  if (!classes || !Array.isArray(classes) || classes.length === 0) {
     return (
       <Chip
         label="No classes assigned"
@@ -109,29 +109,54 @@ const formatClasses = (classes: any[]): JSX.Element => {
     );
   }
 
-  if (
-    classes.length === 1 &&
-    (classes[0] === "All" || classes[0].id === "All")
-  ) {
-    return (
-      <Chip
-        label="All Classes"
-        size="small"
-        color="primary"
-        sx={{ height: 24, fontSize: "0.75rem" }}
-      />
-    );
+  // Special case for "All Classes"
+  if (classes.length === 1) {
+    const firstClass = classes[0];
+    if (
+      firstClass === "All" ||
+      (typeof firstClass === "object" &&
+        (firstClass.id === "All" ||
+          firstClass.name === "All" ||
+          firstClass.classname === "All"))
+    ) {
+      return (
+        <Chip
+          label="All Classes"
+          size="small"
+          color="primary"
+          sx={{ height: 24, fontSize: "0.75rem" }}
+        />
+      );
+    }
   }
 
   return (
     <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
       {classes.map((cls, index) => {
-        // Handle both string values and object values with name/id properties
-        const label =
-          typeof cls === "string"
-            ? cls
-            : cls.classname || cls.name || `Class ${cls.id}`;
-        const key = typeof cls === "string" ? index : cls.id || index;
+        // Determine the display label and key based on data structure
+        let label;
+        let key;
+
+        if (typeof cls === "string") {
+          label = cls;
+          key = `class-${index}`;
+        } else if (typeof cls === "object" && cls !== null) {
+          // Try all possible property names for the class name
+          label =
+            cls.classname ||
+            cls.name ||
+            cls.className ||
+            cls.class_name ||
+            cls.class ||
+            `Class ${cls.id || index}`;
+
+          // Use id if available, otherwise use index
+          key = cls.id ? `class-${cls.id}` : `class-${index}`;
+        } else {
+          // Fallback for unexpected data type
+          label = `Class ${index + 1}`;
+          key = `class-${index}`;
+        }
 
         return (
           <Chip
@@ -176,7 +201,6 @@ const Holidays = () => {
       const data = await getHolidays();
       setHolidays(data);
     } catch (error) {
-      console.error("Error fetching holidays:", error);
       setNotification({
         open: true,
         message: "Failed to load holidays",

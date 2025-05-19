@@ -8,11 +8,7 @@ import {
   Button,
   TextField,
   FormControl,
-  Select,
-  MenuItem,
-  Checkbox,
-  ListItemText,
-  OutlinedInput,
+  Divider,
   Chip,
   CircularProgress,
   FormHelperText,
@@ -54,7 +50,8 @@ const HolidayFormDialog: React.FC<HolidayFormDialogProps> = ({
     endDate?: string;
     classes?: string;
   }>({});
-
+  const [selectedClasses, setSelectedClasses] = useState<string[]>([]);
+  console.log("holiday", JSON.stringify(holiday));
   useEffect(() => {
     if (open) {
       fetchActiveClasses();
@@ -62,45 +59,18 @@ const HolidayFormDialog: React.FC<HolidayFormDialogProps> = ({
   }, [open]);
 
   useEffect(() => {
+    // Reset form fields
     setName(holiday?.name || "");
     setStartDate(holiday?.startDate || "");
     setEndDate(holiday?.endDate || holiday?.startDate || "");
 
-    if (holiday?.classes) {
-      const isAllClasses =
-        holiday.classes.includes("All") ||
-        (availableClasses.length > 0 &&
-          availableClasses.every(
-            (cls) =>
-              holiday.classes.includes(cls.id) ||
-              holiday.classes.some((c) => {
-                if (typeof c === "object" && c !== null) return c.id === cls.id;
-                return c === cls.id || c === cls.id.toString();
-              })
-          ));
-
-      if (isAllClasses) {
-        setClasses([{ id: -1, name: "All" }]);
-      } else {
-        const formattedClasses = holiday.classes.map((cls) => {
-          if (typeof cls === "object" && cls !== null && "id" in cls) {
-            return {
-              id: cls.id,
-              name: cls.name || cls.classname || `Class ${cls.id}`,
-            };
-          } else if (typeof cls === "number") {
-            return { id: cls, name: `Class ${cls}` };
-          } else if (typeof cls === "string" && /^\d+$/.test(cls)) {
-            return { id: parseInt(cls, 10), name: `Class ${cls}` };
-          }
-          return { id: 0, name: String(cls) };
-        });
-        setClasses(formattedClasses);
-      }
+    // Only process holiday classes if we have both holiday data and available classes
+    if (holiday?.classes && availableClasses.length > 0) {
+      processHolidayClasses(holiday.classes, availableClasses);
     } else {
-      setClasses([]);
+      setSelectedClasses([]);
     }
-  }, [holiday, open, availableClasses]);
+  }, [holiday, availableClasses]);
 
   const fetchActiveClasses = async () => {
     setLoading(true);
@@ -112,6 +82,11 @@ const HolidayFormDialog: React.FC<HolidayFormDialogProps> = ({
           name: cls.classname || cls.name || `Class ${cls.id}`,
         }));
         setAvailableClasses(classItems);
+
+        // After fetching classes, re-process holiday classes if in edit mode
+        if (holiday?.classes && holiday.id) {
+          processHolidayClasses(holiday.classes, classItems);
+        }
       } else {
         setAvailableClasses([]);
       }
@@ -123,21 +98,83 @@ const HolidayFormDialog: React.FC<HolidayFormDialogProps> = ({
     }
   };
 
-  const handleClassChange = (event: any) => {
-    const value = event.target.value;
-    if (value.some((item: any) => item.id === -1)) {
-      setClasses([{ id: -1, name: "All" }]);
-    } else {
-      setClasses(value);
+  // Helper function to process holiday classes and match them with available classes
+  const processHolidayClasses = (
+    holidayClasses: any[],
+    availableClasses: ClassItem[]
+  ) => {
+    // Check for "All" class
+    if (
+      holidayClasses.includes("All") ||
+      (Array.isArray(holidayClasses) &&
+        holidayClasses.length > 0 &&
+        typeof holidayClasses[0] === "object" &&
+        (holidayClasses[0]?.name === "All" || holidayClasses[0]?.id === "All"))
+    ) {
+      setSelectedClasses(["All"]);
+      return;
     }
-  };
 
-  const handleSelectAll = () => {
-    if (classes.some((cls) => cls.id === -1)) {
-      setClasses([]);
-    } else {
-      setClasses([{ id: -1, name: "All" }]);
+    // Extract all class IDs from availableClasses
+    const availableClassIds = availableClasses.map((cls) => cls.id.toString());
+
+    // Extract all class IDs from holidayClasses
+    const holidayClassIds = holidayClasses.map((cls) => {
+      if (typeof cls === "object" && cls !== null) {
+        return (cls.id || cls.classId || "").toString();
+      }
+      return cls.toString();
+    });
+
+    // If all available classes are selected OR we have IDs for all classes
+    if (
+      // Check if all available class IDs are present in holiday classes
+      availableClassIds.length > 0 &&
+      (holidayClassIds.length === availableClassIds.length ||
+        availableClassIds.every((id) => holidayClassIds.includes(id)))
+    ) {
+      setSelectedClasses(["All"]);
+      return;
     }
+
+    // Otherwise process individual classes
+    const classIds = holidayClasses
+      .map((cls) => {
+        // Case 1: If class is an object with id property
+        if (typeof cls === "object" && cls !== null) {
+          const classId = cls.id || cls.classId;
+          if (classId) return classId.toString();
+
+          // If no direct ID, try to match by name
+          const className = cls.name || cls.classname;
+          if (className) {
+            const matchedClass = availableClasses.find(
+              (ac) => ac.name === className
+            );
+            if (matchedClass) return matchedClass.id.toString();
+          }
+        }
+        // Case 2: If class is a string (could be an ID or a class name)
+        else if (typeof cls === "string") {
+          // Check if it's already an ID (numeric string)
+          if (/^\d+$/.test(cls)) return cls;
+
+          // Otherwise, it's likely a class name - try to match it with available classes
+          const matchedClass = availableClasses.find(
+            (ac) =>
+              ac.name === cls ||
+              ac.name?.toLowerCase() === cls.toLowerCase() ||
+              ac.classname === cls
+          );
+
+          if (matchedClass) return matchedClass.id.toString();
+        }
+
+        return cls ? cls.toString() : null;
+      })
+      .filter(Boolean);
+
+    setSelectedClasses(classIds);
   };
 
   const validateForm = (): boolean => {
@@ -171,7 +208,7 @@ const HolidayFormDialog: React.FC<HolidayFormDialogProps> = ({
       isValid = false;
     }
 
-    if (!classes.length) {
+    if (!selectedClasses.length) {
       newErrors.classes = "At least one class must be selected";
       isValid = false;
     }
@@ -181,28 +218,30 @@ const HolidayFormDialog: React.FC<HolidayFormDialogProps> = ({
   };
 
   const handleSave = () => {
-    if (!validateForm()) {
-      return;
-    }
+    if (!validateForm()) return;
 
-    let classIds;
-
-    if (classes.some((cls) => cls.id === -1)) {
-      classIds = ["All"];
-    } else {
-      classIds = classes.map((cls) => cls.id);
-    }
-
-    onSave({
+    const holidayData = {
       id: holiday?.id,
       name: name.trim(),
       startDate: startDate,
       endDate: endDate,
-      classes: classIds,
+      classes: selectedClasses.includes("All")
+        ? ["All"] // Ensure we send "All" as a string when All Classes is selected
+        : selectedClasses.map((classId) => {
+            const classObj = availableClasses.find(
+              (c) => c.id?.toString() === classId
+            );
+
+            // Return the class object if found, otherwise just the ID
+            return classObj || classId;
+          }),
       holidayName: name.trim(),
       start_date: startDate,
       end_date: endDate,
-    });
+    };
+
+    console.log("Submitting holiday data:", holidayData);
+    onSave(holidayData);
   };
 
   return (
@@ -298,81 +337,200 @@ const HolidayFormDialog: React.FC<HolidayFormDialogProps> = ({
             </Box>
           </Box>
           <Box>
-            <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
-              Classes *
-            </Typography>
-            <FormControl fullWidth size="small" error={!!errors.classes}>
-              {loading ? (
+            <FormControl fullWidth margin="dense" error={!!errors.classes}>
+              <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
+                Classes *
+              </Typography>
+              <Box
+                sx={{
+                  border: "1px solid",
+                  borderColor: errors.classes
+                    ? "error.main"
+                    : "rgba(0, 0, 0, 0.23)",
+                  borderRadius: 1,
+                  p: 1,
+                  maxHeight: "200px",
+                  overflowY: "auto",
+                }}
+              >
                 <Box
                   sx={{
                     display: "flex",
                     alignItems: "center",
-                    justifyContent: "center",
-                    p: 2,
+                    p: 1,
+                    borderRadius: 1,
+                    cursor: "pointer",
+                    mb: 1,
+                    bgcolor: selectedClasses.includes("All")
+                      ? "rgba(25, 118, 210, 0.08)"
+                      : "transparent",
+                    "&:hover": {
+                      bgcolor: "rgba(0, 0, 0, 0.04)",
+                    },
+                  }}
+                  onClick={() => {
+                    if (selectedClasses.includes("All")) {
+                      setSelectedClasses([]);
+                    } else {
+                      setSelectedClasses(["All"]);
+                    }
+
+                    if (errors.classes) {
+                      setErrors({ ...errors, classes: undefined });
+                    }
                   }}
                 >
-                  <CircularProgress size={24} />
-                </Box>
-              ) : (
-                <>
-                  <Select
-                    multiple
-                    value={classes}
-                    onChange={handleClassChange}
-                    input={<OutlinedInput />}
-                    renderValue={(selected) =>
-                      selected.some((item) => item.id === -1) ? (
-                        "All Classes"
-                      ) : (
-                        <Box
-                          sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}
-                        >
-                          {selected.map((value) => (
-                            <Chip
-                              key={value.id}
-                              label={value.name}
-                              size="small"
-                            />
-                          ))}
-                        </Box>
-                      )
-                    }
-                    sx={{ minHeight: 40 }}
-                    required
+                  <Box
+                    sx={{
+                      width: 20,
+                      height: 20,
+                      border: "1px solid",
+                      borderColor: selectedClasses.includes("All")
+                        ? "primary.main"
+                        : "rgba(0, 0, 0, 0.23)",
+                      borderRadius: 0.5,
+                      mr: 2,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      bgcolor: selectedClasses.includes("All")
+                        ? "primary.main"
+                        : "transparent",
+                    }}
                   >
-                    <MenuItem
-                      value={{ id: -1, name: "All" } as any}
-                      onClick={handleSelectAll}
-                    >
-                      <Checkbox
-                        checked={classes.some((cls) => cls.id === -1)}
-                      />
-                      <ListItemText primary="All Classes" />
-                    </MenuItem>
-                    {availableClasses.length > 0 ? (
-                      availableClasses.map((cls) => (
-                        <MenuItem
-                          key={cls.id}
-                          value={cls as any}
-                          disabled={classes.some((c) => c.id === -1)}
-                        >
-                          <Checkbox
-                            checked={
-                              classes.some((c) => c.id === cls.id) ||
-                              classes.some((c) => c.id === -1)
-                            }
-                          />
-                          <ListItemText primary={cls.name} />
-                        </MenuItem>
-                      ))
-                    ) : (
-                      <MenuItem disabled>No classes available</MenuItem>
+                    {selectedClasses.includes("All") && (
+                      <Box
+                        component="span"
+                        sx={{ color: "white", fontSize: "0.8rem" }}
+                      >
+                        ✓
+                      </Box>
                     )}
-                  </Select>
-                  {errors.classes && (
-                    <FormHelperText>{errors.classes}</FormHelperText>
-                  )}
-                </>
+                  </Box>
+                  <Typography sx={{ fontStyle: "italic" }}>
+                    All Classes
+                  </Typography>
+                </Box>
+                <Divider sx={{ my: 1 }} />
+                {availableClasses.map((classItem) => {
+                  const classId = classItem.id?.toString() || "";
+                  const className = classItem.name || `Class ${classId}`;
+                  const isSelected = selectedClasses.includes(classId);
+
+                  return (
+                    <Box
+                      key={classId}
+                      sx={{
+                        display: "flex",
+                        alignItems: "center",
+                        p: 1,
+                        borderRadius: 1,
+                        cursor: selectedClasses.includes("All")
+                          ? "not-allowed"
+                          : "pointer",
+                        mb: 0.5,
+                        bgcolor:
+                          isSelected && !selectedClasses.includes("All")
+                            ? "rgba(25, 118, 210, 0.08)"
+                            : "transparent",
+                        opacity: selectedClasses.includes("All") ? 0.5 : 1,
+                        "&:hover": {
+                          bgcolor: selectedClasses.includes("All")
+                            ? "transparent"
+                            : "rgba(0, 0, 0, 0.04)",
+                        },
+                      }}
+                      onClick={() => {
+                        if (selectedClasses.includes("All")) return;
+
+                        setSelectedClasses((prevSelected) => {
+                          if (prevSelected.includes(classId)) {
+                            return prevSelected.filter((id) => id !== classId);
+                          } else {
+                            return [...prevSelected, classId];
+                          }
+                        });
+
+                        if (errors.classes) {
+                          setErrors({ ...errors, classes: undefined });
+                        }
+                      }}
+                    >
+                      <Box
+                        sx={{
+                          width: 20,
+                          height: 20,
+                          border: "1px solid",
+                          borderColor:
+                            isSelected || selectedClasses.includes("All")
+                              ? "primary.main"
+                              : "rgba(0, 0, 0, 0.23)",
+                          borderRadius: 0.5,
+                          mr: 2,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          bgcolor:
+                            isSelected || selectedClasses.includes("All")
+                              ? "primary.main"
+                              : "transparent",
+                        }}
+                      >
+                        {(isSelected || selectedClasses.includes("All")) && (
+                          <Box
+                            component="span"
+                            sx={{ color: "white", fontSize: "0.8rem" }}
+                          >
+                            ✓
+                          </Box>
+                        )}
+                      </Box>
+                      <Typography>{className}</Typography>
+                    </Box>
+                  );
+                })}
+                {availableClasses.length === 0 && (
+                  <Box sx={{ p: 1, textAlign: "center" }}>
+                    <Typography color="text.secondary">
+                      {loading ? "Loading classes..." : "No classes available"}
+                    </Typography>
+                  </Box>
+                )}
+              </Box>
+              <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5, mt: 1 }}>
+                {selectedClasses.includes("All") ? (
+                  <Chip
+                    label="All Classes"
+                    color="primary"
+                    size="small"
+                    onDelete={() => setSelectedClasses([])}
+                  />
+                ) : (
+                  selectedClasses.map((classId) => {
+                    const classObj = availableClasses.find(
+                      (c) => c.id?.toString() === classId
+                    );
+                    const label = classObj
+                      ? classObj.name || `Class ${classId}`
+                      : `Class ${classId}`;
+
+                    return (
+                      <Chip
+                        key={classId}
+                        label={label}
+                        size="small"
+                        onDelete={() => {
+                          setSelectedClasses((prev) =>
+                            prev.filter((id) => id !== classId)
+                          );
+                        }}
+                      />
+                    );
+                  })
+                )}
+              </Box>
+              {errors.classes && (
+                <FormHelperText error>{errors.classes}</FormHelperText>
               )}
             </FormControl>
           </Box>
@@ -386,7 +544,6 @@ const HolidayFormDialog: React.FC<HolidayFormDialogProps> = ({
             >
               Cancel
             </Button>
-
             <Button
               variant="contained"
               disableElevation
