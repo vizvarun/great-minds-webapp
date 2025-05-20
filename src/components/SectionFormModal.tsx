@@ -86,10 +86,14 @@ const SectionFormModal = ({
           setClasses([]);
         }
 
-        // For section form, we'll disable employee selection since we'll only allow deletion
-        // of teachers and students inside section view
-        setEmployees([]);
-        setEmployeesLoading(false);
+        // Fetch all employees for teacher dropdowns
+        setEmployeesLoading(true);
+        const employeesResponse = await getActiveEmployees();
+        if (employeesResponse && Array.isArray(employeesResponse)) {
+          setEmployees(employeesResponse);
+        } else {
+          setEmployees([]);
+        }
       } catch (error) {
         console.error("Failed to fetch data:", error);
         setClasses([]);
@@ -276,15 +280,92 @@ const SectionFormModal = ({
                 />
               </Box>
 
-              {/* Remove Class Teacher and Class Admin fields since they'll be managed in section view */}
+              {/* Add back the Class Teacher dropdown */}
               <Box sx={{ mb: 2 }}>
-                <Typography
-                  variant="body2"
-                  sx={{ mb: 1, fontWeight: 500, color: "text.secondary" }}
-                >
-                  Note: Teachers and students can be managed after creating the
-                  section
+                <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
+                  Class Teacher
                 </Typography>
+                <FormControl fullWidth size="small">
+                  <Select
+                    id="classTeacherId"
+                    name="classTeacherId"
+                    value={formData.classTeacherId || ""}
+                    onChange={handleChange as any}
+                    displayEmpty
+                    disabled={employeesLoading}
+                    endAdornment={
+                      employeesLoading ? (
+                        <CircularProgress size={20} sx={{ mr: 2 }} />
+                      ) : null
+                    }
+                  >
+                    <MenuItem value="">
+                      <em>None</em>
+                    </MenuItem>
+                    {employees && employees.length > 0 ? (
+                      employees.map((employee) => (
+                        <MenuItem key={employee.id} value={employee.id}>
+                          {employee.fullName ||
+                            `${employee.firstName || ""} ${
+                              employee.lastName || ""
+                            }`.trim() ||
+                            `Employee ${employee.id}`}
+                          {employee.designation && ` - ${employee.designation}`}
+                        </MenuItem>
+                      ))
+                    ) : (
+                      <MenuItem value="" disabled>
+                        {employeesLoading
+                          ? "Loading employees..."
+                          : "No employees available"}
+                      </MenuItem>
+                    )}
+                  </Select>
+                </FormControl>
+              </Box>
+
+              {/* Add back the Class Admin dropdown */}
+              <Box sx={{ mb: 2 }}>
+                <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
+                  Class Admin
+                </Typography>
+                <FormControl fullWidth size="small">
+                  <Select
+                    id="classAdminId"
+                    name="classAdminId"
+                    value={formData.classAdminId || ""}
+                    onChange={handleChange as any}
+                    displayEmpty
+                    disabled={employeesLoading}
+                    endAdornment={
+                      employeesLoading ? (
+                        <CircularProgress size={20} sx={{ mr: 2 }} />
+                      ) : null
+                    }
+                  >
+                    <MenuItem value="">
+                      <em>None</em>
+                    </MenuItem>
+                    {employees && employees.length > 0 ? (
+                      employees.map((employee) => (
+                        <MenuItem key={employee.id} value={employee.id}>
+                          {employee.fullName ||
+                            `${employee.firstName || ""} ${
+                              employee.lastName || ""
+                            }`.trim() ||
+                            `Employee ${employee.id}`}
+                          {employee.designation && ` - ${employee.designation}`}
+                        </MenuItem>
+                      ))
+                    ) : (
+                      <MenuItem value="" disabled>
+                        {employeesLoading
+                          ? "Loading employees..."
+                          : "No employees available"}
+                      </MenuItem>
+                    )}
+                  </Select>
+                </FormControl>
               </Box>
 
               <Divider sx={{ my: 2 }} />

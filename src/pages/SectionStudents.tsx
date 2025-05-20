@@ -12,27 +12,24 @@ import {
   TableHead,
   TableRow,
   TablePagination,
-  IconButton,
   TextField,
   InputAdornment,
   Divider,
   CircularProgress,
   Alert,
   Snackbar,
-  Modal,
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
-import EditIcon from "@mui/icons-material/Edit";
-import DeleteIcon from "@mui/icons-material/Delete";
 import SearchIcon from "@mui/icons-material/Search";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import {
   getStudentsBySection,
-  removeStudentFromSection,
   addStudentsToSection,
 } from "../services/studentService";
 import AddStudentsModal from "../components/AddStudentsModal";
 import type { Student } from "../services/studentService";
+import api from "../services/api";
+import AuthService from "../services/auth";
 
 const SectionStudents = () => {
   const location = useLocation();
@@ -45,10 +42,6 @@ const SectionStudents = () => {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [searchQuery, setSearchQuery] = useState("");
-
-  // Delete confirmation modal state
-  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [studentToDelete, setStudentToDelete] = useState<Student | null>(null);
 
   // Add students modal state
   const [isAddStudentsModalOpen, setIsAddStudentsModalOpen] = useState(false);
@@ -155,58 +148,49 @@ const SectionStudents = () => {
     }
   };
 
-  const handleEditStudent = (student: Student) => {
-    console.log("Edit student assignment:", student.id);
-    // Open edit modal for this student
-  };
+  const handleToggleStudentStatus = async (student: Student) => {
+    if (!sectionId) return;
 
-  const handleDeleteClick = (student: Student) => {
-    setStudentToDelete(student);
-    setIsDeleteModalOpen(true);
-  };
+    setLoading(true);
+    try {
+      const user_id = AuthService.getUserId() || 14;
+      const school_id = AuthService.getSchoolId() || 4;
 
-  const handleConfirmDelete = async () => {
-    if (studentToDelete && sectionId) {
-      try {
-        const success = await removeStudentFromSection(
-          studentToDelete.id,
-          sectionId
-        );
+      // Call the API to toggle student status
+      const response = await api.put(
+        `/section/remove-student?section_id=${sectionId}&student_ids=${student.id}&user_id=${user_id}&school_id=${school_id}`
+      );
 
-        if (success) {
-          // Update local state
-          setStudents(students.filter((s) => s.id !== studentToDelete.id));
-
-          setNotification({
-            open: true,
-            message: `${studentToDelete.firstname} ${studentToDelete.lastname} removed from section`,
-            severity: "success",
-            timestamp: Date.now(),
-          });
-        } else {
-          throw new Error("Failed to remove student");
-        }
-      } catch (error) {
+      // Check for success response
+      if (response.data) {
+        // Show success notification
         setNotification({
           open: true,
-          message: "Failed to remove student from section",
-          severity: "error",
+          message: `${student.firstname} ${
+            student.lastname || ""
+          } removed from section successfully`,
+          severity: "success",
           timestamp: Date.now(),
         });
+
+        // Refresh the student list after a short delay to allow the API to update
+        setTimeout(() => {
+          fetchStudents();
+        }, 300);
+      } else {
+        throw new Error("Failed to remove student from section");
       }
-
-      setIsDeleteModalOpen(false);
-      setStudentToDelete(null);
+    } catch (error) {
+      console.error("Error updating student status:", error);
+      setNotification({
+        open: true,
+        message: "Failed to remove student from section",
+        severity: "error",
+        timestamp: Date.now(),
+      });
+    } finally {
+      setLoading(false);
     }
-  };
-
-  const handleCancelDelete = () => {
-    setIsDeleteModalOpen(false);
-    setStudentToDelete(null);
-  };
-
-  const handleCloseNotification = () => {
-    setNotification((prev) => ({ ...prev, open: false }));
   };
 
   // Get full name helper function
@@ -216,6 +200,11 @@ const SectionStudents = () => {
         student.middlename ? student.middlename + " " : ""
       }${student.lastname || ""}`.trim() || "-"
     );
+  };
+
+  // Add this function to handle closing notifications
+  const handleCloseNotification = () => {
+    setNotification((prev) => ({ ...prev, open: false }));
   };
 
   return (
@@ -349,7 +338,7 @@ const SectionStudents = () => {
                   sx={{ fontWeight: 600, bgcolor: "grey.50", width: "15%" }}
                   align="center"
                 >
-                  Actions
+                  Status
                 </TableCell>
               </TableRow>
             </TableHead>
@@ -370,18 +359,56 @@ const SectionStudents = () => {
                     <TableCell>{getFullName(student)}</TableCell>
                     <TableCell align="center">
                       <Box sx={{ display: "flex", justifyContent: "center" }}>
-                        <IconButton
-                          size="small"
-                          onClick={() => handleDeleteClick(student)}
-                          color="error"
+                        <Box
                           sx={{
-                            "&:hover": {
-                              bgcolor: "rgba(211, 47, 47, 0.04)",
-                            },
+                            position: "relative",
+                            display: "inline-flex",
+                            alignItems: "center",
                           }}
                         >
-                          <DeleteIcon fontSize="small" />
-                        </IconButton>
+                          <input
+                            type="checkbox"
+                            checked={student.isactive !== false}
+                            onChange={() => handleToggleStudentStatus(student)}
+                            style={{
+                              appearance: "none",
+                              WebkitAppearance: "none",
+                              MozAppearance: "none",
+                              width: "30px",
+                              height: "18px",
+                              borderRadius: "10px",
+                              background:
+                                student.isactive !== false
+                                  ? "#0cb5bf"
+                                  : "#e0e0e0",
+                              outline: "none",
+                              cursor: "pointer",
+                              position: "relative",
+                              transition: "background 0.25s ease",
+                              border: "1px solid",
+                              borderColor:
+                                student.isactive !== false
+                                  ? "#0cb5bf"
+                                  : "#d0d0d0",
+                              pointerEvents: loading ? "none" : "auto",
+                            }}
+                          />
+                          <span
+                            style={{
+                              position: "absolute",
+                              left: student.isactive !== false ? "18px" : "2px",
+                              width: "14px",
+                              height: "14px",
+                              borderRadius: "50%",
+                              background: "#ffffff",
+                              boxShadow: "0 1px 2px rgba(0,0,0,0.1)",
+                              transition: "left 0.25s ease",
+                              pointerEvents: "none",
+                              top: "50%",
+                              marginTop: "-7px",
+                            }}
+                          />
+                        </Box>
                       </Box>
                     </TableCell>
                   </TableRow>
@@ -415,113 +442,13 @@ const SectionStudents = () => {
         }}
       />
 
-      {/* Delete Confirmation Modal */}
-      <Modal
-        open={isDeleteModalOpen}
-        onClose={handleCancelDelete}
-        aria-labelledby="delete-confirmation-modal"
-        sx={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-        }}
-      >
-        <Paper
-          elevation={0}
-          sx={{
-            width: 400,
-            maxWidth: "95%",
-            bgcolor: "background.paper",
-            borderRadius: 2,
-            boxShadow: 24,
-            p: 0,
-            outline: "none",
-          }}
-        >
-          <Box
-            sx={{
-              p: 3,
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-            }}
-          >
-            <Typography
-              variant="h6"
-              component="h2"
-              sx={{ fontWeight: 600, mb: 2 }}
-            >
-              Confirm Removal
-            </Typography>
-            <Typography variant="body1" sx={{ mb: 3, textAlign: "center" }}>
-              Are you sure you want to remove{" "}
-              <strong>
-                {studentToDelete ? getFullName(studentToDelete) : ""}
-              </strong>{" "}
-              from this section?
-            </Typography>
-
-            <Box
-              sx={{
-                display: "flex",
-                justifyContent: "center",
-                gap: 2,
-                width: "100%",
-              }}
-            >
-              <Button
-                variant="outlined"
-                onClick={handleCancelDelete}
-                disableRipple
-                sx={{
-                  flex: 1,
-                  textTransform: "none",
-                  borderRadius: 0.5,
-                  backgroundColor: "transparent",
-                  outline: "none",
-                  border: "1px solid",
-                  borderColor: "grey.300",
-                  color: "text.primary",
-                  transition: "none",
-                  "&:hover": {
-                    backgroundColor: "transparent",
-                    borderColor: "grey.400",
-                  },
-                }}
-              >
-                Cancel
-              </Button>
-              <Button
-                variant="contained"
-                onClick={handleConfirmDelete}
-                disableElevation
-                disableRipple
-                sx={{
-                  flex: 1,
-                  textTransform: "none",
-                  borderRadius: 0.5,
-                  background: "error.main",
-                  color: "white",
-                  transition: "none",
-                  "&:hover": {
-                    background: "error.dark",
-                  },
-                }}
-              >
-                Remove
-              </Button>
-            </Box>
-          </Box>
-        </Paper>
-      </Modal>
-
       {/* Add Students Modal - Pass existing students to filter them out */}
       <AddStudentsModal
         open={isAddStudentsModalOpen}
         onClose={() => setIsAddStudentsModalOpen(false)}
         onSubmit={handleAddStudentsSubmit}
         sectionId={sectionId}
-        existingStudents={students} // Pass existing students to filter them out
+        existingStudents={students}
       />
 
       {/* Notification Snackbar */}
