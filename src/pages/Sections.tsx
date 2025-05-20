@@ -180,6 +180,7 @@ const Sections = () => {
   const handleAddSection = () => {
     setSelectedSection(null);
     setIsEditMode(false);
+    // Pass the currently selected filterClassId when opening the modal
     setIsModalOpen(true);
   };
 
@@ -689,7 +690,7 @@ const Sections = () => {
                         >
                           <DownloadIcon fontSize="small" />
                         </IconButton>
-                        <IconButton
+                        {/* <IconButton
                           size="small"
                           onClick={() => handleDeleteClick(section.id)}
                           color="error"
@@ -705,7 +706,7 @@ const Sections = () => {
                           }}
                         >
                           <DeleteIcon fontSize="small" />
-                        </IconButton>
+                        </IconButton> */}
                       </Box>
                     </TableCell>
                   </TableRow>
@@ -754,6 +755,8 @@ const Sections = () => {
         section={selectedSection || undefined}
         isEditMode={isEditMode}
         sectionId={selectedSection?.id} // Pass section ID separately for API calls
+        // Pass the currently selected class ID to prefill
+        defaultClassId={filterClassId ? parseInt(filterClassId) : undefined}
       />
 
       {/* Delete Confirmation Modal */}

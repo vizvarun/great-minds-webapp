@@ -130,7 +130,9 @@ const SectionStudents = () => {
       if (success) {
         setNotification({
           open: true,
-          message: `${studentIds.length} students added to section successfully`,
+          message: `${studentIds.length} ${
+            studentIds.length === 1 ? "student" : "students"
+          } added to section successfully`,
           severity: "success",
           timestamp: Date.now(),
         });
@@ -306,7 +308,7 @@ const SectionStudents = () => {
             },
           }}
         >
-          Add Student
+          Add Students
         </Button>
       </Box>
 
@@ -513,12 +515,13 @@ const SectionStudents = () => {
         </Paper>
       </Modal>
 
-      {/* Add Students Modal */}
+      {/* Add Students Modal - Pass existing students to filter them out */}
       <AddStudentsModal
         open={isAddStudentsModalOpen}
         onClose={() => setIsAddStudentsModalOpen(false)}
         onSubmit={handleAddStudentsSubmit}
         sectionId={sectionId}
+        existingStudents={students} // Pass existing students to filter them out
       />
 
       {/* Notification Snackbar */}

@@ -156,7 +156,12 @@ export const updateSection = async (section: Section): Promise<Section> => {
 export const deleteSection = async (id: number): Promise<void> => {
   try {
     const user_id = AuthService.getUserId() || 14;
-    await api.delete(`/sections/${id}?user_id=${user_id}`);
+    const school_id = AuthService.getSchoolId() || 4;
+
+    // Updated endpoint to match the required format
+    await api.delete(
+      `/sections/delete?section_id=${id}&school_id=${school_id}&user_id=${user_id}`
+    );
   } catch (error) {
     console.error("Error deleting section:", error);
     throw error;
@@ -169,13 +174,27 @@ export const toggleSectionStatus = async (
 ): Promise<Section> => {
   try {
     const user_id = AuthService.getUserId() || 14;
-    const response = await api.patch(
-      `/sections/${id}/status?user_id=${user_id}`,
-      {
-        is_active: !currentStatus,
-      }
+    const school_id = AuthService.getSchoolId() || 4;
+
+    // Updated endpoint to match required format
+    const response = await api.put(
+      `/sections/toggle-status?section_id=${id}&school_id=${school_id}&user_id=${user_id}`
     );
-    return response.data.data;
+
+    // Return the updated section from the response or create one with toggled status
+    if (response.data && response.data.data) {
+      return response.data.data;
+    } else {
+      // If response doesn't contain data, return a partial section with toggled status
+      return {
+        id: id,
+        isactive: !currentStatus,
+        // Include required fields with default values to satisfy TypeScript
+        schoolid: school_id,
+        classid: 0,
+        section: "",
+      };
+    }
   } catch (error) {
     console.error("Error toggling section status:", error);
     throw error;

@@ -28,6 +28,7 @@ interface SectionFormModalProps {
   section?: Section;
   isEditMode?: boolean;
   sectionId?: number;
+  defaultClassId?: number; // Add this new prop
 }
 
 interface ExtendedSection extends Section {
@@ -42,6 +43,7 @@ const SectionFormModal = ({
   section,
   isEditMode = false,
   sectionId,
+  defaultClassId,
 }: SectionFormModalProps) => {
   const [formData, setFormData] = useState<Partial<ExtendedSection>>({
     section: "",
@@ -66,11 +68,18 @@ const SectionFormModal = ({
         if (classesResponse && classesResponse.data) {
           setClasses(classesResponse.data);
 
-          // Set default class selection if not in edit mode and we have classes
-          if (!isEditMode && classesResponse.data.length > 0) {
+          // Set default class selection if not in edit mode
+          if (!isEditMode) {
+            // Use the defaultClassId if provided, otherwise use first class
+            const classIdToUse =
+              defaultClassId ||
+              (classesResponse.data.length > 0
+                ? classesResponse.data[0].id
+                : 0);
+
             setFormData((prev) => ({
               ...prev,
-              classid: classesResponse.data[0].id,
+              classid: classIdToUse,
             }));
           }
         } else {
@@ -95,7 +104,7 @@ const SectionFormModal = ({
       // Only fetch when modal is opened
       fetchData();
     }
-  }, [open, isEditMode]);
+  }, [open, isEditMode, defaultClassId]); // Add defaultClassId to dependencies
 
   // Set initial form data when section prop changes
   useEffect(() => {
@@ -107,17 +116,19 @@ const SectionFormModal = ({
         classAdminId: section.classAdminId,
       });
     } else if (classes.length > 0) {
-      // Default to first class in the list for new sections
+      // Default to provided default class ID or first class in the list for new sections
+      const classIdToUse = defaultClassId || classes[0].id;
+
       setFormData({
         section: "",
-        classid: classes[0].id,
+        classid: classIdToUse,
         isactive: true,
         classTeacherId: undefined,
         classAdminId: undefined,
       });
     }
     setErrors({});
-  }, [section, isEditMode, classes]);
+  }, [section, isEditMode, classes, defaultClassId]); // Add defaultClassId to dependencies
 
   const handleChange = (
     e: React.ChangeEvent<{ name?: string; value: unknown }>

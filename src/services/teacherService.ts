@@ -10,45 +10,58 @@ export interface Teacher {
   fullName?: string; // Computed property for display
   designation: string;
   email?: string;
+  typeId: number;
 }
 
 export const getTeachersBySection = async (
-  sectionId?: number
+  sectionId: number
 ): Promise<Teacher[]> => {
   try {
     const user_id = AuthService.getUserId() || 14;
+    const school_id = AuthService.getSchoolId() || 4;
 
-    if (!sectionId) {
-      return getAllTeachers();
-    }
+    const response = await api.get(
+      `/section/teachers?section_id=${sectionId}&school_id=${school_id}&user_id=${user_id}`
+    );
 
-    // Updated endpoint to match the required format
-    const response = await api.get(`/section/teachers?section_id=${sectionId}`);
-
+    // Handle the new response format with teachers array
     if (response.data && Array.isArray(response.data.teachers)) {
-      // Map API response to Teacher interface and add fullName computed property
       return response.data.teachers.map((teacher: any) => ({
-        id: teacher.teacherid, // Use teacherid as the id for selection
-        userId: teacher.id, // Original ID field might be the userId
+        id: teacher.teacherid, // Use teacherid as the primary identifier
+        userId: teacher.teacherid,
         firstName: teacher.firstname || "",
         lastName: teacher.lastname || "",
         middleName: teacher.middlename || "",
         fullName: `${teacher.firstname || ""} ${
           teacher.middlename ? teacher.middlename + " " : ""
         }${teacher.lastname || ""}`.trim(),
-        designation: teacher.designation || "",
+        designation: "", // Designation based on typeId
         email: teacher.email || "",
         sectionId: teacher.sectionid,
-        typeId: teacher.typeid, // This might indicate the teacher's role (teacher/admin)
+        typeId: teacher.typeid,
+        recordId: teacher.id, // Store the original record ID separately for operations like delete
       }));
     }
 
-    // Return empty array if no data found
+    // Fallback to handling the old response format if needed
+    if (response.data && Array.isArray(response.data)) {
+      return response.data.map((teacher: any) => ({
+        id: teacher.id || teacher.teacherId || teacher.empId,
+        userId: teacher.userId,
+        firstName: teacher.firstName || "",
+        lastName: teacher.lastName || "",
+        middleName: teacher.middleName || "",
+        fullName: `${teacher.firstName || ""} ${
+          teacher.middleName ? teacher.middleName + " " : ""
+        }${teacher.lastName || ""}`.trim(),
+        designation: teacher.designation || "",
+        email: teacher.email || "",
+      }));
+    }
     return [];
   } catch (error) {
-    console.error("Error fetching teachers by section:", error);
-    // If an error occurs, fall back to getAllTeachers
-    return getAllTeachers();
+    console.error(`Error fetching teachers for section ${sectionId}:`, error);
+    return [];
   }
 };
 
@@ -136,5 +149,90 @@ export const getActiveEmployees = async (): Promise<Teacher[]> => {
   } catch (error) {
     console.error("Error fetching active employees:", error);
     return [];
+  }
+};
+
+/**
+ * Add teacher to a specific section
+ */
+export const addTeacherToSection = async (
+  teacherId: number,
+  sectionId: number
+): Promise<boolean> => {
+  try {
+    const user_id = AuthService.getUserId() || 14;
+    const school_id = AuthService.getSchoolId() || 4;
+
+    const response = await api.post(`/section/add-teacher`, {
+      teacher_id: teacherId,
+      section_id: sectionId,
+      school_id: school_id,
+      user_id: user_id,
+    });
+
+    return response.data && response.data.status === "success";
+  } catch (error) {
+    console.error(
+      `Error adding teacher ${teacherId} to section ${sectionId}:`,
+      error
+    );
+    return false;
+  }
+};
+
+/**
+ * Add teachers to a specific section - updated to handle multiple teachers
+ */
+export const addTeachersToSection = async (
+  teacherIds: number[],
+  sectionId: number
+): Promise<boolean> => {
+  try {
+    const user_id = AuthService.getUserId() || 14;
+    const school_id = AuthService.getSchoolId() || 4;
+
+    // For multiple teachers, execute all requests and wait for all to complete
+    const results = await Promise.all(
+      teacherIds.map(async (teacherId) => {
+        const response = await api.post(
+          `/sections/add-employee?section_id=${sectionId}&employee_id=${teacherId}&user_id=${user_id}`
+        );
+
+        return response.data && response.data.status === "success";
+      })
+    );
+
+    // Return true only if all operations were successful
+    return results.every((result) => result === true);
+  } catch (error) {
+    console.error(`Error adding teachers to section ${sectionId}:`, error);
+    return false;
+  }
+};
+
+/**
+ * Remove teacher from a specific section
+ */
+export const removeTeacherFromSection = async (
+  teacherId: number,
+  sectionId: number,
+  recordId?: number
+): Promise<boolean> => {
+  try {
+    const user_id = AuthService.getUserId() || 14;
+    const school_id = AuthService.getSchoolId() || 4;
+
+    // Use the correct API endpoint with the required query parameters
+    const response = await api.delete(
+      `/section/teacher/delete?section_id=${sectionId}&teacher_id=${teacherId}&user_id=${user_id}&school_id=${school_id}`
+    );
+
+    return response.data && response.data.status === "success";
+  } catch (error) {
+    console.error(
+      `Error removing teacher ${teacherId} from section ${sectionId}:`,
+      error
+    );
+    return false;
   }
 };

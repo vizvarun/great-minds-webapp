@@ -16,111 +16,103 @@ import {
   Typography,
 } from "@mui/material";
 import { useEffect, useState } from "react";
-import type { Student } from "../services/studentService";
-import { getStudents } from "../services/studentService";
+import type { Teacher } from "../services/teacherService";
+import { getActiveEmployees } from "../services/teacherService";
 
-interface AddStudentsModalProps {
+interface AddTeacherModalProps {
   open: boolean;
   onClose: () => void;
-  onSubmit: (studentIds: number[]) => void;
+  onSubmit: (teacherIds: number[]) => void;
   sectionId: number;
-  existingStudents?: Student[]; // Added prop for existing students
+  existingTeachers?: Teacher[]; // Added prop for existing teachers
 }
 
-const AddStudentsModal = ({
+const AddTeacherModal = ({
   open,
   onClose,
   onSubmit,
   sectionId,
-  existingStudents = [], // Default to empty array
-}: AddStudentsModalProps) => {
-  const [students, setStudents] = useState<Student[]>([]);
+  existingTeachers = [], // Default to empty array
+}: AddTeacherModalProps) => {
+  const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>([]);
+  const [selectedTeacherIds, setSelectedTeacherIds] = useState<string[]>([]);
 
-  // Create a set of existing student IDs for efficient lookup
-  const existingStudentIds = new Set(existingStudents.map((s) => s.id));
+  // Create a set of existing teacher IDs for efficient lookup
+  const existingTeacherIds = new Set(existingTeachers.map((t) => t.id));
 
   useEffect(() => {
-    // Reset selected student IDs when modal opens or closes
-    setSelectedStudentIds([]);
+    // Reset selected teacher IDs when modal opens or closes
+    setSelectedTeacherIds([]);
 
     if (open) {
-      fetchStudents();
+      fetchTeachers();
     }
   }, [open]);
 
-  const fetchStudents = async () => {
+  const fetchTeachers = async () => {
     setLoading(true);
     try {
-      // Fetch all students
-      const response = await getStudents(0, 1000);
-      if (response && Array.isArray(response.data)) {
-        // Filter out students that are already in the section
-        const availableStudents = response.data.filter(
-          (student) => !existingStudentIds.has(student.id)
+      const teacherList = await getActiveEmployees();
+      if (teacherList && Array.isArray(teacherList)) {
+        // Filter out teachers that are already in the section
+        const filteredTeachers = teacherList.filter(
+          (teacher) => !existingTeacherIds.has(teacher.id)
         );
-        setStudents(availableStudents);
+        setTeachers(filteredTeachers);
       } else {
-        setError("Failed to load students");
+        setError("Failed to load teachers");
       }
     } catch (err) {
-      setError("Error loading students");
-      console.error("Error fetching students:", err);
+      setError("Error loading teachers");
+      console.error("Error fetching teachers:", err);
     } finally {
       setLoading(false);
     }
   };
 
   const handleChange = (
-    event: SelectChangeEvent<typeof selectedStudentIds>
+    event: SelectChangeEvent<typeof selectedTeacherIds>
   ) => {
     const {
       target: { value },
     } = event;
-    setSelectedStudentIds(
-      // On autofill we get a stringified value.
-      typeof value === "string" ? value.split(",") : value
-    );
+
+    setSelectedTeacherIds(typeof value === "string" ? value.split(",") : value);
   };
 
-  // Handle deletion of a chip (deselecting a student)
   const handleDeleteChip = (id: string, event: React.MouseEvent) => {
-    // Stop the event propagation to prevent dropdown from opening
     event.stopPropagation();
-
-    // Remove the ID from selected students
-    setSelectedStudentIds(
-      selectedStudentIds.filter((studentId) => studentId !== id)
+    setSelectedTeacherIds(
+      selectedTeacherIds.filter((teacherId) => teacherId !== id)
     );
   };
 
   const handleSubmit = () => {
-    // Convert string array to number array
-    const numberIds = selectedStudentIds.map((id) => parseInt(id));
-    onSubmit(numberIds);
+    if (selectedTeacherIds.length > 0) {
+      const numberIds = selectedTeacherIds.map((id) => parseInt(id));
+      onSubmit(numberIds);
+      setSelectedTeacherIds([]);
+    }
   };
 
   const handleClose = () => {
-    setSelectedStudentIds([]);
+    setSelectedTeacherIds([]);
     onClose();
   };
 
-  // Get student name for display in chip
-  const getStudentFullName = (id: string) => {
-    const student = students.find((s) => s.id.toString() === id);
-    if (!student) return `Student ${id}`;
-    return student.firstName && student.lastName
-      ? `${student.firstName} ${student.lastName}`
-      : student.firstName || `Student ${id}`;
+  const getTeacherFullName = (id: string) => {
+    const teacher = teachers.find((t) => t.id.toString() === id);
+    if (!teacher) return `Teacher ${id}`;
+    return teacher.fullName || `${teacher.firstName} ${teacher.lastName}`;
   };
 
   return (
     <Modal
       open={open}
       onClose={handleClose}
-      aria-labelledby="add-students-modal"
+      aria-labelledby="add-teacher-modal"
       sx={{
         display: "flex",
         alignItems: "center",
@@ -151,7 +143,7 @@ const AddStudentsModal = ({
           }}
         >
           <Typography variant="h6" component="h2" sx={{ fontWeight: 600 }}>
-            Add Students to Section
+            Add Teachers to Section
           </Typography>
           <IconButton
             onClick={handleClose}
@@ -168,7 +160,7 @@ const AddStudentsModal = ({
 
         <Box sx={{ p: 3 }}>
           <Typography variant="body2" sx={{ mb: 2 }}>
-            Select students to add to this section:
+            Select teachers to add to this section:
           </Typography>
 
           {loading ? (
@@ -178,12 +170,12 @@ const AddStudentsModal = ({
           ) : (
             <>
               <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
-                Select Students
+                Select Teachers
               </Typography>
               <FormControl fullWidth>
                 <Select
                   multiple
-                  value={selectedStudentIds}
+                  value={selectedTeacherIds}
                   onChange={handleChange}
                   displayEmpty
                   input={<OutlinedInput />}
@@ -192,7 +184,7 @@ const AddStudentsModal = ({
                       {selected.map((value) => (
                         <Chip
                           key={value}
-                          label={getStudentFullName(value)}
+                          label={getTeacherFullName(value)}
                           onDelete={(event) =>
                             handleDeleteChip(value, event as React.MouseEvent)
                           }
@@ -216,20 +208,21 @@ const AddStudentsModal = ({
                       },
                     },
                   }}
-                  disabled={students.length === 0}
+                  disabled={teachers.length === 0}
                   sx={{ width: "100%" }}
                 >
-                  {students.length === 0 ? (
+                  {teachers.length === 0 ? (
                     <MenuItem disabled>
-                      {existingStudentIds.size > 0
-                        ? "All available students are already assigned to this section"
-                        : "No students available"}
+                      {existingTeacherIds.size > 0
+                        ? "All available teachers are already assigned to this section"
+                        : "No teachers available"}
                     </MenuItem>
                   ) : (
-                    students.map((student) => (
-                      <MenuItem key={student.id} value={student.id.toString()}>
-                        {student.enrollmentNo || `ST-${student.id}`} -{" "}
-                        {student.firstName} {student.lastName}
+                    teachers.map((teacher) => (
+                      <MenuItem key={teacher.id} value={teacher.id.toString()}>
+                        {teacher.fullName ||
+                          `${teacher.firstName} ${teacher.lastName}`}
+                        {teacher.designation && ` - ${teacher.designation}`}
                       </MenuItem>
                     ))
                   )}
@@ -258,7 +251,7 @@ const AddStudentsModal = ({
             <Button
               variant="contained"
               onClick={handleSubmit}
-              disabled={selectedStudentIds.length === 0 || loading}
+              disabled={selectedTeacherIds.length === 0 || loading}
               disableElevation
               sx={{
                 textTransform: "none",
@@ -273,8 +266,8 @@ const AddStudentsModal = ({
                 },
               }}
             >
-              Add {selectedStudentIds.length}{" "}
-              {selectedStudentIds.length === 1 ? "Student" : "Students"}
+              Add {selectedTeacherIds.length}{" "}
+              {selectedTeacherIds.length === 1 ? "Teacher" : "Teachers"}
             </Button>
           </Box>
         </Box>
@@ -283,4 +276,4 @@ const AddStudentsModal = ({
   );
 };
 
-export default AddStudentsModal;
+export default AddTeacherModal;
