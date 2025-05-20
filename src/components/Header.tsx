@@ -43,7 +43,7 @@ const Header = ({ schoolName, username }: HeaderProps) => {
         </Box>
 
         {/* School name centered */}
-        <Box
+        {/* <Box
           sx={{
             display: "flex",
             alignItems: "center",
@@ -59,7 +59,7 @@ const Header = ({ schoolName, username }: HeaderProps) => {
           >
             {schoolName || "Great Minds School"}
           </Typography>
-        </Box>
+        </Box> */}
 
         <Box
           sx={{
