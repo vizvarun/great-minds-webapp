@@ -111,6 +111,14 @@ const Employees = () => {
     }
   };
 
+  const filteredEmployees = employees.filter((employee) =>
+    `${employee.empNo || ""} ${employee.firstName || ""} ${
+      employee.lastName || ""
+    } ${employee.designation || ""} ${employee.mobileNo || ""}`
+      .toLowerCase()
+      .includes(searchQuery.toLowerCase())
+  );
+
   const handleChangePage = (_: unknown, newPage: number) => {
     setPage(newPage);
   };
@@ -509,108 +517,114 @@ const Employees = () => {
               </TableRow>
             </TableHead>
             <TableBody>
-              {employees.map((employee) => (
-                <TableRow
-                  key={employee.empId}
-                  hover
-                  sx={{
-                    "&:hover": {
-                      backgroundColor: "rgba(0, 0, 0, 0.02)",
-                    },
-                    transition: "none",
-                  }}
-                >
-                  <TableCell>{employee.empNo || "-"}</TableCell>
-                  <TableCell>{employee.firstName || "-"}</TableCell>
-                  <TableCell>{employee.lastName || "-"}</TableCell>
-                  <TableCell>{employee.designation || "-"}</TableCell>
-                  <TableCell>{employee.mobileNo || "-"}</TableCell>
-                  <TableCell align="center">
-                    <Box sx={{ display: "flex", justifyContent: "center" }}>
-                      <Box
-                        sx={{
-                          position: "relative",
-                          display: "inline-flex",
-                          alignItems: "center",
-                        }}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={employee.deletedAt === null}
-                          onChange={() =>
-                            handleToggleStatus(
-                              employee.empId,
-                              employee.deletedAt === null
-                            )
-                          }
-                          style={{
-                            appearance: "none",
-                            WebkitAppearance: "none",
-                            MozAppearance: "none",
-                            width: "30px",
-                            height: "18px",
-                            borderRadius: "10px",
-                            background:
-                              employee.deletedAt === null
-                                ? "#0cb5bf"
-                                : "#e0e0e0",
-                            outline: "none",
-                            cursor: "pointer",
-                            position: "relative",
-                            transition: "background 0.25s ease",
-                            border: "1px solid",
-                            borderColor:
-                              employee.deletedAt === null
-                                ? "#0cb5bf"
-                                : "#d0d0d0",
-                            pointerEvents: loading ? "none" : "auto", // Disable during loading
-                          }}
-                        />
-                        <span
-                          style={{
-                            position: "absolute",
-                            left: employee.deletedAt === null ? "18px" : "2px",
-                            width: "14px",
-                            height: "14px",
-                            borderRadius: "50%",
-                            background: "#ffffff",
-                            boxShadow: "0 1px 2px rgba(0,0,0,0.1)",
-                            transition: "left 0.25s ease",
-                            pointerEvents: "none",
-                            top: "50%",
-                            marginTop: "-7px",
-                          }}
-                        />
-                      </Box>
-                    </Box>
-                  </TableCell>
-                  <TableCell align="center">
-                    <Box sx={{ display: "flex", justifyContent: "center" }}>
-                      <IconButton
-                        size="small"
-                        onClick={() => handleEditEmployee(employee.empId)}
-                        color="primary"
-                        sx={{
-                          transition: "none",
-                          outline: "none",
-                          "&:hover": {
-                            bgcolor: "rgba(25, 118, 210, 0.04)",
-                          },
-                          "&:focus": {
-                            outline: "none",
-                          },
-                        }}
-                      >
-                        <EditIcon fontSize="small" />
-                      </IconButton>
-                    </Box>
-                  </TableCell>
-                </TableRow>
-              ))}
-              {employees.length === 0 && (
+              {filteredEmployees.length > 0 ? (
+                filteredEmployees
+                  .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+                  .map((employee) => (
+                    <TableRow
+                      key={employee.empId}
+                      hover
+                      sx={{
+                        "&:hover": {
+                          backgroundColor: "rgba(0, 0, 0, 0.02)",
+                        },
+                        transition: "none",
+                      }}
+                    >
+                      <TableCell>{employee.empNo || "-"}</TableCell>
+                      <TableCell>{employee.firstName || "-"}</TableCell>
+                      <TableCell>{employee.lastName || "-"}</TableCell>
+                      <TableCell>{employee.designation || "-"}</TableCell>
+                      <TableCell>{employee.mobileNo || "-"}</TableCell>
+                      <TableCell align="center">
+                        <Box sx={{ display: "flex", justifyContent: "center" }}>
+                          <Box
+                            sx={{
+                              position: "relative",
+                              display: "inline-flex",
+                              alignItems: "center",
+                            }}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={employee.deletedAt === null}
+                              onChange={() =>
+                                handleToggleStatus(
+                                  employee.empId,
+                                  employee.deletedAt === null
+                                )
+                              }
+                              style={{
+                                appearance: "none",
+                                WebkitAppearance: "none",
+                                MozAppearance: "none",
+                                width: "30px",
+                                height: "18px",
+                                borderRadius: "10px",
+                                background:
+                                  employee.deletedAt === null
+                                    ? "#0cb5bf"
+                                    : "#e0e0e0",
+                                outline: "none",
+                                cursor: "pointer",
+                                position: "relative",
+                                transition: "background 0.25s ease",
+                                border: "1px solid",
+                                borderColor:
+                                  employee.deletedAt === null
+                                    ? "#0cb5bf"
+                                    : "#d0d0d0",
+                                pointerEvents: loading ? "none" : "auto", // Disable during loading
+                              }}
+                            />
+                            <span
+                              style={{
+                                position: "absolute",
+                                left:
+                                  employee.deletedAt === null ? "18px" : "2px",
+                                width: "14px",
+                                height: "14px",
+                                borderRadius: "50%",
+                                background: "#ffffff",
+                                boxShadow: "0 1px 2px rgba(0,0,0,0.1)",
+                                transition: "left 0.25s ease",
+                                pointerEvents: "none",
+                                top: "50%",
+                                marginTop: "-7px",
+                              }}
+                            />
+                          </Box>
+                        </Box>
+                      </TableCell>
+                      <TableCell align="center">
+                        <Box sx={{ display: "flex", justifyContent: "center" }}>
+                          <IconButton
+                            size="small"
+                            onClick={() => handleEditEmployee(employee.empId)}
+                            color="primary"
+                            sx={{
+                              transition: "none",
+                              outline: "none",
+                              "&:hover": {
+                                bgcolor: "rgba(25, 118, 210, 0.04)",
+                              },
+                              "&:focus": {
+                                outline: "none",
+                              },
+                            }}
+                          >
+                            <EditIcon fontSize="small" />
+                          </IconButton>
+                        </Box>
+                      </TableCell>
+                    </TableRow>
+                  ))
+              ) : (
                 <TableRow>
                   <TableCell colSpan={7} align="center" sx={{ py: 3 }}>
-                    No employees found.
+                    {searchQuery
+                      ? "No matching employees found."
+                      : "No employees found."}
                   </TableCell>
                 </TableRow>
               )}
@@ -622,7 +636,7 @@ const Employees = () => {
       <TablePagination
         component="div"
         rowsPerPageOptions={[5, 10, 25]}
-        count={totalRecords}
+        count={filteredEmployees.length}
         rowsPerPage={rowsPerPage}
         page={page}
         onPageChange={handleChangePage}
