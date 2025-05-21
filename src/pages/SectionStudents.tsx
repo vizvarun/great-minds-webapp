@@ -31,6 +31,11 @@ import type { Student } from "../services/studentService";
 import api from "../services/api";
 import AuthService from "../services/auth";
 
+// Function to determine if a student is active based on student_deletedat field
+const isStudentActive = (student: Student): boolean => {
+  return student.student_deletedat === null;
+};
+
 const SectionStudents = () => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -156,35 +161,47 @@ const SectionStudents = () => {
       const user_id = AuthService.getUserId() || 14;
       const school_id = AuthService.getSchoolId() || 4;
 
-      // Call the API to toggle student status
+      // Call the API to toggle student status using the correct endpoint
       const response = await api.put(
-        `/section/remove-student?section_id=${sectionId}&student_ids=${student.id}&user_id=${user_id}&school_id=${school_id}`
+        `/section/student/status-toggle?section_id=${sectionId}&student_id=${student.id}`
       );
 
-      // Check for success response
       if (response.data) {
+        // Update the student status locally without refetching the list
+        setStudents((prevStudents) =>
+          prevStudents.map((s) =>
+            s.id === student.id
+              ? {
+                  ...s,
+                  // Toggle the student_deletedat field: if null, set to current date, otherwise set to null
+                  student_deletedat:
+                    s.student_deletedat === null
+                      ? new Date().toISOString()
+                      : null,
+                }
+              : s
+          )
+        );
+
         // Show success notification
         setNotification({
           open: true,
           message: `${student.firstname} ${
             student.lastname || ""
-          } removed from section successfully`,
+          } status has been ${
+            isStudentActive(student) ? "deactivated" : "activated"
+          }`,
           severity: "success",
           timestamp: Date.now(),
         });
-
-        // Refresh the student list after a short delay to allow the API to update
-        setTimeout(() => {
-          fetchStudents();
-        }, 300);
       } else {
-        throw new Error("Failed to remove student from section");
+        throw new Error("Failed to update student status");
       }
     } catch (error) {
       console.error("Error updating student status:", error);
       setNotification({
         open: true,
-        message: "Failed to remove student from section",
+        message: "Failed to update student status",
         severity: "error",
         timestamp: Date.now(),
       });
@@ -368,7 +385,7 @@ const SectionStudents = () => {
                         >
                           <input
                             type="checkbox"
-                            checked={student.isactive !== false}
+                            checked={isStudentActive(student)}
                             onChange={() => handleToggleStudentStatus(student)}
                             style={{
                               appearance: "none",
@@ -377,26 +394,24 @@ const SectionStudents = () => {
                               width: "30px",
                               height: "18px",
                               borderRadius: "10px",
-                              background:
-                                student.isactive !== false
-                                  ? "#0cb5bf"
-                                  : "#e0e0e0",
+                              background: isStudentActive(student)
+                                ? "#0cb5bf"
+                                : "#e0e0e0",
                               outline: "none",
                               cursor: "pointer",
                               position: "relative",
                               transition: "background 0.25s ease",
                               border: "1px solid",
-                              borderColor:
-                                student.isactive !== false
-                                  ? "#0cb5bf"
-                                  : "#d0d0d0",
+                              borderColor: isStudentActive(student)
+                                ? "#0cb5bf"
+                                : "#d0d0d0",
                               pointerEvents: loading ? "none" : "auto",
                             }}
                           />
                           <span
                             style={{
                               position: "absolute",
-                              left: student.isactive !== false ? "18px" : "2px",
+                              left: isStudentActive(student) ? "18px" : "2px",
                               width: "14px",
                               height: "14px",
                               borderRadius: "50%",

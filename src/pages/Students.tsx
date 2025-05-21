@@ -219,21 +219,18 @@ const Students = () => {
   };
 
   // Handle form submission (add/edit)
-  const handleFormSubmit = async (studentData: any) => {
+  const handleStudentSubmit = async (studentData: any) => {
+    setLoading(true);
     try {
       if (isEditMode && selectedStudent) {
-        // Update existing student
-        const updatedStudent = await updateStudent({
+        // Edit existing student
+        await updateStudent({
           ...studentData,
           id: selectedStudent.id,
-          mobileNo: studentData.phoneNumber || studentData.mobileNo,
         });
 
-        setStudents(
-          students.map((student) =>
-            student.id === selectedStudent.id ? updatedStudent : student
-          )
-        );
+        // Refresh the student list
+        await fetchStudents();
 
         setNotification({
           open: true,
@@ -243,23 +240,28 @@ const Students = () => {
         });
       } else {
         // Add new student
-        const newStudent = await createStudent({
-          ...studentData,
-          mobileNo: studentData.phoneNumber || studentData.mobileNo,
-        });
+        const result = await createStudent(studentData);
 
-        setStudents([...students, newStudent]);
+        // Check if the response indicates success
+        if (result && result.id) {
+          // Refresh the student list
+          await fetchStudents();
 
-        setNotification({
-          open: true,
-          message: "Student added successfully",
-          severity: "success",
-          timestamp: Date.now(),
-        });
+          setNotification({
+            open: true,
+            message: "Student added successfully",
+            severity: "success",
+            timestamp: Date.now(),
+          });
+        } else {
+          throw new Error("Failed to create student");
+        }
       }
 
+      // Close modal after successful operation
       setIsFormModalOpen(false);
     } catch (error) {
+      console.error("Error in student operation:", error);
       setNotification({
         open: true,
         message: isEditMode
@@ -268,6 +270,8 @@ const Students = () => {
         severity: "error",
         timestamp: Date.now(),
       });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -635,7 +639,7 @@ const Students = () => {
       <StudentFormModal
         open={isFormModalOpen}
         onClose={() => setIsFormModalOpen(false)}
-        onSubmit={handleFormSubmit}
+        onSubmit={handleStudentSubmit}
         student={selectedStudent as any}
         isEditMode={isEditMode}
       />

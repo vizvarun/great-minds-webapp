@@ -280,7 +280,7 @@ const SectionFormModal = ({
                 />
               </Box>
 
-              {/* Add back the Class Teacher dropdown */}
+              {/* Class Teacher dropdown */}
               <Box sx={{ mb: 2 }}>
                 <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
                   Class Teacher
@@ -324,7 +324,7 @@ const SectionFormModal = ({
                 </FormControl>
               </Box>
 
-              {/* Add back the Class Admin dropdown */}
+              {/* Class Admin dropdown */}
               <Box sx={{ mb: 2 }}>
                 <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
                   Class Admin

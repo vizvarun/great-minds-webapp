@@ -11,8 +11,9 @@ export interface Student {
   phoneno: string;
   isactive: boolean;
   profilepic?: string;
-  // Including other fields for completeness
   dob?: string;
+  email?: string;
+  gender?: string;
   addressline1?: string;
   addressline2?: string;
   city?: string;
@@ -20,6 +21,7 @@ export interface Student {
   zipcode?: string;
   classid?: number;
   sectionid?: number;
+  student_deletedat?: string | null; // Added this field to track student status
 }
 
 export const getStudentsBySection = async (
@@ -128,14 +130,57 @@ export const createStudent = async (
     const user_id = AuthService.getUserId() || 14;
     const school_id = AuthService.getSchoolId() || 4;
 
+    // Map field names to match API expectations based on the correct format
     const payload = {
-      ...student,
+      firstname: student.firstname || "",
+      lastname: student.lastname || "",
+      middlename: student.middlename || "",
+      enrollmentno: student.enrollmentno || "",
+      email: student.email || "",
+      mobileno: student.phoneno || student.mobileno || "",
       schoolid: school_id,
-      user_id: user_id,
+      createdby: user_id,
+      isactive: true,
+      dob: student.dob || "",
+      addressline1: student.addressline1 || "",
+      addressline2: student.addressline2 || "",
+      city: student.city || "",
+      state: student.state || "",
+      zipcode: student.zipcode || "",
     };
 
-    const response = await api.post("/students/create", payload);
-    return response.data.data;
+    // Modified to move user_id to query parameters
+    const response = await api.post(
+      `/students/create?user_id=${user_id}`,
+      payload
+    );
+
+    // Check for successful response with the correct structure
+    if (
+      response.data &&
+      response.data.status === "success" &&
+      response.data.data
+    ) {
+      return {
+        ...student,
+        id: response.data.data.id,
+      };
+    } else if (response.data && response.data.id) {
+      // Alternative success response structure
+      return {
+        ...student,
+        id: response.data.id,
+      };
+    } else if (response.status === 201 || response.status === 200) {
+      // If the response is successful but doesn't have the expected data structure
+      // Return a constructed student object with a temporary ID
+      return {
+        ...student,
+        id: Date.now(), // Temporary ID that will be replaced on refresh
+      };
+    }
+
+    throw new Error(response.data?.message || "Failed to create student");
   } catch (error) {
     console.error("Error creating student:", error);
     throw error;
@@ -173,13 +218,13 @@ export const toggleStudentStatus = async (
 ): Promise<Student> => {
   try {
     const user_id = AuthService.getUserId() || 14;
-    const response = await api.patch(
-      `/students/${id}/status?user_id=${user_id}`,
-      {
-        is_active: !currentStatus,
-      }
+    // Use the correct endpoint for toggling student status
+    const response = await api.post(
+      `/students/toggle-status?student_id=${id}&user_id=${user_id}`
     );
-    return response.data.data;
+
+    // Return the updated student data
+    return response.data.data || { id, isactive: !currentStatus };
   } catch (error) {
     console.error("Error toggling student status:", error);
     throw error;

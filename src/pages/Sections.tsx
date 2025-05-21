@@ -539,6 +539,11 @@ const Sections = () => {
                   Section
                 </TableCell>
                 <TableCell
+                  sx={{ fontWeight: 600, bgcolor: "grey.50", width: "20%" }}
+                >
+                  Class Teacher
+                </TableCell>
+                <TableCell
                   sx={{ fontWeight: 600, bgcolor: "grey.50", width: "10%" }}
                   align="center"
                 >
@@ -567,6 +572,9 @@ const Sections = () => {
                       {section.className || `Class ${section.classid}`}
                     </TableCell>
                     <TableCell>{section.section}</TableCell>
+                    <TableCell>
+                      {section.classTeacherName || "Not Assigned"}
+                    </TableCell>
                     <TableCell align="center">
                       <Box sx={{ display: "flex", justifyContent: "center" }}>
                         <Box
@@ -713,7 +721,7 @@ const Sections = () => {
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={4} align="center" sx={{ py: 3 }}>
+                  <TableCell colSpan={6} align="center" sx={{ py: 3 }}>
                     No sections found.
                   </TableCell>
                 </TableRow>

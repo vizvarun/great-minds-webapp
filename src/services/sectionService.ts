@@ -13,6 +13,11 @@ export interface Section {
   updatedat?: string | null;
   deletedat?: string | null;
   className?: string; // This will be populated from the UI side
+  // New fields for teacher and admin information
+  classTeacherId?: number;
+  classTeacherName?: string;
+  classAdminId?: number;
+  classAdminName?: string;
 }
 
 export interface SectionResponse {
@@ -61,12 +66,30 @@ export const getSections = async (
     const classesResponse = await getAllActiveClasses();
     const classes = classesResponse.data || [];
 
-    // Map class names to sections
-    const sectionsWithClassNames = sectionsData.map((section: Section) => {
+    // Map class names to sections and extract teacher/admin data from new structure
+    const sectionsWithClassNames = sectionsData.map((sectionItem: any) => {
+      // Handle the new nested structure
+      const section = sectionItem.section_data || sectionItem;
+      const teacherData = sectionItem.teacher_data?.employee;
+      const adminData = sectionItem.admin_data?.employee;
+
       const matchedClass = classes.find((cls) => cls.id === section.classid);
+
+      // Format teacher and admin names
+      const formatName = (employee: any) => {
+        if (!employee) return "";
+        return `${employee.firstname || ""} ${
+          employee.middlename ? employee.middlename + " " : ""
+        }${employee.lastname || ""}`.trim();
+      };
+
       return {
         ...section,
         className: matchedClass ? matchedClass.classname : "Unknown Class",
+        classTeacherId: teacherData?.id,
+        classTeacherName: formatName(teacherData),
+        classAdminId: adminData?.id,
+        classAdminName: formatName(adminData),
       };
     });
 
@@ -139,6 +162,8 @@ export const updateSection = async (section: Section): Promise<Section> => {
         createdby: user_id,
         schoolid: section.schoolid || school_id,
         isactive: section.isactive !== undefined ? section.isactive : true,
+        teacherid: section.classTeacherId || null,
+        adminid: section.classAdminId || null,
       }
     );
 
