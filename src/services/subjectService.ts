@@ -9,6 +9,15 @@ export interface Subject {
   updatedAt?: string | null;
 }
 
+// Add a new interface for the class-subject mapping response
+export interface ClassSubjectMapping {
+  id: number;
+  classId: number;
+  subjectId: number;
+  createdAt?: string;
+  updatedAt?: string | null;
+}
+
 export interface SubjectsResponse {
   page: number;
   page_size: number;
@@ -74,26 +83,10 @@ export const getClassSubjects = async (classId: number): Promise<Subject[]> => {
     const school_id = AuthService.getSchoolId() || 4;
 
     const response = await api.get(
-      `/class/subjects?class_id=${classId}&school_id=${school_id}&user_id=${user_id}`
+      `/classes/subjects?class_id=${classId}&school_id=${school_id}&user_id=${user_id}`
     );
 
-    // Transform the API response to match our expected format
-    if (
-      response.data &&
-      response.data.subjects &&
-      Array.isArray(response.data.subjects)
-    ) {
-      return response.data.subjects.map((subject: any) => ({
-        id: subject.id,
-        schoolId: subject.schoolId || subject.school_id,
-        subjectName:
-          subject.subjectName || subject.subject_name || subject.name || "",
-        createdAt: subject.createdAt || subject.created_at,
-        updatedAt: subject.updatedAt || subject.updated_at,
-      }));
-    }
-
-    return [];
+    return response.data;
   } catch (error) {
     console.error(`Error fetching subjects for class ${classId}:`, error);
     return [];

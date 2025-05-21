@@ -39,10 +39,12 @@ import {
   toggleSectionStatus,
   updateSection,
 } from "../services/sectionService";
+import api from "../services/api";
 
 import type { SelectChangeEvent } from "@mui/material";
 import type { Class } from "../services/classService";
 import type { Section } from "../services/sectionService";
+import AuthService from "../services/auth";
 
 const Sections = () => {
   const navigate = useNavigate();
@@ -377,14 +379,121 @@ const Sections = () => {
     }
   };
 
-  const handleDownloadSection = (id: number) => {
-    // Implement actual download functionality if needed
-    const section = sections.find((s) => s.id === id);
-    if (section) {
+  const handleDownloadSection = async (id: number) => {
+    try {
+      const user_id = AuthService.getUserId() || 14;
+      const section = sections.find((s) => s.id === id);
+
+      // Show loading notification
       setNotification({
         open: true,
-        message: `Downloading data for ${section.className} ${section.section}`,
+        message: `Downloading students data for ${
+          section?.section || "section"
+        }...`,
         severity: "info",
+        timestamp: Date.now(),
+      });
+
+      try {
+        // Call the API to get the Excel file as blob
+        const response = await api.get(
+          `/students/section/export?section_id=${id}&user_id=${user_id}`,
+          { responseType: "blob" }
+        );
+
+        // Create a URL for the blob
+        const blob = new Blob([response.data], {
+          type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        });
+        const url = URL.createObjectURL(blob);
+
+        // Create a hidden link element and trigger download
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = `Students_${section?.className || "Class"}_${
+          section?.section || "Section"
+        }.xlsx`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        // Clean up the URL object
+        URL.revokeObjectURL(url);
+
+        // Show success notification
+        setNotification({
+          open: true,
+          message: `Students data downloaded successfully`,
+          severity: "success",
+          timestamp: Date.now(),
+        });
+      } catch (error) {
+        // Handle specific error response data
+        if (error.response) {
+          if (error.response.status === 404) {
+            // Try to parse the error message from the API
+            try {
+              // For non-blob responses, we can read the data directly
+              const errorData = await error.response.data;
+              if (typeof errorData === "object" && errorData.detail) {
+                // Show the actual error message from API
+                setNotification({
+                  open: true,
+                  message: errorData.detail,
+                  severity: "error",
+                  timestamp: Date.now(),
+                });
+                return;
+              }
+            } catch (parseError) {
+              // If the response is a blob, we need to read it as text
+              const reader = new FileReader();
+              reader.onload = () => {
+                try {
+                  const errorJson = JSON.parse(reader.result as string);
+                  if (errorJson.detail) {
+                    setNotification({
+                      open: true,
+                      message: errorJson.detail,
+                      severity: "error",
+                      timestamp: Date.now(),
+                    });
+                    return;
+                  }
+                } catch (jsonError) {
+                  // Fallback if JSON parsing fails
+                  console.error("Error parsing error response:", jsonError);
+                }
+
+                // Default error message if we couldn't extract API message
+                setNotification({
+                  open: true,
+                  message: "No students found in this section",
+                  severity: "warning",
+                  timestamp: Date.now(),
+                });
+              };
+              reader.readAsText(error.response.data);
+              return;
+            }
+          }
+        }
+
+        // Generic error fallback
+        console.error("Error downloading section students:", error);
+        setNotification({
+          open: true,
+          message: "Failed to download students data",
+          severity: "error",
+          timestamp: Date.now(),
+        });
+      }
+    } catch (outerError) {
+      console.error("Error in download process:", outerError);
+      setNotification({
+        open: true,
+        message: "An unexpected error occurred",
+        severity: "error",
         timestamp: Date.now(),
       });
     }

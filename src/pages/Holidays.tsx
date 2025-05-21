@@ -368,10 +368,7 @@ const Holidays = () => {
       // Create a hidden link element and trigger download with .xlsx extension
       const link = document.createElement("a");
       link.setAttribute("href", url);
-      link.setAttribute(
-        "download",
-        `holidays_${new Date().toISOString().split("T")[0]}.xlsx`
-      );
+      link.setAttribute("download", `holidays.xlsx`);
       link.style.visibility = "hidden";
       document.body.appendChild(link);
       link.click();

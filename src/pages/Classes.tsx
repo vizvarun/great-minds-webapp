@@ -38,7 +38,7 @@ import {
   updateClassSubjects,
 } from "../services/subjectService";
 import type { Class } from "../services/classService";
-import type { Subject } from "../services/subjectService";
+import type { Subject, ClassSubjectMapping } from "../services/subjectService";
 import api from "../services/api";
 import AuthService from "../services/auth";
 
@@ -111,15 +111,135 @@ const Classes = () => {
   const fetchClassSubjects = async (classId: number) => {
     setSubjectsLoading(true);
     try {
-      const subjects = await getClassSubjects(classId);
-      // Extract just the IDs for the checkboxes
-      const subjectIds = subjects.map((subject) => subject.id);
-      setClassSubjects(subjectIds);
-      setSelectedSubjects(subjectIds);
+      // First fetch all subjects
+      const allSubjectsResponse = await getSubjects(0, 1000);
+      let allSubjectsData = [];
+
+      if (allSubjectsResponse && allSubjectsResponse.subjects) {
+        allSubjectsData = allSubjectsResponse.subjects;
+        setAllSubjects(allSubjectsData);
+      }
+
+      // Then fetch subjects assigned to the class
+      const classSubjectsResponse = await getClassSubjects(classId);
+      console.log("Class subjects response:", classSubjectsResponse);
+
+      if (classSubjectsResponse && Array.isArray(classSubjectsResponse)) {
+        // Extract subjectIds from the mapping response - using the subjectId property from the response
+        const subjectIds = classSubjectsResponse
+          .map((mapping) => mapping.subjectId)
+          .filter((id) => id !== undefined && id !== null);
+
+        console.log("Subject IDs extracted from mapping:", subjectIds);
+        setClassSubjects(subjectIds);
+        setSelectedSubjects(subjectIds);
+
+        // Check if all subjects are mapped to automatically select "Select All"
+        if (allSubjectsData.length > 0) {
+          // Check if all available subjects are included in the mapped subjects
+          const allSubjectIds = allSubjectsData.map((subject) => subject.id);
+          const allMapped = allSubjectIds.every((id) =>
+            subjectIds.includes(id)
+          );
+
+          if (allMapped && subjectIds.length >= allSubjectsData.length) {
+            console.log(
+              "All subjects are mapped - select All checkbox should be checked"
+            );
+          }
+        }
+      } else {
+        setClassSubjects([]);
+        setSelectedSubjects([]);
+      }
     } catch (error) {
       console.error("Error fetching class subjects:", error);
       setClassSubjects([]);
       setSelectedSubjects([]);
+    } finally {
+      setSubjectsLoading(false);
+    }
+  };
+
+  const handleOpenSubjectMapping = async (cls: Class) => {
+    setSelectedClass(cls);
+    setModalOpen(true);
+    setSubjectsLoading(true);
+
+    try {
+      // First fetch all subjects
+      const allSubjectsResponse = await getSubjects(0, 1000);
+      let allSubjectsData = [];
+
+      if (allSubjectsResponse && allSubjectsResponse.subjects) {
+        allSubjectsData = allSubjectsResponse.subjects;
+        setAllSubjects(allSubjectsData);
+      }
+
+      // Then fetch subjects assigned to the class
+      const classSubjectsResponse = await getClassSubjects(cls.id);
+
+      if (classSubjectsResponse && Array.isArray(classSubjectsResponse)) {
+        // Handle various API response formats
+        let subjectIds = [];
+
+        // Check the actual structure of response objects
+        if (classSubjectsResponse.length > 0) {
+          const firstItem = classSubjectsResponse[0];
+
+          // Determine the property name by checking the actual response structure
+          if (typeof firstItem === "object") {
+            // Check possible property names in order of likelihood
+            const idPropertyName =
+              "subjectId" in firstItem
+                ? "subjectId"
+                : "subject_id" in firstItem
+                ? "subject_id"
+                : "id" in firstItem
+                ? "id"
+                : null;
+
+            if (idPropertyName) {
+              subjectIds = classSubjectsResponse
+                .map((item) => item[idPropertyName])
+                .filter((id) => id !== undefined && id !== null);
+            } else if ("data" in firstItem && Array.isArray(firstItem.data)) {
+              // Handle nested data structure if present
+              subjectIds = firstItem.data
+                .map((s) => s.id || s.subjectId)
+                .filter((id) => id !== undefined && id !== null);
+            }
+          } else if (typeof firstItem === "number") {
+            // If the response is already an array of IDs
+            subjectIds = classSubjectsResponse;
+          }
+        }
+
+        console.log("Extracted Subject IDs:", subjectIds);
+
+        if (subjectIds.length > 0) {
+          // Use direct setState to ensure the value is properly set
+          setSelectedSubjects(subjectIds);
+          setClassSubjects(subjectIds);
+        } else {
+          setSelectedSubjects([]);
+          setClassSubjects([]);
+        }
+      } else {
+        // Clear selections if no valid response
+        setSelectedSubjects([]);
+        setClassSubjects([]);
+      }
+    } catch (error) {
+      console.error("Error fetching subjects for mapping:", error);
+      setNotification({
+        open: true,
+        message: "Failed to load subjects",
+        severity: "error",
+        timestamp: Date.now(),
+      });
+      setSelectedSubjects([]);
+      setClassSubjects([]);
     } finally {
       setSubjectsLoading(false);
     }
@@ -238,54 +358,70 @@ const Classes = () => {
     }
   };
 
-  const handleDownloadClass = (id: number) => {
-    const cls = classes.find((c) => c.id === id);
-    if (cls) {
+  const handleDownloadClass = async (id: number) => {
+    try {
+      const user_id = AuthService.getUserId() || 14;
+      const cls = classes.find((c) => c.id === id);
+
+      // Show loading notification
       setNotification({
         open: true,
-        message: `Downloading data for ${cls.classname}`,
+        message: `Downloading students data for ${
+          cls?.classname || "class"
+        }...`,
         severity: "info",
         timestamp: Date.now(),
       });
-    }
-    // Implement actual download functionality if needed
-  };
 
-  const handleOpenSubjectMapping = async (cls: Class) => {
-    setSelectedClass(cls);
-    setModalOpen(true);
-    setSubjectsLoading(true);
+      // Call the API to get the Excel file as blob
+      const response = await api.get(
+        `/students/class/export?class_id=${id}&user_id=${user_id}`,
+        { responseType: "blob" }
+      );
 
-    try {
-      // First fetch all subjects
-      const allSubjectsResponse = await getSubjects(0, 1000);
-      if (allSubjectsResponse && allSubjectsResponse.subjects) {
-        setAllSubjects(allSubjectsResponse.subjects);
-      }
+      // Create a URL for the blob
+      const blob = new Blob([response.data], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+      const url = URL.createObjectURL(blob);
 
-      // Then fetch subjects assigned to the class
-      const classSubjectsResponse = await getClassSubjects(cls.id);
-      if (classSubjectsResponse) {
-        // Extract just the IDs for the checkboxes
-        const subjectIds = classSubjectsResponse.map((subject) => subject.id);
-        setClassSubjects(subjectIds);
-        setSelectedSubjects(subjectIds);
-      } else {
-        setClassSubjects([]);
-        setSelectedSubjects([]);
-      }
-    } catch (error) {
-      console.error("Error fetching subjects for mapping:", error);
+      // Create a hidden link element and trigger download
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `Students_${cls?.classname || "Class"}.xlsx`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      // Clean up the URL object
+      URL.revokeObjectURL(url);
+
+      // Show success notification
       setNotification({
         open: true,
-        message: "Failed to load subjects",
-        severity: "error",
+        message: `Students data downloaded successfully`,
+        severity: "success",
         timestamp: Date.now(),
       });
-      setClassSubjects([]);
-      setSelectedSubjects([]);
-    } finally {
-      setSubjectsLoading(false);
+    } catch (error) {
+      // console.error("Error downloading class students:", error);
+      // console.error("Error downloading class students:", JSON.parse(error));
+      // setNotification({
+      //   open: true,
+      //   message: "Failed to download students data",
+      //   severity: "error",
+      //   timestamp: Date.now(),
+      // });
+      if (error.response) {
+        const errorMessage = error.response.data.detail;
+        const customHeader = error.response.headers["x-error"];
+
+        console.error(`Error: ${errorMessage} - ${customHeader}`);
+        alert(`Error: ${errorMessage} - ${customHeader}`);
+      } else {
+        console.error("Unexpected error", error);
+        alert("An unexpected error occurred.");
+      }
     }
   };
 
@@ -310,8 +446,14 @@ const Classes = () => {
       setSubjectsLoading(true);
 
       try {
-        // Call API to update class subject mapping
-        await updateClassSubjects(selectedClass.id, selectedSubjects);
+        const user_id = AuthService.getUserId() || 14;
+        const school_id = AuthService.getSchoolId() || 4;
+
+        // Call the correct API endpoint with query parameters and subject IDs in the body
+        await api.post(
+          `/subject/class-assign?class_id=${selectedClass.id}&school_id=${school_id}&user_id=${user_id}`,
+          selectedSubjects
+        );
 
         setNotification({
           open: true,
@@ -323,6 +465,7 @@ const Classes = () => {
         // Update local state if needed
         handleCloseSubjectMapping();
       } catch (error) {
+        console.error("Error saving subject mapping:", error);
         setNotification({
           open: true,
           message: "Failed to update subjects",
@@ -760,7 +903,8 @@ const Classes = () => {
               <Divider sx={{ my: 1 }} />
 
               {allSubjects.map((subject) => {
-                const isChecked = selectedSubjects.includes(subject.id);
+                // Force the isChecked to be a boolean based on array inclusion
+                const isChecked = selectedSubjects.indexOf(subject.id) !== -1;
 
                 return (
                   <Box
