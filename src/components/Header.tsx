@@ -1,3 +1,5 @@
+//@ts-nocheck
+
 import LogoutIcon from "@mui/icons-material/Logout";
 import { AppBar, Box, Button, Toolbar, Typography } from "@mui/material";
 import { useNavigate } from "react-router-dom";

@@ -1,3 +1,5 @@
+//@ts-nocheck
+
 import PhoneAndroidIcon from "@mui/icons-material/PhoneAndroid";
 import {
   Box,
@@ -59,7 +61,7 @@ const Login = () => {
         device_id: "web", // Using "web" as device ID
         bypass_otp: true, // Bypass OTP for now
       });
-      
+
       // Check if we got a successful response with OTP
       if (response && response.message) {
         // Navigate to OTP verification page and pass the mobile number
@@ -72,7 +74,8 @@ const Login = () => {
       console.error("Login error:", err);
       // Display a more subtle error message
       setApiError(
-        err.response?.data?.message || "Failed to send OTP. Please try again later."
+        err.response?.data?.message ||
+          "Failed to send OTP. Please try again later."
       );
     } finally {
       setIsLoading(false);

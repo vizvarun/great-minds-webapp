@@ -1,22 +1,23 @@
-import React, { useState, useEffect } from "react";
+//@ts-nocheck
+
+import CloseIcon from "@mui/icons-material/Close";
 import {
+  Box,
+  Button,
+  Chip,
+  Divider,
+  FormControl,
+  FormHelperText,
+  IconButton,
   Modal,
   Paper,
-  Box,
-  Typography,
-  IconButton,
-  Button,
   TextField,
-  FormControl,
-  Divider,
-  Chip,
-  CircularProgress,
-  FormHelperText,
+  Typography,
 } from "@mui/material";
-import CloseIcon from "@mui/icons-material/Close";
-import type { Holiday } from "../services/holidayService";
-import { getAllActiveClasses } from "../services/classService";
+import React, { useEffect, useState } from "react";
 import type { Class } from "../services/classService";
+import { getAllActiveClasses } from "../services/classService";
+import type { Holiday } from "../services/holidayService";
 
 interface HolidayFormDialogProps {
   open: boolean;

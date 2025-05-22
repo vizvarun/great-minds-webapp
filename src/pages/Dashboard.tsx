@@ -270,7 +270,7 @@ const Dashboard = () => {
                   }}
                 >
                   <Stack direction="row" spacing={2} alignItems="center">
-                    <Avatar sx={{ bgcolor: theme.palette.error.light }}>
+                    <Avatar sx={{ bgcolor: "rgba(255, 0, 0, 0.15)" }}>
                       <CakeIcon sx={{ color: theme.palette.error.main }} />
                     </Avatar>
                     <Typography variant="h6" fontWeight="bold">
@@ -352,7 +352,7 @@ const Dashboard = () => {
                   }}
                 >
                   <Stack direction="row" spacing={2} alignItems="center">
-                    <Avatar sx={{ bgcolor: theme.palette.info.light }}>
+                    <Avatar sx={{ bgcolor: "rgba(14, 147, 132, 0.15)" }}>
                       <EventIcon sx={{ color: theme.palette.info.main }} />
                     </Avatar>
                     <Typography variant="h6" fontWeight="bold">

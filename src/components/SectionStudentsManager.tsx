@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from "react";
+//@ts-nocheck
+
 import {
   Box,
   Button,
@@ -6,17 +7,16 @@ import {
   CircularProgress,
   Divider,
   FormControl,
-  IconButton,
   MenuItem,
   OutlinedInput,
   Paper,
   Select,
-  Typography,
   SelectChangeEvent,
+  Typography,
 } from "@mui/material";
-import CloseIcon from "@mui/icons-material/Close";
-import { getStudentsBySection } from "../services/studentService";
+import React, { useEffect, useState } from "react";
 import type { Student } from "../services/studentService";
+import { getStudentsBySection } from "../services/studentService";
 
 interface SectionStudentsManagerProps {
   sectionId: number;

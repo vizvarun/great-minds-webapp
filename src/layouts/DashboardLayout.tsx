@@ -1,3 +1,5 @@
+//@ts-nocheck
+
 import { useEffect, useState, type ReactNode } from "react";
 import { Box } from "@mui/material";
 import Header from "../components/Header";

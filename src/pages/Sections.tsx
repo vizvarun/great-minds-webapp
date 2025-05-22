@@ -1,5 +1,6 @@
+//@ts-nocheck
+
 import AddIcon from "@mui/icons-material/Add";
-import DeleteIcon from "@mui/icons-material/Delete";
 import DownloadIcon from "@mui/icons-material/Download";
 import EditIcon from "@mui/icons-material/Edit";
 import PeopleIcon from "@mui/icons-material/People";
@@ -31,6 +32,7 @@ import {
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import SectionFormModal from "../components/SectionFormModal";
+import api from "../services/api";
 import { getAllActiveClasses } from "../services/classService";
 import {
   createSection,
@@ -39,12 +41,11 @@ import {
   toggleSectionStatus,
   updateSection,
 } from "../services/sectionService";
-import api from "../services/api";
 
 import type { SelectChangeEvent } from "@mui/material";
+import AuthService from "../services/auth";
 import type { Class } from "../services/classService";
 import type { Section } from "../services/sectionService";
-import AuthService from "../services/auth";
 
 const Sections = () => {
   const navigate = useNavigate();

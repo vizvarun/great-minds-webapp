@@ -1,7 +1,5 @@
 // @ts-nocheck
-
 import React, { useEffect, useState } from "react";
-import type { ReactNode } from "react";
 import {
   Box,
   Button,
@@ -13,8 +11,6 @@ import {
   IconButton,
   Modal,
   Paper,
-  Tab,
-  Tabs,
   TextField,
   Typography,
   MenuItem,
@@ -22,68 +18,40 @@ import {
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import CloudUploadIcon from "@mui/icons-material/CloudUpload";
+import PersonIcon from "@mui/icons-material/Person";
+import { updateStudent } from "../services/studentService";
+import AuthService from "../services/auth";
 
 interface StudentData {
   id?: number;
   enrollmentNo: string;
   firstName: string;
   lastName: string;
-  phoneNumber: string;
-  dateOfBirth: string;
+  mobileNo: string;
+  dob: string;
   city: string;
   state: string;
-  pincode: string;
+  zipcode: string;
   gender: string;
-  addressLine1: string;
-  addressLine2?: string;
+  addressline1: string;
+  addressline2?: string;
   profilePhoto?: string;
-  // Father details
-  fatherFirstName: string;
-  fatherLastName: string;
-  fatherPhoneNumber: string;
-  fatherEmail?: string;
-  // Mother details
-  motherFirstName: string;
-  motherLastName: string;
-  motherPhoneNumber: string;
-  motherEmail?: string;
-  // Guardian details
-  guardianFirstName: string;
-  guardianLastName: string;
-  guardianPhoneNumber: string;
-  guardianEmail?: string;
 }
 
 const initialStudentData: StudentData = {
   enrollmentNo: "",
   firstName: "",
   lastName: "",
-  phoneNumber: "",
-  dateOfBirth: "",
+  mobileNo: "",
+  dob: "",
   city: "",
   state: "",
-  pincode: "",
+  zipcode: "",
   gender: "",
-  addressLine1: "",
-  addressLine2: "",
-  // Father details
-  fatherFirstName: "",
-  fatherLastName: "",
-  fatherPhoneNumber: "",
-  fatherEmail: "",
-  // Mother details
-  motherFirstName: "",
-  motherLastName: "",
-  motherPhoneNumber: "",
-  motherEmail: "",
-  // Guardian details
-  guardianFirstName: "",
-  guardianLastName: "",
-  guardianPhoneNumber: "",
-  guardianEmail: "",
+  addressline1: "",
+  addressline2: "",
 };
 
-// Mock data for dropdowns
 const mockStates = [
   "Andhra Pradesh",
   "Arunachal Pradesh",
@@ -121,30 +89,6 @@ interface StudentFormModalProps {
   onSubmit: (student: StudentData) => void;
   student?: StudentData;
   isEditMode?: boolean;
-  studentOnlyMode?: boolean;
-}
-
-interface TabPanelProps {
-  children?: ReactNode;
-  index: number;
-  value: number;
-}
-
-function TabPanel(props: TabPanelProps) {
-  const { children, value, index, ...other } = props;
-
-  return (
-    <div
-      role="tabpanel"
-      hidden={value !== index}
-      id={`student-tabpanel-${index}`}
-      aria-labelledby={`student-tab-${index}`}
-      {...other}
-      style={{ width: "100%" }}
-    >
-      {value === index && <Box sx={{ pt: 2, width: "100%" }}>{children}</Box>}
-    </div>
-  );
 }
 
 const StudentFormModal = ({
@@ -153,26 +97,13 @@ const StudentFormModal = ({
   onSubmit,
   student,
   isEditMode = false,
-  studentOnlyMode = !isEditMode,
 }: StudentFormModalProps) => {
   const [formData, setFormData] = useState<StudentData>(initialStudentData);
   const [errors, setErrors] = useState<
     Partial<Record<keyof StudentData, string>>
   >({});
-  const [tabValue, setTabValue] = useState(0);
   const [profileImage, setProfileImage] = useState<string | null>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
-
-  // Common styles for consistent inputs with no outlines
-  const inputStyles = {
-    borderRadius: 0.5,
-    width: "100%",
-    minWidth: "250px",
-    outline: "none",
-    "&:focus": {
-      outline: "none",
-    },
-  };
 
   // Initialize form data when student prop changes
   useEffect(() => {
@@ -187,11 +118,6 @@ const StudentFormModal = ({
     }
     setErrors({});
   }, [student]);
-
-  // Tab change handler
-  const handleTabChange = (_: React.SyntheticEvent, newValue: number) => {
-    setTabValue(newValue);
-  };
 
   // Handle image upload
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -232,7 +158,6 @@ const StudentFormModal = ({
   // Handle select changes
   const handleSelectChange = (e: any) => {
     const { name, value } = e.target;
-
     setFormData({
       ...formData,
       [name]: value,
@@ -252,146 +177,60 @@ const StudentFormModal = ({
     const newErrors: Partial<Record<keyof StudentData, string>> = {};
     let isValid = true;
 
-    // Basic validation rules based on the current tab
-    if (tabValue === 0) {
-      // Student details tab
-      if (!formData.enrollmentNo.trim()) {
-        newErrors.enrollmentNo = "Enrollment number is required";
-        isValid = false;
-      }
+    if (!formData.enrollmentNo?.trim()) {
+      newErrors.enrollmentNo = "Enrollment number is required";
+      isValid = false;
+    }
 
-      if (!formData.firstName.trim()) {
-        newErrors.firstName = "First name is required";
-        isValid = false;
-      }
+    if (!formData.firstName?.trim()) {
+      newErrors.firstName = "First name is required";
+      isValid = false;
+    }
 
-      if (!formData.lastName.trim()) {
-        newErrors.lastName = "Last name is required";
-        isValid = false;
-      }
+    if (!formData.lastName?.trim()) {
+      newErrors.lastName = "Last name is required";
+      isValid = false;
+    }
 
-      if (!formData.phoneNumber.trim()) {
-        newErrors.phoneNumber = "Phone number is required";
-        isValid = false;
-      } else if (!/^\d{10}$/.test(formData.phoneNumber)) {
-        newErrors.phoneNumber = "Phone number must be 10 digits";
-        isValid = false;
-      }
+    if (!formData.mobileNo?.trim()) {
+      newErrors.mobileNo = "Phone number is required";
+      isValid = false;
+    } else if (!/^\d{10}$/.test(formData.mobileNo)) {
+      newErrors.mobileNo = "Phone number must be 10 digits";
+      isValid = false;
+    }
 
-      if (!formData.dateOfBirth) {
-        newErrors.dateOfBirth = "Date of birth is required";
-        isValid = false;
-      }
+    if (!formData.gender) {
+      newErrors.gender = "Gender is required";
+      isValid = false;
+    }
 
-      if (!formData.state) {
-        newErrors.state = "State is required";
-        isValid = false;
-      }
+    if (!formData.dob) {
+      newErrors.dob = "Date of birth is required";
+      isValid = false;
+    }
 
-      if (!formData.city.trim()) {
-        newErrors.city = "City is required";
-        isValid = false;
-      }
+    if (!formData.state) {
+      newErrors.state = "State is required";
+      isValid = false;
+    }
 
-      if (!formData.pincode.trim()) {
-        newErrors.pincode = "Pin code is required";
-        isValid = false;
-      } else if (!/^\d{6}$/.test(formData.pincode)) {
-        newErrors.pincode = "Pin code must be 6 digits";
-        isValid = false;
-      }
+    if (!formData.city?.trim()) {
+      newErrors.city = "City is required";
+      isValid = false;
+    }
 
-      if (!formData.addressLine1.trim()) {
-        newErrors.addressLine1 = "Address is required";
-        isValid = false;
-      }
-    } else if (!studentOnlyMode) {
-      if (tabValue === 1) {
-        if (!formData.fatherFirstName.trim()) {
-          newErrors.fatherFirstName = "First name is required";
-          isValid = false;
-        }
+    if (!formData.zipcode?.trim()) {
+      newErrors.zipcode = "Pin code is required";
+      isValid = false;
+    } else if (!/^\d{6}$/.test(formData.zipcode)) {
+      newErrors.zipcode = "Pin code must be 6 digits";
+      isValid = false;
+    }
 
-        if (!formData.fatherLastName.trim()) {
-          newErrors.fatherLastName = "Last name is required";
-          isValid = false;
-        }
-
-        if (!formData.fatherPhoneNumber.trim()) {
-          newErrors.fatherPhoneNumber = "Phone number is required";
-          isValid = false;
-        } else if (!/^\d{10}$/.test(formData.fatherPhoneNumber)) {
-          newErrors.fatherPhoneNumber = "Phone number must be 10 digits";
-          isValid = false;
-        }
-
-        if (
-          formData.fatherEmail &&
-          !/\S+@\S+\.\S+/.test(formData.fatherEmail)
-        ) {
-          newErrors.fatherEmail = "Invalid email format";
-          isValid = false;
-        }
-      } else if (tabValue === 2) {
-        if (!formData.motherFirstName.trim()) {
-          newErrors.motherFirstName = "First name is required";
-          isValid = false;
-        }
-
-        if (!formData.motherLastName.trim()) {
-          newErrors.motherLastName = "Last name is required";
-          isValid = false;
-        }
-
-        if (!formData.motherPhoneNumber.trim()) {
-          newErrors.motherPhoneNumber = "Phone number is required";
-          isValid = false;
-        } else if (!/^\d{10}$/.test(formData.motherPhoneNumber)) {
-          newErrors.motherPhoneNumber = "Phone number must be 10 digits";
-          isValid = false;
-        }
-
-        if (
-          formData.motherEmail &&
-          !/\S+@\S+\.\S+/.test(formData.motherEmail)
-        ) {
-          newErrors.motherEmail = "Invalid email format";
-          isValid = false;
-        }
-      } else if (tabValue === 3) {
-        if (
-          formData.guardianFirstName ||
-          formData.guardianLastName ||
-          formData.guardianPhoneNumber ||
-          formData.guardianEmail
-        ) {
-          if (!formData.guardianFirstName.trim()) {
-            newErrors.guardianFirstName = "First name is required";
-            isValid = false;
-          }
-
-          if (!formData.guardianLastName.trim()) {
-            newErrors.guardianLastName = "Last name is required";
-            isValid = false;
-          }
-
-          if (!formData.guardianPhoneNumber.trim()) {
-            newErrors.guardianPhoneNumber = "Phone number is required";
-            isValid = false;
-          } else if (!/^\d{10}$/.test(formData.guardianPhoneNumber)) {
-            newErrors.guardianPhoneNumber = "Phone number must be 10 digits";
-            isValid = false;
-          }
-
-          if (
-            formData.guardianEmail &&
-            !/\S+@\S+\.\S+/.test(formData.guardianEmail)
-          ) {
-            newErrors.guardianEmail = "Invalid email format";
-            isValid = false;
-          }
-        }
-      }
+    if (!formData.addressline1?.trim()) {
+      newErrors.addressline1 = "Address is required";
+      isValid = false;
     }
 
     setErrors(newErrors);
@@ -399,62 +238,115 @@ const StudentFormModal = ({
   };
 
   // Handle form submission
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (validateForm()) {
+      try {
+        // Format the data to match the API expectations
+        const school_id = AuthService.getSchoolId() || 0;
+        const formattedData = {
+          // Required API fields
+          firstname: formData.firstName,
+          lastname: formData.lastName,
+          middlename: "", // Default empty string if not available
+          enrollmentno: formData.enrollmentNo,
+          email: formData.email || "", // Default empty string if not available
+          mobileno: formData.mobileNo,
+          schoolid: school_id,
+          createdby: AuthService.getUserId() || 0,
+          isactive: true,
+          dob: formData.dob,
+          addressline1: formData.addressline1,
+          addressline2: formData.addressline2 || "",
+          city: formData.city,
+          state: formData.state,
+          zipcode: formData.zipcode,
+          gender: formData.gender,
+          // Include id if in edit mode
+          ...(isEditMode && student?.id ? { id: student.id } : {}),
+        };
 
-    // Transform form data to match API expectations
-    const apiFormattedData = {
-      // Basic student information from form to API format
-      enrollmentno: formData.enrollmentNo,
-      firstname: formData.firstName,
-      lastname: formData.lastName,
-      middlename: "", // Add if you have this field
-      phoneno: formData.phoneNumber,
-      mobileno: formData.phoneNumber, // API might expect this name
-      dob: formData.dateOfBirth, // Keep ISO format YYYY-MM-DD from the date picker
-      email: formData.email || "",
-      gender: formData.gender,
-      addressline1: formData.addressLine1,
-      addressline2: formData.addressLine2 || "",
-      city: formData.city,
-      state: formData.state,
-      zipcode: formData.pincode,
-      isactive: true,
-      // Any other fields needed for the API
-    };
-
-    if (studentOnlyMode) {
-      if (validateForm()) {
-        onSubmit(apiFormattedData);
-      }
-    } else {
-      const currentTab = tabValue;
-
-      let allTabsValid = true;
-      for (let i = 0; i < 4; i++) {
-        setTabValue(i);
-        if (!validateForm()) {
-          allTabsValid = false;
-          break;
+        if (isEditMode && student?.id) {
+          await updateStudent(
+            student.id,
+            AuthService.getUserId() || 0,
+            formattedData
+          );
         }
-      }
 
-      setTabValue(currentTab);
-
-      if (allTabsValid) {
-        onSubmit(apiFormattedData);
+        // Pass the formatted data to the parent component
+        onSubmit(formattedData);
+      } catch (error) {
+        console.error("Error submitting student form:", error);
+        // You might want to set an error state here to display to the user
       }
     }
   };
+
+  // Radio button component for better reuse
+  const RadioButton = ({ id, value, checked, label }) => (
+    <Box
+      sx={{
+        display: "flex",
+        alignItems: "center",
+        cursor: "pointer",
+        mr: 3,
+      }}
+      onClick={() => setFormData({ ...formData, gender: value })}
+    >
+      <Box
+        sx={{
+          width: 18,
+          height: 18,
+          borderRadius: "50%",
+          border: "2px solid",
+          borderColor: checked ? "primary.main" : "grey.400",
+          position: "relative",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          mr: 1,
+        }}
+      >
+        {checked && (
+          <Box
+            sx={{
+              width: 10,
+              height: 10,
+              borderRadius: "50%",
+              bgcolor: "primary.main",
+            }}
+          />
+        )}
+      </Box>
+      <Typography
+        component="label"
+        htmlFor={id}
+        variant="body2"
+        sx={{
+          fontWeight: checked ? 500 : 400,
+          color: checked ? "text.primary" : "text.secondary",
+        }}
+      >
+        {label}
+      </Typography>
+      <input
+        type="radio"
+        id={id}
+        name="gender"
+        value={value}
+        checked={checked}
+        onChange={handleChange}
+        style={{ position: "absolute", opacity: 0 }}
+      />
+    </Box>
+  );
 
   return (
     <Modal
       open={open}
       onClose={onClose}
       aria-labelledby="student-form-modal"
-      BackdropProps={{
-        sx: { backgroundColor: "rgba(0, 0, 0, 0.5)" },
-      }}
       sx={{
         display: "flex",
         alignItems: "center",
@@ -462,125 +354,89 @@ const StudentFormModal = ({
       }}
     >
       <Paper
-        elevation={0}
+        elevation={3}
         sx={{
-          width: 900,
-          maxWidth: "95%",
-          maxHeight: "95%",
+          // width: 900,
+          maxWidth: "60%",
+          maxHeight: "90vh",
           overflow: "auto",
-          bgcolor: "background.paper",
           borderRadius: 2,
-          boxShadow: 24,
-          p: 0,
-          outline: "none",
         }}
       >
+        {/* Header */}
         <Box
           sx={{
-            p: 3,
+            px: 3,
+            py: 2,
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
-            bgcolor: "primary.light",
+            borderBottom: 1,
+            borderColor: "divider",
+            bgcolor: "primary.main",
             color: "white",
           }}
         >
-          <Typography variant="h6" component="h2" sx={{ fontWeight: 600 }}>
+          <Typography variant="h6" fontWeight="medium">
             {isEditMode ? "Edit Student" : "Add New Student"}
           </Typography>
-          <IconButton
-            onClick={onClose}
-            sx={{
-              color: "white",
-              "&:hover": {
-                bgcolor: "rgba(255, 255, 255, 0.1)",
-              },
-            }}
-          >
+          <IconButton onClick={onClose} sx={{ color: "white" }}>
             <CloseIcon />
           </IconButton>
         </Box>
 
-        <Box>
-          {!studentOnlyMode && (
-            <Tabs
-              value={tabValue}
-              onChange={handleTabChange}
-              variant="scrollable"
-              scrollButtons="auto"
-              sx={{
-                borderBottom: 1,
-                borderColor: "divider",
-                "& .MuiTab-root": {
-                  textTransform: "none",
-                  fontSize: "0.95rem",
-                  px: 3,
-                  py: 1.5,
-                  outline: "none",
-                },
-                "& .Mui-selected": {
-                  outline: "none",
-                },
-                "& .MuiTabs-indicator": {
-                  height: 3,
-                },
-              }}
-            >
-              <Tab label="Student" disableRipple />
-              <Tab label="Father" disableRipple />
-              <Tab label="Mother" disableRipple />
-              <Tab label="Guardian" disableRipple />
-            </Tabs>
-          )}
+        <Box component="form" onSubmit={handleSubmit} sx={{ p: 3 }}>
+          <Grid container spacing={3}>
+            {/* Student Information - Full Width */}
+            <Grid item xs={12}>
+              <Typography variant="subtitle1" fontWeight="medium" gutterBottom>
+                Student Information
+              </Typography>
 
-          <Box component="form" onSubmit={handleSubmit} sx={{ p: 4, pt: 3 }}>
-            <TabPanel value={tabValue} index={0}>
-              <Grid container spacing={3}>
-                <Grid item xs={12}>
-                  <Box
-                    sx={{
-                      display: "flex",
-                      flexDirection: "column",
-                      alignItems: "center",
-                      mb: 3,
-                    }}
-                  >
+              <Box
+                sx={{
+                  p: 2,
+                  border: "1px solid",
+                  borderColor: "divider",
+                  borderRadius: 2,
+                  mb: 3,
+                }}
+              >
+                {/* Photo and Basic Info in same row */}
+                <Grid container spacing={2}>
+                  {/* Photo Section */}
+                  <Grid item xs={12} sm={3} md={2}>
                     <Box
                       sx={{
-                        width: 220,
-                        height: 220,
-                        border: "1px dashed",
-                        borderColor: "grey.300",
+                        width: "100%",
+                        aspectRatio: "1/1",
                         borderRadius: 1,
+                        mb: 1,
                         display: "flex",
-                        justifyContent: "center",
                         alignItems: "center",
-                        mb: 2,
+                        justifyContent: "center",
                         overflow: "hidden",
-                        backgroundColor: "grey.50",
+                        bgcolor: "background.paper",
+                        border: "1px solid",
+                        borderColor: "divider",
                       }}
                     >
                       {profileImage ? (
                         <Box
                           component="img"
                           src={profileImage}
-                          alt="Student Photo Preview"
+                          alt="Student"
                           sx={{
-                            maxWidth: "100%",
-                            maxHeight: "100%",
-                            objectFit: "contain",
+                            width: "100%",
+                            height: "100%",
+                            objectFit: "cover",
                           }}
                         />
                       ) : (
-                        <Typography
-                          color="text.secondary"
-                          align="center"
-                          sx={{ px: 2 }}
-                        >
-                          No photo uploaded yet
-                        </Typography>
+                        <PersonIcon sx={{ fontSize: 50, color: "grey.300" }} />
                       )}
                     </Box>
+
                     <input
                       ref={fileInputRef}
                       type="file"
@@ -588,705 +444,324 @@ const StudentFormModal = ({
                       style={{ display: "none" }}
                       onChange={handleImageUpload}
                     />
+
                     <Button
                       variant="outlined"
-                      startIcon={<CloudUploadIcon />}
+                      size="small"
+                      fullWidth
+                      startIcon={<CloudUploadIcon fontSize="small" />}
                       onClick={() => fileInputRef.current?.click()}
                       sx={{
                         textTransform: "none",
-                        borderRadius: 0.5,
-                        transition: "none",
-                        outline: "none",
-                        "&:hover": {
-                          backgroundColor: "transparent",
-                        },
+                        fontSize: "0.75rem",
+                        py: 0.5,
+                        borderRadius: 1,
+                        borderColor: "grey.300",
                       }}
                     >
-                      Upload Photo
+                      Upload
                     </Button>
-                  </Box>
-                </Grid>
+                  </Grid>
 
-                <Grid item xs={12}>
-                  <Grid container spacing={2}>
-                    <Grid item xs={12} sm={6}>
-                      <FormLabel
-                        sx={{ mb: 1, display: "block", fontWeight: 500 }}
-                      >
-                        Enrollment Number
-                      </FormLabel>
-                      <TextField
-                        name="enrollmentNo"
-                        value={formData.enrollmentNo}
-                        onChange={handleChange}
-                        fullWidth
-                        variant="outlined"
-                        placeholder="Enter enrollment number"
-                        error={!!errors.enrollmentNo}
-                        helperText={errors.enrollmentNo}
-                        disabled={isEditMode}
-                        size="small"
-                        InputProps={{
-                          sx: inputStyles,
-                        }}
-                      />
-                    </Grid>
-
-                    <Grid item xs={12} sm={6}>
-                      <FormLabel
-                        sx={{ mb: 1, display: "block", fontWeight: 500 }}
-                      >
-                        Phone Number
-                      </FormLabel>
-                      <TextField
-                        name="phoneNumber"
-                        value={formData.phoneNumber}
-                        onChange={handleChange}
-                        fullWidth
-                        variant="outlined"
-                        placeholder="10-digit phone number"
-                        error={!!errors.phoneNumber}
-                        helperText={errors.phoneNumber}
-                        inputProps={{ maxLength: 10 }}
-                        size="small"
-                        InputProps={{
-                          sx: inputStyles,
-                        }}
-                      />
-                    </Grid>
-
-                    <Grid item xs={12} sm={6}>
-                      <FormLabel
-                        sx={{ mb: 1, display: "block", fontWeight: 500 }}
-                      >
-                        First Name
-                      </FormLabel>
-                      <TextField
-                        name="firstName"
-                        value={formData.firstName}
-                        onChange={handleChange}
-                        fullWidth
-                        variant="outlined"
-                        placeholder="Enter first name"
-                        error={!!errors.firstName}
-                        helperText={errors.firstName}
-                        size="small"
-                        InputProps={{
-                          sx: inputStyles,
-                        }}
-                      />
-                    </Grid>
-
-                    <Grid item xs={12} sm={6}>
-                      <FormLabel
-                        sx={{ mb: 1, display: "block", fontWeight: 500 }}
-                      >
-                        Last Name
-                      </FormLabel>
-                      <TextField
-                        name="lastName"
-                        value={formData.lastName}
-                        onChange={handleChange}
-                        fullWidth
-                        variant="outlined"
-                        placeholder="Enter last name"
-                        error={!!errors.lastName}
-                        helperText={errors.lastName}
-                        size="small"
-                        InputProps={{
-                          sx: inputStyles,
-                        }}
-                      />
-                    </Grid>
-
-                    <Grid item xs={12} sm={6}>
-                      <FormLabel
-                        sx={{ mb: 1, display: "block", fontWeight: 500 }}
-                      >
-                        Date of Birth
-                      </FormLabel>
-                      <TextField
-                        name="dateOfBirth"
-                        type="date"
-                        value={formData.dateOfBirth}
-                        onChange={handleChange}
-                        fullWidth
-                        variant="outlined"
-                        error={!!errors.dateOfBirth}
-                        helperText={errors.dateOfBirth}
-                        size="small"
-                        InputProps={{
-                          sx: inputStyles,
-                        }}
-                      />
-                    </Grid>
-
-                    <Grid item xs={12} sm={6}>
-                      <FormLabel
-                        sx={{ mb: 1, display: "block", fontWeight: 500 }}
-                      >
-                        Gender
-                      </FormLabel>
-                      <TextField
-                        name="gender"
-                        value={formData.gender}
-                        onChange={handleChange}
-                        fullWidth
-                        variant="outlined"
-                        placeholder="Enter Gender"
-                        error={!!errors.gender}
-                        helperText={errors.gender}
-                        size="small"
-                        InputProps={{
-                          sx: inputStyles,
-                        }}
-                      />
-                    </Grid>
-
-                    <Grid item xs={12} sm={6}>
-                      <FormLabel
-                        sx={{ mb: 1, display: "block", fontWeight: 500 }}
-                      >
-                        State
-                      </FormLabel>
-                      <FormControl
-                        fullWidth
-                        error={!!errors.state}
-                        size="small"
-                      >
-                        <Select
-                          name="state"
-                          value={formData.state}
-                          onChange={handleSelectChange}
-                          displayEmpty
-                          sx={{
-                            ...inputStyles,
-                            "& .MuiSelect-select": {
-                              width: "100%",
-                            },
-                          }}
+                  {/* Basic Info Section - Right side of photo */}
+                  <Grid item xs={12} sm={9} md={10}>
+                    <Grid container spacing={2}>
+                      <Grid item xs={12} sm={4}>
+                        <FormLabel
+                          sx={{ fontWeight: 500, display: "block", mb: 0.5 }}
                         >
-                          <MenuItem disabled value="">
-                            Select state
-                          </MenuItem>
-                          {mockStates.map((state) => (
-                            <MenuItem key={state} value={state}>
-                              {state}
-                            </MenuItem>
-                          ))}
-                        </Select>
-                        {errors.state && (
-                          <FormHelperText>{errors.state}</FormHelperText>
+                          Enrollment Number*
+                        </FormLabel>
+                        <TextField
+                          fullWidth
+                          name="enrollmentNo"
+                          value={formData.enrollmentNo || ""}
+                          onChange={handleChange}
+                          placeholder="Enrollment number"
+                          size="small"
+                          // disabled={isEditMode}
+                          error={!!errors.enrollmentNo}
+                          helperText={errors.enrollmentNo}
+                        />
+                      </Grid>
+
+                      <Grid item xs={12} sm={4}>
+                        <FormLabel
+                          sx={{ fontWeight: 500, display: "block", mb: 0.5 }}
+                        >
+                          First Name*
+                        </FormLabel>
+                        <TextField
+                          fullWidth
+                          name="firstName"
+                          value={formData.firstName || ""}
+                          onChange={handleChange}
+                          placeholder="Enter first name"
+                          size="small"
+                          error={!!errors.firstName}
+                          helperText={errors.firstName}
+                        />
+                      </Grid>
+
+                      <Grid item xs={12} sm={4}>
+                        <FormLabel
+                          sx={{ fontWeight: 500, display: "block", mb: 0.5 }}
+                        >
+                          Last Name*
+                        </FormLabel>
+                        <TextField
+                          fullWidth
+                          name="lastName"
+                          value={formData.lastName || ""}
+                          onChange={handleChange}
+                          placeholder="Enter last name"
+                          size="small"
+                          error={!!errors.lastName}
+                          helperText={errors.lastName}
+                        />
+                      </Grid>
+
+                      <Grid item xs={12} sm={4}>
+                        <FormLabel
+                          sx={{ fontWeight: 500, display: "block", mb: 0.5 }}
+                        >
+                          Phone Number*
+                        </FormLabel>
+                        <TextField
+                          fullWidth
+                          name="mobileNo"
+                          value={formData.mobileNo || ""}
+                          onChange={handleChange}
+                          placeholder="Phone number"
+                          inputProps={{ maxLength: 10 }}
+                          size="small"
+                          error={!!errors.mobileNo}
+                          helperText={errors.mobileNo}
+                        />
+                      </Grid>
+
+                      <Grid item xs={12} sm={4}>
+                        <FormLabel
+                          sx={{ fontWeight: 500, display: "block", mb: 0.5 }}
+                        >
+                          Date of Birth*
+                        </FormLabel>
+                        <TextField
+                          fullWidth
+                          name="dob"
+                          type="date"
+                          value={formData.dob || ""}
+                          onChange={handleChange}
+                          size="small"
+                          error={!!errors.dob}
+                          helperText={errors.dob}
+                        />
+                      </Grid>
+
+                      <Grid item xs={12} sm={4}>
+                        <FormLabel
+                          sx={{ fontWeight: 500, display: "block", mb: 0.5 }}
+                        >
+                          Gender*
+                        </FormLabel>
+                        <Box sx={{ display: "flex", pt: 1 }}>
+                          <RadioButton
+                            id="male"
+                            value="M"
+                            checked={formData.gender === "M"}
+                            label="Male"
+                          />
+                          <RadioButton
+                            id="female"
+                            value="F"
+                            checked={formData.gender === "F"}
+                            label="Female"
+                          />
+                        </Box>
+                        {errors.gender && (
+                          <FormHelperText error>{errors.gender}</FormHelperText>
                         )}
-                      </FormControl>
-                    </Grid>
-
-                    <Grid item xs={12} sm={6}>
-                      <FormLabel
-                        sx={{ mb: 1, display: "block", fontWeight: 500 }}
-                      >
-                        City
-                      </FormLabel>
-                      <TextField
-                        name="city"
-                        value={formData.city}
-                        onChange={handleChange}
-                        fullWidth
-                        variant="outlined"
-                        placeholder="Enter city name"
-                        error={!!errors.city}
-                        helperText={errors.city}
-                        size="small"
-                        InputProps={{
-                          sx: inputStyles,
-                        }}
-                      />
-                    </Grid>
-
-                    <Grid item xs={12} sm={6}>
-                      <FormLabel
-                        sx={{ mb: 1, display: "block", fontWeight: 500 }}
-                      >
-                        Pin Code
-                      </FormLabel>
-                      <TextField
-                        name="pincode"
-                        value={formData.pincode}
-                        onChange={handleChange}
-                        fullWidth
-                        variant="outlined"
-                        placeholder="6-digit pin code"
-                        error={!!errors.pincode}
-                        helperText={errors.pincode}
-                        inputProps={{ maxLength: 6 }}
-                        size="small"
-                        InputProps={{
-                          sx: inputStyles,
-                        }}
-                      />
-                    </Grid>
-
-                    <Grid item xs={12}>
-                      <FormLabel
-                        sx={{ mb: 1, display: "block", fontWeight: 500 }}
-                      >
-                        Address Line 1
-                      </FormLabel>
-                      <TextField
-                        name="addressLine1"
-                        value={formData.addressLine1}
-                        onChange={handleChange}
-                        fullWidth
-                        variant="outlined"
-                        placeholder="Enter address line 1"
-                        error={!!errors.addressLine1}
-                        helperText={errors.addressLine1}
-                        size="small"
-                        InputProps={{
-                          sx: inputStyles,
-                        }}
-                      />
-                    </Grid>
-
-                    <Grid item xs={12}>
-                      <FormLabel
-                        sx={{ mb: 1, display: "block", fontWeight: 500 }}
-                      >
-                        Address Line 2 (Optional)
-                      </FormLabel>
-                      <TextField
-                        name="addressLine2"
-                        value={formData.addressLine2}
-                        onChange={handleChange}
-                        fullWidth
-                        variant="outlined"
-                        placeholder="Enter address line 2"
-                        size="small"
-                        InputProps={{
-                          sx: inputStyles,
-                        }}
-                      />
+                      </Grid>
                     </Grid>
                   </Grid>
                 </Grid>
-              </Grid>
-            </TabPanel>
+              </Box>
+            </Grid>
 
-            {!studentOnlyMode && (
-              <>
-                <TabPanel value={tabValue} index={1}>
-                  <Grid container spacing={2}>
-                    <Grid item xs={12} sm={6}>
-                      <FormLabel
-                        sx={{ mb: 1, display: "block", fontWeight: 500 }}
+            {/* Address Information Section - Full Width */}
+            <Grid item xs={12}>
+              <Typography variant="subtitle1" fontWeight="medium" gutterBottom>
+                Address Information
+              </Typography>
+              <Box
+                sx={{
+                  p: 2,
+                  border: "1px solid",
+                  borderColor: "divider",
+                  borderRadius: 2,
+                }}
+              >
+                <Grid container spacing={2}>
+                  <Grid item xs={12} sm={4}>
+                    <FormLabel
+                      sx={{ fontWeight: 500, display: "block", mb: 1 }}
+                    >
+                      State*
+                    </FormLabel>
+                    <FormControl fullWidth size="small" error={!!errors.state}>
+                      <Select
+                        name="state"
+                        value={formData.state || ""}
+                        onChange={handleSelectChange}
+                        displayEmpty
                       >
-                        First Name
-                      </FormLabel>
-                      <TextField
-                        name="fatherFirstName"
-                        value={formData.fatherFirstName}
-                        onChange={handleChange}
-                        fullWidth
-                        variant="outlined"
-                        placeholder="Enter father's first name"
-                        error={!!errors.fatherFirstName}
-                        helperText={errors.fatherFirstName}
-                        size="small"
-                        InputProps={{
-                          sx: inputStyles,
-                        }}
-                      />
-                    </Grid>
-
-                    <Grid item xs={12} sm={6}>
-                      <FormLabel
-                        sx={{ mb: 1, display: "block", fontWeight: 500 }}
-                      >
-                        Last Name
-                      </FormLabel>
-                      <TextField
-                        name="fatherLastName"
-                        value={formData.fatherLastName}
-                        onChange={handleChange}
-                        fullWidth
-                        variant="outlined"
-                        placeholder="Enter father's last name"
-                        error={!!errors.fatherLastName}
-                        helperText={errors.fatherLastName}
-                        size="small"
-                        InputProps={{
-                          sx: inputStyles,
-                        }}
-                      />
-                    </Grid>
-
-                    <Grid item xs={12} sm={6}>
-                      <FormLabel
-                        sx={{ mb: 1, display: "block", fontWeight: 500 }}
-                      >
-                        Phone Number
-                      </FormLabel>
-                      <TextField
-                        name="fatherPhoneNumber"
-                        value={formData.fatherPhoneNumber}
-                        onChange={handleChange}
-                        fullWidth
-                        variant="outlined"
-                        placeholder="10-digit phone number"
-                        error={!!errors.fatherPhoneNumber}
-                        helperText={errors.fatherPhoneNumber}
-                        inputProps={{ maxLength: 10 }}
-                        size="small"
-                        InputProps={{
-                          sx: inputStyles,
-                        }}
-                      />
-                    </Grid>
-
-                    <Grid item xs={12} sm={6}>
-                      <FormLabel
-                        sx={{ mb: 1, display: "block", fontWeight: 500 }}
-                      >
-                        Email Address
-                      </FormLabel>
-                      <TextField
-                        name="fatherEmail"
-                        type="email"
-                        value={formData.fatherEmail}
-                        onChange={handleChange}
-                        fullWidth
-                        variant="outlined"
-                        placeholder="Enter father's email address"
-                        error={!!errors.fatherEmail}
-                        helperText={errors.fatherEmail}
-                        size="small"
-                        InputProps={{
-                          sx: inputStyles,
-                        }}
-                      />
-                    </Grid>
+                        <MenuItem disabled value="">
+                          Select state
+                        </MenuItem>
+                        {mockStates.map((state) => (
+                          <MenuItem key={state} value={state}>
+                            {state}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                      {errors.state && (
+                        <FormHelperText>{errors.state}</FormHelperText>
+                      )}
+                    </FormControl>
                   </Grid>
-                </TabPanel>
 
-                <TabPanel value={tabValue} index={2}>
-                  <Grid container spacing={2}>
-                    <Grid item xs={12} sm={6}>
-                      <FormLabel
-                        sx={{ mb: 1, display: "block", fontWeight: 500 }}
-                      >
-                        First Name
-                      </FormLabel>
-                      <TextField
-                        name="motherFirstName"
-                        value={formData.motherFirstName}
-                        onChange={handleChange}
-                        fullWidth
-                        variant="outlined"
-                        placeholder="Enter mother's first name"
-                        error={!!errors.motherFirstName}
-                        helperText={errors.motherFirstName}
-                        size="small"
-                        InputProps={{
-                          sx: inputStyles,
-                        }}
-                      />
-                    </Grid>
-
-                    <Grid item xs={12} sm={6}>
-                      <FormLabel
-                        sx={{ mb: 1, display: "block", fontWeight: 500 }}
-                      >
-                        Last Name
-                      </FormLabel>
-                      <TextField
-                        name="motherLastName"
-                        value={formData.motherLastName}
-                        onChange={handleChange}
-                        fullWidth
-                        variant="outlined"
-                        placeholder="Enter mother's last name"
-                        error={!!errors.motherLastName}
-                        helperText={errors.motherLastName}
-                        size="small"
-                        InputProps={{
-                          sx: inputStyles,
-                        }}
-                      />
-                    </Grid>
-
-                    <Grid item xs={12} sm={6}>
-                      <FormLabel
-                        sx={{ mb: 1, display: "block", fontWeight: 500 }}
-                      >
-                        Phone Number
-                      </FormLabel>
-                      <TextField
-                        name="motherPhoneNumber"
-                        value={formData.motherPhoneNumber}
-                        onChange={handleChange}
-                        fullWidth
-                        variant="outlined"
-                        placeholder="10-digit phone number"
-                        error={!!errors.motherPhoneNumber}
-                        helperText={errors.motherPhoneNumber}
-                        inputProps={{ maxLength: 10 }}
-                        size="small"
-                        InputProps={{
-                          sx: inputStyles,
-                        }}
-                      />
-                    </Grid>
-
-                    <Grid item xs={12} sm={6}>
-                      <FormLabel
-                        sx={{ mb: 1, display: "block", fontWeight: 500 }}
-                      >
-                        Email Address
-                      </FormLabel>
-                      <TextField
-                        name="motherEmail"
-                        type="email"
-                        value={formData.motherEmail}
-                        onChange={handleChange}
-                        fullWidth
-                        variant="outlined"
-                        placeholder="Enter mother's email address"
-                        error={!!errors.motherEmail}
-                        helperText={errors.motherEmail}
-                        size="small"
-                        InputProps={{
-                          sx: inputStyles,
-                        }}
-                      />
-                    </Grid>
+                  <Grid item xs={12} sm={4}>
+                    <FormLabel
+                      sx={{ fontWeight: 500, display: "block", mb: 1 }}
+                    >
+                      City*
+                    </FormLabel>
+                    <TextField
+                      fullWidth
+                      name="city"
+                      value={formData.city || ""}
+                      onChange={handleChange}
+                      placeholder="Enter city name"
+                      size="small"
+                      error={!!errors.city}
+                      helperText={errors.city}
+                    />
                   </Grid>
-                </TabPanel>
 
-                <TabPanel value={tabValue} index={3}>
-                  <Box sx={{ mb: 2 }}>
-                    <Typography variant="body2" color="text.secondary">
-                      Guardian details are optional. Fill this section only if
-                      different from parents.
-                    </Typography>
-                  </Box>
-                  <Grid container spacing={2}>
-                    <Grid item xs={12} sm={6}>
-                      <FormLabel
-                        sx={{ mb: 1, display: "block", fontWeight: 500 }}
-                      >
-                        First Name
-                      </FormLabel>
-                      <TextField
-                        name="guardianFirstName"
-                        value={formData.guardianFirstName}
-                        onChange={handleChange}
-                        fullWidth
-                        variant="outlined"
-                        placeholder="Enter guardian's first name"
-                        error={!!errors.guardianFirstName}
-                        helperText={errors.guardianFirstName}
-                        size="small"
-                        InputProps={{
-                          sx: inputStyles,
-                        }}
-                      />
-                    </Grid>
-
-                    <Grid item xs={12} sm={6}>
-                      <FormLabel
-                        sx={{ mb: 1, display: "block", fontWeight: 500 }}
-                      >
-                        Last Name
-                      </FormLabel>
-                      <TextField
-                        name="guardianLastName"
-                        value={formData.guardianLastName}
-                        onChange={handleChange}
-                        fullWidth
-                        variant="outlined"
-                        placeholder="Enter guardian's last name"
-                        error={!!errors.guardianLastName}
-                        helperText={errors.guardianLastName}
-                        size="small"
-                        InputProps={{
-                          sx: inputStyles,
-                        }}
-                      />
-                    </Grid>
-
-                    <Grid item xs={12} sm={6}>
-                      <FormLabel
-                        sx={{ mb: 1, display: "block", fontWeight: 500 }}
-                      >
-                        Phone Number
-                      </FormLabel>
-                      <TextField
-                        name="guardianPhoneNumber"
-                        value={formData.guardianPhoneNumber}
-                        onChange={handleChange}
-                        fullWidth
-                        variant="outlined"
-                        placeholder="10-digit phone number"
-                        error={!!errors.guardianPhoneNumber}
-                        helperText={errors.guardianPhoneNumber}
-                        inputProps={{ maxLength: 10 }}
-                        size="small"
-                        InputProps={{
-                          sx: inputStyles,
-                        }}
-                      />
-                    </Grid>
-
-                    <Grid item xs={12} sm={6}>
-                      <FormLabel
-                        sx={{ mb: 1, display: "block", fontWeight: 500 }}
-                      >
-                        Email Address
-                      </FormLabel>
-                      <TextField
-                        name="guardianEmail"
-                        type="email"
-                        value={formData.guardianEmail}
-                        onChange={handleChange}
-                        fullWidth
-                        variant="outlined"
-                        placeholder="Enter guardian's email address"
-                        error={!!errors.guardianEmail}
-                        helperText={errors.guardianEmail}
-                        size="small"
-                        InputProps={{
-                          sx: inputStyles,
-                        }}
-                      />
-                    </Grid>
+                  <Grid item xs={12} sm={4}>
+                    <FormLabel
+                      sx={{ fontWeight: 500, display: "block", mb: 1 }}
+                    >
+                      Pin Code*
+                    </FormLabel>
+                    <TextField
+                      fullWidth
+                      name="zipcode"
+                      value={formData.zipcode || ""}
+                      onChange={handleChange}
+                      placeholder="6-digit pin code"
+                      inputProps={{ maxLength: 6 }}
+                      size="small"
+                      error={!!errors.zipcode}
+                      helperText={errors.zipcode}
+                    />
                   </Grid>
-                </TabPanel>
-              </>
-            )}
 
-            <Divider sx={{ my: 4 }} />
+                  <Grid item xs={12} sm={6}>
+                    <FormLabel
+                      sx={{ fontWeight: 500, display: "block", mb: 1 }}
+                    >
+                      Address Line 1*
+                    </FormLabel>
+                    <TextField
+                      fullWidth
+                      name="addressline1"
+                      value={formData.addressline1 || ""}
+                      onChange={handleChange}
+                      placeholder="Enter address line 1"
+                      size="small"
+                      error={!!errors.addressline1}
+                      helperText={errors.addressline1}
+                    />
+                  </Grid>
 
-            <Box
+                  <Grid item xs={12} sm={6}>
+                    <FormLabel
+                      sx={{ fontWeight: 500, display: "block", mb: 1 }}
+                    >
+                      Address Line 2 (Optional)
+                    </FormLabel>
+                    <TextField
+                      fullWidth
+                      name="addressline2"
+                      value={formData.addressline2 || ""}
+                      onChange={handleChange}
+                      placeholder="Enter address line 2"
+                      size="small"
+                    />
+                  </Grid>
+                </Grid>
+              </Box>
+            </Grid>
+          </Grid>
+
+          {/* Action buttons */}
+          <Box
+            sx={{
+              mt: 3,
+              pt: 3,
+              borderTop: 1,
+              borderColor: "divider",
+              textAlign: "right",
+            }}
+          >
+            <Button
+              variant="outlined"
+              onClick={onClose}
               sx={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
+                mr: 2,
+                textTransform: "none",
+                borderColor: "grey.300",
+                color: "text.primary",
+                "&:hover": {
+                  borderColor: "grey.400",
+                  bgcolor: "transparent",
+                },
               }}
             >
-              <Box>
-                {!studentOnlyMode && tabValue > 0 && (
-                  <Button
-                    variant="outlined"
-                    onClick={() => setTabValue(tabValue - 1)}
-                    disableRipple
-                    sx={{
-                      textTransform: "none",
-                      borderRadius: 0.5,
-                      backgroundColor: "transparent",
-                      outline: "none",
-                      border: "1px solid",
-                      borderColor: (theme) => theme.palette.primary.main,
-                      transition: "none",
-                      "&.MuiButton-outlined:hover": {
-                        backgroundColor: "transparent",
-                        border: "1px solid",
-                        borderColor: (theme) => theme.palette.primary.main,
-                      },
-                      "&:hover": {
-                        backgroundColor: "transparent",
-                      },
-                      "&:focus": {
-                        outline: "none",
-                      },
-                    }}
-                  >
-                    Previous
-                  </Button>
-                )}
-              </Box>
-
-              <Box sx={{ display: "flex", gap: 2 }}>
-                <Button
-                  variant="outlined"
-                  onClick={onClose}
-                  disableRipple
-                  sx={{
-                    textTransform: "none",
-                    borderRadius: 0.5,
-                    backgroundColor: "transparent",
-                    outline: "none",
-                    border: "1px solid",
-                    borderColor: (theme) => theme.palette.primary.main,
-                    transition: "none",
-                    "&.MuiButton-outlined:hover": {
-                      backgroundColor: "transparent",
-                      border: "1px solid",
-                      borderColor: (theme) => theme.palette.primary.main,
-                    },
-                    "&:hover": {
-                      backgroundColor: "transparent",
-                    },
-                    "&:focus": {
-                      outline: "none",
-                    },
-                  }}
-                >
-                  Cancel
-                </Button>
-
-                {!studentOnlyMode && tabValue < 3 ? (
-                  <Button
-                    variant="contained"
-                    disableElevation
-                    disableRipple
-                    onClick={() => setTabValue(tabValue + 1)}
-                    sx={{
-                      textTransform: "none",
-                      borderRadius: 0.5,
-                      background: (theme) => theme.palette.primary.main,
-                      color: "white",
-                      backgroundImage: "none",
-                      outline: "none",
-                      transition: "none",
-                      "&:hover": {
-                        backgroundImage: "none",
-                        background: (theme) => theme.palette.primary.main,
-                      },
-                      "&:focus": {
-                        outline: "none",
-                      },
-                    }}
-                  >
-                    Next
-                  </Button>
-                ) : (
-                  <Button
-                    type="submit"
-                    variant="contained"
-                    disableElevation
-                    disableRipple
-                    sx={{
-                      textTransform: "none",
-                      borderRadius: 0.5,
-                      background: (theme) => theme.palette.primary.main,
-                      color: "white",
-                      backgroundImage: "none",
-                      outline: "none",
-                      transition: "none",
-                      "&:hover": {
-                        backgroundImage: "none",
-                        background: (theme) => theme.palette.primary.main,
-                      },
-                      "&:focus": {
-                        outline: "none",
-                      },
-                    }}
-                  >
-                    {isEditMode ? "Update" : "Save"}
-                  </Button>
-                )}
-              </Box>
-            </Box>
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              variant="contained"
+              sx={{
+                px: 3,
+                py: 1,
+                textTransform: "none",
+                borderRadius: 0.5,
+                background: (theme) => theme.palette.primary.main,
+                color: "white",
+                backgroundImage: "none",
+                outline: "none",
+                transition: "none",
+                "&:hover": {
+                  backgroundImage: "none",
+                  background: (theme) => theme.palette.primary.main,
+                  boxShadow: "none",
+                  transition: "none",
+                },
+                "&:focus": {
+                  outline: "none",
+                  boxShadow: "none",
+                },
+                "&:active": {
+                  transform: "none",
+                  boxShadow: "none",
+                },
+              }}
+            >
+              {isEditMode ? "Update" : "Save"}
+            </Button>
           </Box>
         </Box>
       </Paper>

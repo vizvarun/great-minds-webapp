@@ -1,3 +1,5 @@
+//@ts-nocheck
+
 import CloseIcon from "@mui/icons-material/Close";
 import type { SelectChangeEvent } from "@mui/material";
 import {

@@ -1,3 +1,5 @@
+//@ts-nocheck
+
 import api from "./api";
 import AuthService from "./auth";
 

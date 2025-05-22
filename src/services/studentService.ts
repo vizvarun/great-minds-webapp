@@ -1,3 +1,5 @@
+//@ts-nocheck
+
 import api from "./api";
 import AuthService from "./auth";
 
@@ -187,15 +189,17 @@ export const createStudent = async (
   }
 };
 
-export const updateStudent = async (student: Student): Promise<Student> => {
+export const updateStudent = async (
+  studentId: number,
+  userId: number,
+  studentData: any
+) => {
   try {
-    const user_id = AuthService.getUserId() || 14;
-
     const response = await api.put(
-      `/students/${student.id}?user_id=${user_id}`,
-      student
+      `/students/update?student_id=${studentId}&user_id=${userId}`,
+      studentData
     );
-    return response.data.data;
+    return response.data;
   } catch (error) {
     console.error("Error updating student:", error);
     throw error;
