@@ -129,7 +129,7 @@ const VerifyOTP = () => {
       await AuthService.login({
         mobile_number: mobileNumber,
         device_id: "web",
-        bypass_otp: true,
+        bypass_otp: false,
       });
 
       setTimer(30);
