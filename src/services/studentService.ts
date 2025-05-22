@@ -234,3 +234,44 @@ export const toggleStudentStatus = async (
     throw error;
   }
 };
+
+export const getStudentTemplate = async (): Promise<Blob> => {
+  try {
+    const response = await api.get("/students/import/template", {
+      responseType: "blob",
+    });
+
+    return new Blob([response.data], {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    });
+  } catch (error) {
+    console.error("Error downloading student template:", error);
+    throw error;
+  }
+};
+
+export const bulkUploadStudents = async (file: File): Promise<any> => {
+  try {
+    const user_id = AuthService.getUserId() || 14;
+    const school_id = AuthService.getSchoolId() || 4;
+
+    // Create FormData and append the file
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const response = await api.post(
+      `/students/import?user_id=${user_id}&school_id=${school_id}`,
+      formData,
+      {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      }
+    );
+
+    return response.data;
+  } catch (error) {
+    console.error("Error bulk uploading students:", error);
+    throw error;
+  }
+};

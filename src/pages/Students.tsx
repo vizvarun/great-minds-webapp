@@ -30,12 +30,15 @@ import PersonAddIcon from "@mui/icons-material/PersonAdd";
 import StudentFormModal from "../components/StudentFormModal";
 import StudentFeesModal from "../components/StudentFeesModal";
 import AddParentModal from "../components/AddParentModal";
+import BulkUploadModal from "../components/BulkUploadModal";
 import {
   getStudents,
   createStudent,
   updateStudent,
   deleteStudent,
   toggleStudentStatus,
+  getStudentTemplate,
+  bulkUploadStudents,
 } from "../services/studentService";
 import type { Student } from "../services/studentService";
 
@@ -67,9 +70,14 @@ const Students = () => {
   const [selectedStudentForParent, setSelectedStudentForParent] =
     useState<Student | null>(null);
 
-  // Fetch students on component mount
+  // Add state for the bulk upload modal and template URL
+  const [isBulkUploadModalOpen, setIsBulkUploadModalOpen] = useState(false);
+  const [templateUrl, setTemplateUrl] = useState<string | null>(null);
+
+  // Fetch students and template on component mount
   useEffect(() => {
     fetchStudents();
+    fetchTemplateUrl();
   }, [page, rowsPerPage]);
 
   const fetchStudents = async () => {
@@ -94,6 +102,17 @@ const Students = () => {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Add function to get template URL for download
+  const fetchTemplateUrl = async () => {
+    try {
+      const blob = await getStudentTemplate();
+      const url = URL.createObjectURL(blob);
+      setTemplateUrl(url);
+    } catch (error) {
+      console.error("Error getting template:", error);
     }
   };
 
@@ -290,6 +309,43 @@ const Students = () => {
     }
   };
 
+  // Add function to handle bulk upload button click
+  const handleBulkUpload = () => {
+    setIsBulkUploadModalOpen(true);
+  };
+
+  // Add function to handle closing the bulk upload modal
+  const handleCloseBulkUploadModal = () => {
+    setIsBulkUploadModalOpen(false);
+  };
+
+  // Add function to handle successful bulk upload
+  const handleBulkUploadSuccess = async (file: File) => {
+    try {
+      setLoading(true);
+      await bulkUploadStudents(file);
+
+      // Refresh student list after successful upload
+      await fetchStudents();
+
+      setNotification({
+        open: true,
+        message: `Students uploaded successfully`,
+        severity: "success",
+        timestamp: Date.now(),
+      });
+    } catch (error) {
+      setNotification({
+        open: true,
+        message: "Failed to upload students",
+        severity: "error",
+        timestamp: Date.now(),
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Handle closing the notification
   const handleCloseNotification = () => {
     setNotification((prev) => ({ ...prev, open: false }));
@@ -380,7 +436,7 @@ const Students = () => {
             <Button
               variant="outlined"
               startIcon={<FileUploadIcon />}
-              // onClick={handleBulkUpload}
+              onClick={handleBulkUpload}
               sx={{
                 textTransform: "none",
                 borderRadius: 0.5,
@@ -706,6 +762,15 @@ const Students = () => {
             ? `${selectedStudentForParent.firstName} ${selectedStudentForParent.lastName}`
             : ""
         }
+      />
+
+      {/* Add Bulk Upload Modal */}
+      <BulkUploadModal
+        open={isBulkUploadModalOpen}
+        onClose={handleCloseBulkUploadModal}
+        onUploadSuccess={handleBulkUploadSuccess}
+        entityType="Students"
+        templateUrl={templateUrl || undefined}
       />
 
       {/* Delete Confirmation Modal */}
