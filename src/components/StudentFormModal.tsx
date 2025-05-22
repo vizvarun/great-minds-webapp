@@ -21,6 +21,7 @@ import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 import PersonIcon from "@mui/icons-material/Person";
 import { updateStudent } from "../services/studentService";
 import AuthService from "../services/auth";
+import api from "../services/api"; // Import api service for the upload endpoint
 
 interface StudentData {
   id?: number;
@@ -36,6 +37,7 @@ interface StudentData {
   addressline1: string;
   addressline2?: string;
   profilePhoto?: string;
+  profilepic?: string;
 }
 
 const initialStudentData: StudentData = {
@@ -102,37 +104,100 @@ const StudentFormModal = ({
   const [errors, setErrors] = useState<
     Partial<Record<keyof StudentData, string>>
   >({});
-  const [profileImage, setProfileImage] = useState<string | null>(null);
+  const [profileImage, setProfileImage] = useState<string | null>(
+    student?.profilepic
+  );
+  const [serverFilename, setServerFilename] = useState<string | null>(null); // Store uploaded image filename
+  const [isUploading, setIsUploading] = useState<boolean>(false); // Track upload state
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
-  // Initialize form data when student prop changes
+  // Initialize form data when student prop changes OR the modal opens
   useEffect(() => {
-    if (student) {
-      setFormData({ ...student });
-      if (student.profilePhoto) {
-        setProfileImage(student.profilePhoto);
-      }
-    } else {
-      setFormData(initialStudentData);
-      setProfileImage(null);
-    }
-    setErrors({});
-  }, [student]);
+    if (open) {
+      if (student) {
+        // Create a copy of the student data to modify
+        const studentData = { ...student };
 
-  // Handle image upload
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        // If student has profilepic property, ensure it's properly handled
+        if (studentData.profilepic) {
+          setServerFilename(studentData.profilepic);
+        } else if (studentData.profilePhoto) {
+          // If there's only profilePhoto but no profilepic
+          setServerFilename(studentData.profilePhoto);
+          studentData.profilepic = studentData.profilePhoto; // Ensure profilepic is set
+        }
+
+        setFormData(studentData);
+        if (student.profilePhoto || student.profilepic) {
+          setProfileImage(student.profilePhoto || student.profilepic);
+        } else {
+          setProfileImage(null);
+        }
+      } else {
+        setFormData(initialStudentData);
+        setProfileImage(null);
+        setServerFilename(null);
+      }
+      setErrors({});
+    }
+  }, [student, open]);
+
+  // Custom close handler to ensure form is reset
+  const handleCloseModal = () => {
+    setFormData(initialStudentData);
+    setProfileImage(null);
+    setServerFilename(null);
+    setErrors({});
+    onClose();
+  };
+
+  // Handle image upload - modified to upload to server
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
+
+      // First, show a preview of the image
       const reader = new FileReader();
       reader.onload = () => {
         const result = reader.result as string;
         setProfileImage(result);
-        setFormData({
-          ...formData,
-          profilePhoto: result,
-        });
       };
       reader.readAsDataURL(file);
+
+      // Then upload the file to server
+      try {
+        setIsUploading(true);
+
+        const formData = new FormData();
+        formData.append("file", file);
+
+        const response = await api.post(
+          "/upload/folder?folder=students",
+          formData,
+          {
+            headers: {
+              "Content-Type": "multipart/form-data",
+            },
+          }
+        );
+
+        // Store the filename from the response
+        if (response.data && response.data.filename) {
+          const filename = response.data.filename;
+          setServerFilename(filename);
+
+          // Update form data with the filename
+          setFormData((prev) => ({
+            ...prev,
+            profilepic: filename, // Store as profilepic in formData
+          }));
+        }
+      } catch (error) {
+        console.error("Error uploading image:", error);
+        // Could add error state/notification here
+      } finally {
+        setIsUploading(false);
+      }
     }
   };
 
@@ -237,13 +302,15 @@ const StudentFormModal = ({
     return isValid;
   };
 
-  // Handle form submission
+  // Handle form submission - ensure profilepic is included properly
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (validateForm()) {
       try {
         // Format the data to match the API expectations
         const school_id = AuthService.getSchoolId() || 0;
+
+        // Include profilepic in the payload directly from formData
         const formattedData = {
           // Required API fields
           firstname: formData.firstName,
@@ -262,9 +329,13 @@ const StudentFormModal = ({
           state: formData.state,
           zipcode: formData.zipcode,
           gender: formData.gender,
+          profilepic: formData.profilepic || serverFilename || "",
+
           // Include id if in edit mode
           ...(isEditMode && student?.id ? { id: student.id } : {}),
         };
+
+        console.log("Submitting student data:", formattedData);
 
         if (isEditMode && student?.id) {
           await updateStudent(
@@ -278,7 +349,6 @@ const StudentFormModal = ({
         onSubmit(formattedData);
       } catch (error) {
         console.error("Error submitting student form:", error);
-        // You might want to set an error state here to display to the user
       }
     }
   };
@@ -345,7 +415,7 @@ const StudentFormModal = ({
   return (
     <Modal
       open={open}
-      onClose={onClose}
+      onClose={handleCloseModal} // Use custom close handler to ensure form is reset
       aria-labelledby="student-form-modal"
       sx={{
         display: "flex",
@@ -380,7 +450,7 @@ const StudentFormModal = ({
           <Typography variant="h6" fontWeight="medium">
             {isEditMode ? "Edit Student" : "Add New Student"}
           </Typography>
-          <IconButton onClick={onClose} sx={{ color: "white" }}>
+          <IconButton onClick={handleCloseModal} sx={{ color: "white" }}>
             <CloseIcon />
           </IconButton>
         </Box>
@@ -419,17 +489,40 @@ const StudentFormModal = ({
                         bgcolor: "background.paper",
                         border: "1px solid",
                         borderColor: "divider",
+                        position: "relative", // Added for the loading indicator
                       }}
                     >
+                      {isUploading && (
+                        <Box
+                          sx={{
+                            position: "absolute",
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            bottom: 0,
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            backgroundColor: "rgba(255,255,255,0.7)",
+                            zIndex: 1,
+                          }}
+                        >
+                          <Typography variant="caption">
+                            Uploading...
+                          </Typography>
+                        </Box>
+                      )}
                       {profileImage ? (
                         <Box
                           component="img"
                           src={profileImage}
                           alt="Student"
                           sx={{
-                            width: "100%",
-                            height: "100%",
-                            objectFit: "cover",
+                            width: "200px",
+                            height: "200px",
+                            maxWidth: "100%",
+                            maxHeight: "100%",
+                            objectFit: "contain",
                           }}
                         />
                       ) : (
@@ -451,6 +544,7 @@ const StudentFormModal = ({
                       fullWidth
                       startIcon={<CloudUploadIcon fontSize="small" />}
                       onClick={() => fileInputRef.current?.click()}
+                      disabled={isUploading}
                       sx={{
                         textTransform: "none",
                         fontSize: "0.75rem",
@@ -459,7 +553,7 @@ const StudentFormModal = ({
                         borderColor: "grey.300",
                       }}
                     >
-                      Upload
+                      {isUploading ? "Uploading..." : "Upload"}
                     </Button>
                   </Grid>
 
@@ -717,7 +811,8 @@ const StudentFormModal = ({
           >
             <Button
               variant="outlined"
-              onClick={onClose}
+              onClick={handleCloseModal} // Use custom close handler
+              disabled={isUploading} // Disable cancel button during upload
               sx={{
                 mr: 2,
                 textTransform: "none",
@@ -734,6 +829,7 @@ const StudentFormModal = ({
             <Button
               type="submit"
               variant="contained"
+              disabled={isUploading} // Disable save/update button during upload
               sx={{
                 px: 3,
                 py: 1,

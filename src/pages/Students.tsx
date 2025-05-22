@@ -26,8 +26,10 @@ import EditIcon from "@mui/icons-material/Edit";
 import SearchIcon from "@mui/icons-material/Search";
 import PaymentsIcon from "@mui/icons-material/Payments";
 import FileUploadIcon from "@mui/icons-material/FileUpload";
+import PersonAddIcon from "@mui/icons-material/PersonAdd";
 import StudentFormModal from "../components/StudentFormModal";
 import StudentFeesModal from "../components/StudentFeesModal";
+import AddParentModal from "../components/AddParentModal";
 import {
   getStudents,
   createStudent,
@@ -59,6 +61,11 @@ const Students = () => {
   // Add state for the delete confirmation modal
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [studentToDelete, setStudentToDelete] = useState<Student | null>(null);
+
+  // Add state for the parent modal
+  const [parentModalOpen, setParentModalOpen] = useState(false);
+  const [selectedStudentForParent, setSelectedStudentForParent] =
+    useState<Student | null>(null);
 
   // Fetch students on component mount
   useEffect(() => {
@@ -217,6 +224,32 @@ const Students = () => {
   const handleViewFees = (student: Student) => {
     setSelectedStudent(student);
     setIsFeesModalOpen(true);
+  };
+
+  // Handle adding parent
+  const handleAddParent = (student: Student) => {
+    setSelectedStudentForParent(student);
+    setParentModalOpen(true);
+  };
+
+  // Handle parent submission
+  const handleAddParentSubmit = async (data: any) => {
+    try {
+      // Success message will be handled inside the modal
+      // Refresh student data if needed
+      fetchStudents();
+
+      // Close the modal
+      setParentModalOpen(false);
+    } catch (error) {
+      console.error("Error handling parent:", error);
+      setNotification({
+        open: true,
+        message: "Failed to process parent contact",
+        severity: "error",
+        timestamp: Date.now(),
+      });
+    }
   };
 
   // Handle form submission (add/edit)
@@ -574,6 +607,23 @@ const Students = () => {
                       </IconButton>
                       <IconButton
                         size="small"
+                        onClick={() => handleAddParent(student)}
+                        color="primary"
+                        sx={{
+                          transition: "none",
+                          outline: "none",
+                          "&:hover": {
+                            bgcolor: "rgba(25, 118, 210, 0.04)",
+                          },
+                          "&:focus": {
+                            outline: "none",
+                          },
+                        }}
+                      >
+                        <PersonAddIcon fontSize="small" />
+                      </IconButton>
+                      <IconButton
+                        size="small"
                         onClick={() => handleDeleteClick(student)}
                         color="error"
                         sx={{
@@ -643,6 +693,19 @@ const Students = () => {
         open={isFeesModalOpen}
         onClose={() => setIsFeesModalOpen(false)}
         student={selectedStudent}
+      />
+
+      {/* Add Parent Modal */}
+      <AddParentModal
+        open={parentModalOpen}
+        onClose={() => setParentModalOpen(false)}
+        onSubmit={handleAddParentSubmit}
+        studentId={selectedStudentForParent?.id}
+        studentName={
+          selectedStudentForParent
+            ? `${selectedStudentForParent.firstName} ${selectedStudentForParent.lastName}`
+            : ""
+        }
       />
 
       {/* Delete Confirmation Modal */}
