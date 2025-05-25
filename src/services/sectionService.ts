@@ -72,17 +72,19 @@ export const getSections = async (
     const sectionsWithClassNames = sectionsData.map((sectionItem: any) => {
       // Handle the new nested structure
       const section = sectionItem.section_data || sectionItem;
+
+      // Extract teacher and admin data from the nested structure
       const teacherData = sectionItem.teacher_data?.employee;
       const adminData = sectionItem.admin_data?.employee;
 
       const matchedClass = classes.find((cls) => cls.id === section.classid);
 
-      // Format teacher and admin names
+      // Format name function to handle employee names consistently
       const formatName = (employee: any) => {
         if (!employee) return "";
-        return `${employee.firstname || ""} ${
-          employee.middlename ? employee.middlename + " " : ""
-        }${employee.lastname || ""}`.trim();
+        return `${employee.firstName || ""} ${
+          employee.middleName ? employee.middleName + " " : ""
+        }${employee.lastName || ""}`.trim();
       };
 
       return {

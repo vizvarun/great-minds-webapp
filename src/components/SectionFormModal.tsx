@@ -59,6 +59,7 @@ const SectionFormModal = ({
   const [employees, setEmployees] = useState<Teacher[]>([]);
   const [loading, setLoading] = useState(false);
   const [employeesLoading, setEmployeesLoading] = useState(false);
+  const [isFormValid, setIsFormValid] = useState(false);
 
   // Fetch all classes and employees when the modal opens
   useEffect(() => {
@@ -136,6 +137,19 @@ const SectionFormModal = ({
     setErrors({});
   }, [section, isEditMode, classes, defaultClassId]); // Add defaultClassId to dependencies
 
+  // Update the form validation effect to check for teacher and admin selections
+  useEffect(() => {
+    // Form is valid when section name, class ID, class teacher, and class admin are provided
+    const valid =
+      !!formData.section?.trim() &&
+      !!formData.classid &&
+      formData.classid !== 0 &&
+      !!formData.classTeacherId &&
+      !!formData.classAdminId;
+
+    setIsFormValid(valid);
+  }, [formData.section, formData.classid, formData.classTeacherId, formData.classAdminId]); // Add dependencies
+
   const handleChange = (
     e: React.ChangeEvent<{ name?: string; value: unknown }>
   ) => {
@@ -166,6 +180,15 @@ const SectionFormModal = ({
     if (!formData.classid || formData.classid === 0) {
       newErrors.classid = "Class selection is required";
     }
+    
+    // Add validation for class teacher and admin
+    if (!formData.classTeacherId) {
+      newErrors.classTeacherId = "Class teacher selection is required";
+    }
+    
+    if (!formData.classAdminId) {
+      newErrors.classAdminId = "Class admin selection is required";
+    }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -177,6 +200,19 @@ const SectionFormModal = ({
     if (validateForm()) {
       onSubmit(formData);
     }
+  };
+
+  // Filter employees for dropdown options
+  const getFilteredTeacherOptions = () => {
+    return employees.filter(
+      (employee) => employee.id !== formData.classAdminId
+    );
+  };
+
+  const getFilteredAdminOptions = () => {
+    return employees.filter(
+      (employee) => employee.id !== formData.classTeacherId
+    );
   };
 
   return (
@@ -285,9 +321,9 @@ const SectionFormModal = ({
               {/* Class Teacher dropdown */}
               <Box sx={{ mb: 2 }}>
                 <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
-                  Class Teacher
+                  Class Teacher*
                 </Typography>
-                <FormControl fullWidth size="small">
+                <FormControl fullWidth size="small" error={!!errors.classTeacherId}>
                   <Select
                     id="classTeacherId"
                     name="classTeacherId"
@@ -304,8 +340,8 @@ const SectionFormModal = ({
                     <MenuItem value="">
                       <em>None</em>
                     </MenuItem>
-                    {employees && employees.length > 0 ? (
-                      employees.map((employee) => (
+                    {getFilteredTeacherOptions().length > 0 ? (
+                      getFilteredTeacherOptions().map((employee) => (
                         <MenuItem key={employee.id} value={employee.id}>
                           {employee.fullName ||
                             `${employee.firstName || ""} ${
@@ -323,15 +359,18 @@ const SectionFormModal = ({
                       </MenuItem>
                     )}
                   </Select>
+                  {errors.classTeacherId && (
+                    <FormHelperText>{errors.classTeacherId}</FormHelperText>
+                  )}
                 </FormControl>
               </Box>
 
               {/* Class Admin dropdown */}
               <Box sx={{ mb: 2 }}>
                 <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
-                  Class Admin
+                  Class Admin*
                 </Typography>
-                <FormControl fullWidth size="small">
+                <FormControl fullWidth size="small" error={!!errors.classAdminId}>
                   <Select
                     id="classAdminId"
                     name="classAdminId"
@@ -348,8 +387,8 @@ const SectionFormModal = ({
                     <MenuItem value="">
                       <em>None</em>
                     </MenuItem>
-                    {employees && employees.length > 0 ? (
-                      employees.map((employee) => (
+                    {getFilteredAdminOptions().length > 0 ? (
+                      getFilteredAdminOptions().map((employee) => (
                         <MenuItem key={employee.id} value={employee.id}>
                           {employee.fullName ||
                             `${employee.firstName || ""} ${
@@ -367,6 +406,9 @@ const SectionFormModal = ({
                       </MenuItem>
                     )}
                   </Select>
+                  {errors.classAdminId && (
+                    <FormHelperText>{errors.classAdminId}</FormHelperText>
+                  )}
                 </FormControl>
               </Box>
 
@@ -387,6 +429,7 @@ const SectionFormModal = ({
                   variant="contained"
                   type="submit"
                   disableElevation
+                  disabled={!isFormValid} // Disable button unless form is valid
                   sx={{
                     textTransform: "none",
                     borderRadius: 0.5,
