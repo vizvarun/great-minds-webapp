@@ -40,64 +40,19 @@ export const getEmployees = async (page = 0, pageSize = 10): Promise<any> => {
   }
 };
 
-export const createEmployee = async (
-  employee: Omit<Employee, "id">
-): Promise<Employee> => {
+export const createEmployee = async (employeeData: any): Promise<any> => {
   try {
     const user_id = AuthService.getUserId() || 14;
     const school_id = AuthService.getSchoolId() || 4;
 
-    // Map the fields to ensure proper naming
-    const empNo = employee.empNo;
-    const mobileNo = employee.mobileNo;
-
-    // Prepare the payload according to the API requirements
-    const payload = {
-      employee: {
-        // If userId is provided (from validation), use it as user_id_of_emp
-        ...(employee.userId && { user_id_of_emp: employee.userId }),
-        school_id: school_id,
-        emp_no: empNo, // Explicitly include emp_no
-        designation: employee.designation,
-      },
-      user: {
-        email: employee.email || "",
-        mobileno: mobileNo, // Explicitly include mobileno
-        first_name: employee.firstName,
-        last_name: employee.lastName || "",
-        middle_name: employee.middleName || "",
-        createdby: user_id,
-      },
-    };
-
-    console.log("Creating employee with payload:", payload); // Debug log
-
+    // The endpoint stays the same, but the payload structure is now handled in the component
+    // and passed directly to this function
     const response = await api.post(
       `/employee/create?user_id=${user_id}`,
-      payload
+      employeeData
     );
 
-    // Check if the response status is 200, regardless of the response.data.status
-    if (response.status === 200) {
-      // Return a properly structured Employee object even if response data structure varies
-      const responseData = response.data.data || {};
-
-      // For safety, use fallback values from the original request when API response is incomplete
-      return {
-        id: responseData.empId || responseData.id || 0, // Use 0 as last resort
-        empNo: responseData.empNo || empNo,
-        firstName: responseData.firstName || employee.firstName,
-        lastName: responseData.lastName || employee.lastName || "",
-        middleName: responseData.middleName || employee.middleName || "",
-        designation: responseData.designation || employee.designation,
-        mobileNo: responseData.mobileNo || mobileNo,
-        email: responseData.email || employee.email || "",
-        userId: responseData.userId || employee.userId,
-        schoolId: school_id,
-      };
-    }
-
-    throw new Error(response.data?.message || "Failed to create employee");
+    return response.data;
   } catch (error) {
     console.error("Error creating employee:", error);
     throw error;

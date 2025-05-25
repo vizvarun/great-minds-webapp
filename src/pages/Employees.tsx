@@ -182,7 +182,7 @@ const Employees = () => {
     setIsModalOpen(false);
   };
 
-  const handleEmployeeSubmit = async (employeeData: Employee) => {
+  const handleEmployeeSubmit = async (employeeData) => {
     setLoading(true); // Start showing loader
     try {
       if (isEditMode && currentEmployee) {
@@ -202,7 +202,7 @@ const Employees = () => {
           timestamp: Date.now(),
         });
       } else {
-        // Add new employee
+        // Add new employee - handle new payload structure
         await createEmployee(employeeData);
 
         // Refetch the entire list to ensure we have the latest data

@@ -19,6 +19,7 @@ import {
 } from "@mui/material";
 import { useEffect, useState } from "react";
 import { validateEmployeePhone } from "../services/employeeService";
+import AuthService from "../services/auth";
 
 interface EmployeeFormData {
   id?: number;
@@ -64,6 +65,13 @@ const EmployeeFormModal = ({
   const [phoneValidated, setPhoneValidated] = useState(false);
   const [fieldsDisabled, setFieldsDisabled] = useState(true);
   const [showFullForm, setShowFullForm] = useState(false);
+
+  // Add state to track the validated user and employee status
+  const [validatedUserId, setValidatedUserId] = useState<number | null>(null);
+  const [employeeExists, setEmployeeExists] = useState(false);
+
+  // Add additional state to track validation response data
+  const [validationResponse, setValidationResponse] = useState(null);
 
   // Common styles for consistent inputs with increased width
   const inputStyles = {
@@ -146,28 +154,60 @@ const EmployeeFormModal = ({
     try {
       const result = await validateEmployeePhone(formData.mobileNumber);
 
-      // Handle the updated API response format
+      // Store the complete validation response for later use
+      setValidationResponse(result);
+
+      // Handle the API response format
       if (result && result.status === "success" && result.data) {
         const { user, employee: empData } = result.data;
 
-        // Pre-fill form with existing data from the API response
-        setFormData({
-          ...formData,
-          employeeNo: empData?.empNo || "",
-          firstName: user?.firstName || "",
-          middleName: user?.middleName || "",
-          lastName: user?.lastName || "",
-          designation: empData?.designation || "",
-        });
+        // Check if employee exists based on whether empId is present and not empty
+        const hasEmployee = empData && empData.empId && empData.empId !== "";
+        setEmployeeExists(hasEmployee);
 
-        setFieldsDisabled(false);
-        setPhoneValidated(true);
-        setShowFullForm(true); // Show all fields after validation
+        // Store the user ID for later use in the submission
+        if (user && user.userId) {
+          setValidatedUserId(user.userId);
+        } else {
+          setValidatedUserId(null);
+        }
+
+        if (hasEmployee) {
+          // Both user and employee exist
+          setErrors({
+            ...errors,
+            mobileNumber:
+              "An employee with this mobile number already exists with ID: " +
+              empData.empNo,
+          });
+          // Keep fields disabled
+          setFieldsDisabled(true);
+          setPhoneValidated(true);
+        } else {
+          // Employee doesn't exist, but user might
+          // Pre-fill form with existing user data if available
+          if (user) {
+            setFormData({
+              ...formData,
+              firstName: user.firstName || "",
+              middleName: user.middleName || "",
+              lastName: user.lastName || "",
+              // If user has mobileNo property, use it
+              mobileNumber: user.mobileNo || formData.mobileNumber,
+            });
+          }
+
+          setFieldsDisabled(false);
+          setPhoneValidated(true);
+          setShowFullForm(true);
+        }
       } else {
         // Handle case where no data is returned but validation was successful
+        setValidatedUserId(null);
+        setEmployeeExists(false);
         setFieldsDisabled(false);
         setPhoneValidated(true);
-        setShowFullForm(true); // Show all fields after validation
+        setShowFullForm(true);
       }
     } catch (error) {
       console.error("Error validating phone:", error);
@@ -176,6 +216,8 @@ const EmployeeFormModal = ({
         mobileNumber: "Failed to validate phone number",
       });
       // Even if there's an error, we still show the form fields to allow manual entry
+      setValidatedUserId(null);
+      setEmployeeExists(false);
       setFieldsDisabled(false);
       setPhoneValidated(true);
       setShowFullForm(true);
@@ -259,26 +301,56 @@ const EmployeeFormModal = ({
 
     if (validateForm()) {
       try {
-        // Transform form data to match API expectations
-        const apiFormattedData = {
-          ...formData,
-          // Ensure these fields are mapped correctly for the API
-          empNo: formData.employeeNo,
-          mobileNo: formData.mobileNumber,
-        };
+        // Get school ID and current user ID
+        const school_id = AuthService.getSchoolId() || 4;
+        const current_user_id = AuthService.getUserId() || 0;
 
-        // Don't close modal immediately - let parent component handle it
-        // Show loading state while API call is in progress
+        let payload;
+
+        if (isEditMode) {
+          // Use existing submit format for edit mode
+          payload = {
+            ...formData,
+            empNo: formData.employeeNo,
+            mobileNo: formData.mobileNumber,
+          };
+        } else {
+          // Create the appropriate payload based on validation results
+          if (validatedUserId) {
+            // User exists, but employee doesn't - just create employee linked to user
+            payload = {
+              employee: {
+                user_id_of_emp: validatedUserId,
+                school_id: school_id,
+                emp_no: formData.employeeNo,
+                designation: formData.designation,
+              },
+            };
+          } else {
+            // Neither user nor employee exists - create both
+            payload = {
+              employee: {
+                school_id: school_id,
+                emp_no: formData.employeeNo,
+                designation: formData.designation,
+              },
+              user: {
+                email: formData.email || "",
+                mobileno: formData.mobileNumber,
+                first_name: formData.firstName,
+                last_name: formData.lastName || "",
+                middle_name: formData.middleName || "",
+                createdby: current_user_id,
+              },
+            };
+          }
+        }
+
+        console.log("Submitting employee data with payload:", payload);
         setValidateLoading(true);
-
-        // Pass the formatted data to parent component
-        onSubmit(apiFormattedData);
-
-        // The parent component (Employees.tsx) will handle closing the modal
-        // after successfully refreshing the list
+        onSubmit(payload);
       } catch (error) {
         console.error("Error submitting form:", error);
-        // Show error in UI
         setErrors({
           ...errors,
           employeeNo: "Error saving employee. Please try again.",
@@ -291,7 +363,7 @@ const EmployeeFormModal = ({
   return (
     <Modal
       open={open}
-      onClose={handleModalClose} // Use our custom close handler instead
+      onClose={handleModalClose} // Use our custom close handler
       aria-labelledby="employee-form-modal"
       BackdropProps={{
         sx: { backgroundColor: "rgba(0, 0, 0, 0.5)" },
@@ -432,6 +504,27 @@ const EmployeeFormModal = ({
 
                 <Grid item xs={12} sm={6} sx={fieldContainerStyle}>
                   <FormLabel sx={{ mb: 1, display: "block", fontWeight: 500 }}>
+                    Designation
+                  </FormLabel>
+                  <TextField
+                    name="designation"
+                    value={formData.designation}
+                    onChange={handleChange}
+                    fullWidth
+                    variant="outlined"
+                    placeholder="Enter designation"
+                    error={!!errors.designation}
+                    helperText={errors.designation}
+                    disabled={fieldsDisabled}
+                    size="small"
+                    InputProps={{
+                      sx: fieldsDisabled ? disabledInputStyles : inputStyles,
+                    }}
+                  />
+                </Grid>
+
+                <Grid item xs={12} sm={6} sx={fieldContainerStyle}>
+                  <FormLabel sx={{ mb: 1, display: "block", fontWeight: 500 }}>
                     First Name
                   </FormLabel>
                   <TextField
@@ -509,32 +602,31 @@ const EmployeeFormModal = ({
                     }}
                   />
                 </Grid>
-
-                <Grid item xs={12} sm={6} sx={fieldContainerStyle}>
-                  <FormLabel sx={{ mb: 1, display: "block", fontWeight: 500 }}>
-                    Designation
-                  </FormLabel>
-                  <TextField
-                    name="designation"
-                    value={formData.designation}
-                    onChange={handleChange}
-                    fullWidth
-                    variant="outlined"
-                    placeholder="Enter designation"
-                    error={!!errors.designation}
-                    helperText={errors.designation}
-                    disabled={fieldsDisabled}
-                    size="small"
-                    InputProps={{
-                      sx: fieldsDisabled ? disabledInputStyles : inputStyles,
-                    }}
-                  />
-                </Grid>
               </>
             )}
           </Grid>
 
           <Divider sx={{ my: 4 }} />
+
+          {/* Display a warning if employee already exists */}
+          {/* {employeeExists && (
+            <Box
+              sx={{
+                p: 2,
+                mb: 3,
+                bgcolor: "#0e9384",
+                color: "warning.dark",
+                borderRadius: 1,
+                border: 1,
+                borderColor: "#0e9384",
+              }}
+            >
+              <Typography variant="body2" color="white">
+                An employee with this mobile number already exists in the
+                system.
+              </Typography>
+            </Box>
+          )} */}
 
           <Box
             sx={{
