@@ -109,6 +109,7 @@ const StudentFormModal = ({
   );
   const [serverFilename, setServerFilename] = useState<string | null>(null); // Store uploaded image filename
   const [isUploading, setIsUploading] = useState<boolean>(false); // Track upload state
+  const [apiError, setApiError] = useState<string | null>(null); // Add state for API error message
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   // Initialize form data when student prop changes OR the modal opens
@@ -141,6 +142,13 @@ const StudentFormModal = ({
       setErrors({});
     }
   }, [student, open]);
+
+  // Reset the API error when the modal opens/closes
+  useEffect(() => {
+    if (open) {
+      setApiError(null);
+    }
+  }, [open]);
 
   // Custom close handler to ensure form is reset
   const handleCloseModal = () => {
@@ -307,6 +315,7 @@ const StudentFormModal = ({
     e.preventDefault();
     if (validateForm()) {
       try {
+        setApiError(null); // Clear previous API errors
         // Format the data to match the API expectations
         const school_id = AuthService.getSchoolId() || 0;
 
@@ -328,7 +337,7 @@ const StudentFormModal = ({
           city: formData.city,
           state: formData.state,
           zipcode: formData.zipcode,
-          gender: formData.gender,
+          gender: formData.gender, // Ensure gender is included
           profilepic: formData.profilepic || serverFilename || "",
 
           // Include id if in edit mode
@@ -349,6 +358,15 @@ const StudentFormModal = ({
         onSubmit(formattedData);
       } catch (error) {
         console.error("Error submitting student form:", error);
+
+        // Extract error message from API response
+        if (error?.response?.data?.detail) {
+          setApiError(error.response.data.detail);
+        } else if (error?.message) {
+          setApiError(error.message);
+        } else {
+          setApiError("An error occurred while saving student information.");
+        }
       }
     }
   };
@@ -415,7 +433,7 @@ const StudentFormModal = ({
   return (
     <Modal
       open={open}
-      onClose={handleCloseModal} // Use custom close handler to ensure form is reset
+      onClose={handleCloseModal}
       aria-labelledby="student-form-modal"
       sx={{
         display: "flex",
@@ -456,6 +474,23 @@ const StudentFormModal = ({
         </Box>
 
         <Box component="form" onSubmit={handleSubmit} sx={{ p: 3 }}>
+          {/* Display API error message if present */}
+          {apiError && (
+            <Box
+              sx={{
+                p: 2,
+                mb: 3,
+                bgcolor: "error.light",
+                color: "error.dark",
+                borderRadius: 1,
+                border: 1,
+                borderColor: "error.main",
+              }}
+            >
+              <Typography variant="body2">{apiError}</Typography>
+            </Box>
+          )}
+
           <Grid container spacing={3}>
             {/* Student Information - Full Width */}
             <Grid item xs={12}>

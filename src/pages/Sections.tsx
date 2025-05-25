@@ -240,33 +240,24 @@ const Sections = () => {
 
   // Save section (add or edit)
   const handleSaveSection = async (sectionData: Partial<Section>) => {
+    const userProfile = localStorage.getItem("userProfile");
+    const schoolId =
+      JSON.parse(userProfile).schoolid ||
+      parseInt(localStorage.getItem("schoolId") || "-1");
+
+    console.log("sectionData:", userProfile, schoolId);
     try {
       if (isEditMode && selectedSection) {
         // Update existing section
-        const response = await updateSection({
+        await updateSection({
           ...sectionData,
           id: selectedSection.id,
-          schoolid:
-            sectionData.schoolid ||
-            parseInt(localStorage.getItem("schoolId") || "4"),
+          schoolid: schoolId,
           isactive:
             sectionData.isactive !== undefined ? sectionData.isactive : true,
         } as Section);
 
-        // Update the UI
-        setSections((prevSections) =>
-          prevSections.map((s) =>
-            s.id === selectedSection.id
-              ? {
-                  ...response,
-                  className:
-                    classes.find((c) => c.id === sectionData.classid)
-                      ?.classname || `Class ${sectionData.classid}`,
-                }
-              : s
-          )
-        );
-
+        // Show notification
         setNotification({
           open: true,
           message: "Section updated successfully",
@@ -277,25 +268,13 @@ const Sections = () => {
         // Add new section
         const payload = {
           ...sectionData,
-          schoolid:
-            sectionData.schoolid ||
-            parseInt(localStorage.getItem("schoolId") || "4"),
+          schoolid: schoolId,
           isactive: true,
         };
 
-        const response = await createSection(payload as Omit<Section, "id">);
+        await createSection(payload as Omit<Section, "id">);
 
-        // Add class name before adding to state
-        const newSection = {
-          ...response,
-          className:
-            classes.find((c) => c.id === sectionData.classid)?.classname ||
-            `Class ${sectionData.classid}`,
-        };
-
-        // Update the UI
-        setSections((prevSections) => [...prevSections, newSection]);
-
+        // Show notification
         setNotification({
           open: true,
           message: "Section added successfully",
@@ -304,6 +283,10 @@ const Sections = () => {
         });
       }
 
+      // Refetch sections to get updated data instead of manually updating state
+      await fetchSections();
+
+      // Close modal
       setIsModalOpen(false);
       setSelectedSection(null);
     } catch (error) {

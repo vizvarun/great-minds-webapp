@@ -149,6 +149,7 @@ export const createStudent = async (
       city: student.city || "",
       state: student.state || "",
       zipcode: student.zipcode || "",
+      gender: student.gender || "",
     };
 
     // Modified to move user_id to query parameters
@@ -182,7 +183,10 @@ export const createStudent = async (
       };
     }
 
-    throw new Error(response.data?.message || "Failed to create student");
+    throw new Error(
+      response.data?.detail ||
+        "Something went wrong while creating the student."
+    );
   } catch (error) {
     console.error("Error creating student:", error);
     throw error;

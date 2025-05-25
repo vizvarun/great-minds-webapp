@@ -296,11 +296,10 @@ const Students = () => {
       setIsFormModalOpen(false);
     } catch (error) {
       console.error("Error in student operation:", error);
+      console.log("Error details:", error.response?.data || error.message);
       setNotification({
         open: true,
-        message: isEditMode
-          ? "Failed to update student"
-          : "Failed to add student",
+        message: error.response?.data?.detail || "Something went wrong",
         severity: "error",
         timestamp: Date.now(),
       });
