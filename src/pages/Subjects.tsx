@@ -62,6 +62,43 @@ const Subjects = () => {
     fetchSubjects();
   }, [page, rowsPerPage]);
 
+  // Add custom CSS for tooltips
+  useEffect(() => {
+    // Add custom CSS to control tooltip positioning
+    const style = document.createElement("style");
+    style.innerHTML = `
+      .custom-tooltip {
+        position: relative;
+      }
+      .custom-tooltip::before {
+        content: attr(data-tooltip);
+        position: absolute;
+        bottom: -30px;
+        left: 50%;
+        transform: translateX(-50%);
+        padding: 5px 8px;
+        border-radius: 4px;
+        background-color: rgba(0, 0, 0, 0.75);
+        color: white;
+        font-size: 12px;
+        white-space: nowrap;
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity 0.2s;
+        z-index: 1000;
+      }
+      .custom-tooltip:hover::before {
+        opacity: 1;
+        visibility: visible;
+      }
+    `;
+    document.head.appendChild(style);
+
+    return () => {
+      document.head.removeChild(style);
+    };
+  }, []);
+
   const fetchSubjects = async () => {
     setLoading(true);
     try {
@@ -368,6 +405,8 @@ const Subjects = () => {
                   <TableCell align="center">
                     <Box sx={{ display: "flex", justifyContent: "center" }}>
                       <IconButton
+                        className="custom-tooltip"
+                        data-tooltip="Edit Subject"
                         size="small"
                         onClick={() => handleEditSubject(subject.id)}
                         color="primary"
@@ -385,6 +424,8 @@ const Subjects = () => {
                         <EditIcon fontSize="small" />
                       </IconButton>
                       <IconButton
+                        className="custom-tooltip"
+                        data-tooltip="Delete Subject"
                         size="small"
                         onClick={() => handleDeleteSubject(subject.id)}
                         color="error"

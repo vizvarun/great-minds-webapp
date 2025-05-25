@@ -358,6 +358,43 @@ const Students = () => {
     setNotification((prev) => ({ ...prev, open: false }));
   };
 
+  // Add custom CSS for tooltips
+  useEffect(() => {
+    // Add custom CSS to control tooltip positioning
+    const style = document.createElement('style');
+    style.innerHTML = `
+      .custom-tooltip {
+        position: relative;
+      }
+      .custom-tooltip::before {
+        content: attr(data-tooltip);
+        position: absolute;
+        bottom: -30px;
+        left: 50%;
+        transform: translateX(-50%);
+        padding: 5px 8px;
+        border-radius: 4px;
+        background-color: rgba(0, 0, 0, 0.75);
+        color: white;
+        font-size: 12px;
+        white-space: nowrap;
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity 0.2s;
+        z-index: 1000;
+      }
+      .custom-tooltip:hover::before {
+        opacity: 1;
+        visibility: visible;
+      }
+    `;
+    document.head.appendChild(style);
+    
+    return () => {
+      document.head.removeChild(style);
+    };
+  }, []);
+  
   return (
     <Paper
       elevation={0}
@@ -426,13 +463,15 @@ const Students = () => {
                 ) : searchQuery ? (
                   <InputAdornment position="end">
                     <IconButton
+                      className="custom-tooltip"
+                      data-tooltip="Clear Search"
                       size="small"
                       aria-label="clear search"
                       onClick={() => setSearchQuery("")}
                       edge="end"
-                      sx={{
-                        color: "rgba(0, 0, 0, 0.54)",
-                        p: 0.5,
+                      sx={{ 
+                        color: 'rgba(0, 0, 0, 0.54)',
+                        p: 0.5
                       }}
                     >
                       <ClearIcon fontSize="small" />
@@ -610,6 +649,9 @@ const Students = () => {
                     <TableCell align="center">
                       <Box sx={{ display: "flex", justifyContent: "center" }}>
                         <Box
+                          component="span"
+                          className="custom-tooltip"
+                          data-tooltip={student.isActive ? "Deactivate Student" : "Activate Student"}
                           sx={{
                             position: "relative",
                             display: "inline-flex",
@@ -663,6 +705,8 @@ const Students = () => {
                     <TableCell align="center">
                       <Box sx={{ display: "flex", justifyContent: "center" }}>
                         <IconButton
+                          className="custom-tooltip"
+                          data-tooltip="Edit Student"
                           size="small"
                           onClick={() => handleEditStudent(student)}
                           color="primary"
@@ -680,6 +724,8 @@ const Students = () => {
                           <EditIcon fontSize="small" />
                         </IconButton>
                         <IconButton
+                          className="custom-tooltip"
+                          data-tooltip="View Fees"
                           size="small"
                           onClick={() => handleViewFees(student)}
                           color="primary"
@@ -697,6 +743,8 @@ const Students = () => {
                           <PaymentsIcon fontSize="small" />
                         </IconButton>
                         <IconButton
+                          className="custom-tooltip"
+                          data-tooltip="Add Parent"
                           size="small"
                           onClick={() => handleAddParent(student)}
                           color="primary"
@@ -714,6 +762,8 @@ const Students = () => {
                           <PersonAddIcon fontSize="small" />
                         </IconButton>
                         <IconButton
+                          className="custom-tooltip"
+                          data-tooltip="Delete Student"
                           size="small"
                           onClick={() => handleDeleteClick(student)}
                           color="error"

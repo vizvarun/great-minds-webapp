@@ -211,6 +211,43 @@ const SectionTeachers = () => {
     setNotification((prev) => ({ ...prev, open: false }));
   };
 
+  // Add custom CSS for tooltips
+  useEffect(() => {
+    // Add custom CSS to control tooltip positioning
+    const style = document.createElement('style');
+    style.innerHTML = `
+      .custom-tooltip {
+        position: relative;
+      }
+      .custom-tooltip::before {
+        content: attr(data-tooltip);
+        position: absolute;
+        bottom: -30px;
+        left: 50%;
+        transform: translateX(-50%);
+        padding: 5px 8px;
+        border-radius: 4px;
+        background-color: rgba(0, 0, 0, 0.75);
+        color: white;
+        font-size: 12px;
+        white-space: nowrap;
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity 0.2s;
+        z-index: 1000;
+      }
+      .custom-tooltip:hover::before {
+        opacity: 1;
+        visibility: visible;
+      }
+    `;
+    document.head.appendChild(style);
+    
+    return () => {
+      document.head.removeChild(style);
+    };
+  }, []);
+
   return (
     <Paper
       elevation={0}
@@ -388,6 +425,8 @@ const SectionTeachers = () => {
                         {/* Only show delete button for teachers with typeId 3 */}
                         {teacher.typeId > 3 ? (
                           <IconButton
+                            className="custom-tooltip"
+                            data-tooltip="Remove Teacher"
                             size="small"
                             onClick={() => handleDeleteClick(teacher)}
                             color="error"

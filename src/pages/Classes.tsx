@@ -81,6 +81,43 @@ const Classes = () => {
     fetchAllSubjects();
   }, []);
 
+  // Add custom CSS for tooltips
+  useEffect(() => {
+    // Add custom CSS to control tooltip positioning
+    const style = document.createElement("style");
+    style.innerHTML = `
+      .custom-tooltip {
+        position: relative;
+      }
+      .custom-tooltip::before {
+        content: attr(data-tooltip);
+        position: absolute;
+        bottom: -30px;
+        left: 50%;
+        transform: translateX(-50%);
+        padding: 5px 8px;
+        border-radius: 4px;
+        background-color: rgba(0, 0, 0, 0.75);
+        color: white;
+        font-size: 12px;
+        white-space: nowrap;
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity 0.2s;
+        z-index: 1000;
+      }
+      .custom-tooltip:hover::before {
+        opacity: 1;
+        visibility: visible;
+      }
+    `;
+    document.head.appendChild(style);
+
+    return () => {
+      document.head.removeChild(style);
+    };
+  }, []);
+
   const fetchClasses = async () => {
     setLoading(true);
     try {
@@ -652,6 +689,13 @@ const Classes = () => {
                   <TableCell align="center">
                     <Box sx={{ display: "flex", justifyContent: "center" }}>
                       <Box
+                        component="span"
+                        className="custom-tooltip"
+                        data-tooltip={
+                          cls.isactive === true
+                            ? "Deactivate Class"
+                            : "Activate Class"
+                        }
                         sx={{
                           position: "relative",
                           display: "inline-flex",
@@ -704,6 +748,8 @@ const Classes = () => {
                   <TableCell align="center">
                     <Box sx={{ display: "flex", justifyContent: "center" }}>
                       <IconButton
+                        className="custom-tooltip"
+                        data-tooltip="Manage Subjects"
                         size="small"
                         onClick={() => handleOpenSubjectMapping(cls)}
                         color="primary"
@@ -721,6 +767,8 @@ const Classes = () => {
                         <MenuBookIcon fontSize="small" />
                       </IconButton>
                       <IconButton
+                        className="custom-tooltip"
+                        data-tooltip="Edit Class"
                         size="small"
                         onClick={() => handleEditClass(cls.id)}
                         color="primary"
@@ -738,6 +786,8 @@ const Classes = () => {
                         <EditIcon fontSize="small" />
                       </IconButton>
                       <IconButton
+                        className="custom-tooltip"
+                        data-tooltip="Download Students"
                         size="small"
                         onClick={() => handleDownloadClass(cls.id)}
                         color="primary"

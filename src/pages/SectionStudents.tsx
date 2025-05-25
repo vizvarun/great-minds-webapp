@@ -65,6 +65,43 @@ const SectionStudents = () => {
     fetchStudents();
   }, [sectionId]);
 
+  // Add custom CSS for tooltips
+  useEffect(() => {
+    // Add custom CSS to control tooltip positioning
+    const style = document.createElement('style');
+    style.innerHTML = `
+      .custom-tooltip {
+        position: relative;
+      }
+      .custom-tooltip::before {
+        content: attr(data-tooltip);
+        position: absolute;
+        bottom: -30px;
+        left: 50%;
+        transform: translateX(-50%);
+        padding: 5px 8px;
+        border-radius: 4px;
+        background-color: rgba(0, 0, 0, 0.75);
+        color: white;
+        font-size: 12px;
+        white-space: nowrap;
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity 0.2s;
+        z-index: 1000;
+      }
+      .custom-tooltip:hover::before {
+        opacity: 1;
+        visibility: visible;
+      }
+    `;
+    document.head.appendChild(style);
+    
+    return () => {
+      document.head.removeChild(style);
+    };
+  }, []);
+
   const fetchStudents = async () => {
     if (!sectionId) {
       setError("Section ID is missing");
@@ -379,6 +416,9 @@ const SectionStudents = () => {
                     <TableCell align="center">
                       <Box sx={{ display: "flex", justifyContent: "center" }}>
                         <Box
+                          component="span"
+                          className="custom-tooltip"
+                          data-tooltip={isStudentActive(student) ? "Deactivate Student" : "Activate Student"}
                           sx={{
                             position: "relative",
                             display: "inline-flex",

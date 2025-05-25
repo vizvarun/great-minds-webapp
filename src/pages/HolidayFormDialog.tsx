@@ -282,7 +282,12 @@ const HolidayFormDialog: React.FC<HolidayFormDialogProps> = ({
           <Typography variant="h6" sx={{ fontWeight: 600 }}>
             {holiday ? "Edit Holiday" : "Add Holiday"}
           </Typography>
-          <IconButton onClick={onClose} sx={{ color: "white" }}>
+          <IconButton 
+            className="custom-tooltip" 
+            data-tooltip="Close"
+            onClick={onClose} 
+            sx={{ color: "white" }}
+          >
             <CloseIcon />
           </IconButton>
         </Box>
