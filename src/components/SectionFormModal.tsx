@@ -148,7 +148,12 @@ const SectionFormModal = ({
       !!formData.classAdminId;
 
     setIsFormValid(valid);
-  }, [formData.section, formData.classid, formData.classTeacherId, formData.classAdminId]); // Add dependencies
+  }, [
+    formData.section,
+    formData.classid,
+    formData.classTeacherId,
+    formData.classAdminId,
+  ]); // Add dependencies
 
   const handleChange = (
     e: React.ChangeEvent<{ name?: string; value: unknown }>
@@ -180,12 +185,12 @@ const SectionFormModal = ({
     if (!formData.classid || formData.classid === 0) {
       newErrors.classid = "Class selection is required";
     }
-    
+
     // Add validation for class teacher and admin
     if (!formData.classTeacherId) {
       newErrors.classTeacherId = "Class teacher selection is required";
     }
-    
+
     if (!formData.classAdminId) {
       newErrors.classAdminId = "Class admin selection is required";
     }
@@ -323,7 +328,11 @@ const SectionFormModal = ({
                 <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
                   Class Teacher*
                 </Typography>
-                <FormControl fullWidth size="small" error={!!errors.classTeacherId}>
+                <FormControl
+                  fullWidth
+                  size="small"
+                  error={!!errors.classTeacherId}
+                >
                   <Select
                     id="classTeacherId"
                     name="classTeacherId"
@@ -370,7 +379,11 @@ const SectionFormModal = ({
                 <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
                   Class Admin*
                 </Typography>
-                <FormControl fullWidth size="small" error={!!errors.classAdminId}>
+                <FormControl
+                  fullWidth
+                  size="small"
+                  error={!!errors.classAdminId}
+                >
                   <Select
                     id="classAdminId"
                     name="classAdminId"

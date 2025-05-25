@@ -37,7 +37,7 @@ export const getTeachersBySection = async (
         fullName: `${teacher.firstname || ""} ${
           teacher.middlename ? teacher.middlename + " " : ""
         }${teacher.lastname || ""}`.trim(),
-        designation: "", // Designation based on typeId
+        designation: teacher.designation, // Designation based on typeId
         email: teacher.email || "",
         sectionId: teacher.sectionid,
         typeId: teacher.typeid,
