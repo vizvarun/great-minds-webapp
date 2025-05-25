@@ -26,15 +26,14 @@ const Footer = () => {
         <Box
           sx={{
             display: "flex",
-            flexDirection: { xs: "column", sm: "row" },
-            justifyContent: { xs: "center", sm: "flex-start" }, // Left-align content
+            justifyContent: "center", // Center the content
             alignItems: "center",
-            position: "relative", // Add position relative for absolute positioning
             width: "100%",
+            height: "100%",
           }}
         >
-          <Typography variant="body2" color="text.secondary">
-            &copy; {currentYear} Great Minds School Management System
+          <Typography variant="body2" color="text.secondary" align="center">
+            Great Minds™ by Prastara® | © {currentYear}
           </Typography>
         </Box>
       </Container>
