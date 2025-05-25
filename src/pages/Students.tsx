@@ -26,6 +26,7 @@ import SearchIcon from "@mui/icons-material/Search";
 import PaymentsIcon from "@mui/icons-material/Payments";
 import FileUploadIcon from "@mui/icons-material/FileUpload";
 import PersonAddIcon from "@mui/icons-material/PersonAdd";
+import ClearIcon from "@mui/icons-material/Clear"; // Add this import
 import StudentFormModal from "../components/StudentFormModal";
 import StudentFeesModal from "../components/StudentFeesModal";
 import AddParentModal from "../components/AddParentModal";
@@ -412,16 +413,32 @@ const Students = () => {
                   <SearchIcon color="action" />
                 </InputAdornment>
               ),
-              // Replace CircularProgress with CustomSpinner
-              endAdornment: debouncedSearchQuery !== searchQuery && (
-                <InputAdornment position="end">
-                  <CustomSpinner
-                    size={20}
-                    color="rgba(0, 0, 0, 0.54)"
-                    thickness={2}
-                  />
-                </InputAdornment>
-              ),
+              // Show loading indicator when searching, or clear button when there's a search query
+              endAdornment:
+                debouncedSearchQuery !== searchQuery ? (
+                  <InputAdornment position="end">
+                    <CustomSpinner
+                      size={20}
+                      color="rgba(0, 0, 0, 0.54)"
+                      thickness={2}
+                    />
+                  </InputAdornment>
+                ) : searchQuery ? (
+                  <InputAdornment position="end">
+                    <IconButton
+                      size="small"
+                      aria-label="clear search"
+                      onClick={() => setSearchQuery("")}
+                      edge="end"
+                      sx={{
+                        color: "rgba(0, 0, 0, 0.54)",
+                        p: 0.5,
+                      }}
+                    >
+                      <ClearIcon fontSize="small" />
+                    </IconButton>
+                  </InputAdornment>
+                ) : null,
             }}
           />
           <Box sx={{ display: "flex", gap: 1 }}>
