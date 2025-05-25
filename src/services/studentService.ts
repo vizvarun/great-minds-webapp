@@ -107,17 +107,24 @@ export const removeStudentFromSection = async (
 
 export const getStudents = async (
   page: number = 0,
-  rowsPerPage: number = 10
+  rowsPerPage: number = 10,
+  searchQuery: string = ""
 ): Promise<any> => {
   try {
     const user_id = AuthService.getUserId() || 14;
     const school_id = AuthService.getSchoolId() || 4;
 
-    const response = await api.get(
-      `/students/list?user_id=${user_id}&school_id=${school_id}&page=${
-        page + 1
-      }&per_page=${rowsPerPage}`
-    );
+    // Build the URL with optional search parameter
+    let url = `/students/list?user_id=${user_id}&school_id=${school_id}&page=${
+      page + 1
+    }&per_page=${rowsPerPage}`;
+
+    // Add search parameter if provided
+    if (searchQuery && searchQuery.trim()) {
+      url += `&search=${encodeURIComponent(searchQuery.trim())}`;
+    }
+
+    const response = await api.get(url);
     return response.data;
   } catch (error) {
     console.error("Error fetching students:", error);

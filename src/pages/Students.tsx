@@ -18,7 +18,6 @@ import {
   Alert,
   Snackbar,
   Modal,
-  CircularProgress,
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import DeleteIcon from "@mui/icons-material/Delete";
@@ -31,6 +30,7 @@ import StudentFormModal from "../components/StudentFormModal";
 import StudentFeesModal from "../components/StudentFeesModal";
 import AddParentModal from "../components/AddParentModal";
 import BulkUploadModal from "../components/BulkUploadModal";
+import CustomSpinner from "../components/CustomSpinner";
 import {
   getStudents,
   createStudent,
@@ -41,11 +41,13 @@ import {
   bulkUploadStudents,
 } from "../services/studentService";
 import type { Student } from "../services/studentService";
+import { useDebounce } from "../hooks/useDebounce";
 
 const Students = () => {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [searchQuery, setSearchQuery] = useState("");
+  const debouncedSearchQuery = useDebounce(searchQuery, 500); // Debounce search query with 500ms delay
   const [students, setStudents] = useState<Student[]>([]);
   const [totalRecords, setTotalRecords] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -78,21 +80,28 @@ const Students = () => {
   useEffect(() => {
     fetchStudents();
     fetchTemplateUrl();
-  }, [page, rowsPerPage]);
+  }, [page, rowsPerPage, debouncedSearchQuery]); // Add debouncedSearchQuery as a dependency
 
   const fetchStudents = async () => {
     setLoading(true);
+    setError(null); // Reset error state before fetching
     try {
-      const data = await getStudents(page, rowsPerPage);
+      // Pass the debounced search query to getStudents
+      const data = await getStudents(page, rowsPerPage, debouncedSearchQuery);
 
       if (data && Array.isArray(data.data)) {
         setStudents(data.data);
         setTotalRecords(data.total_records || data.data.length);
         setError(null);
       } else {
-        setError("Failed to load students. Invalid response format.");
+        // Don't set error when no students are found, just set empty array
+        // This will show the "No students found" message instead of error
+        setStudents([]);
+        setTotalRecords(0);
       }
     } catch (err) {
+      console.error("Error fetching students:", err);
+      // Only set error for actual API failures, not empty results
       setError("Failed to load students. Please try again later.");
       setNotification({
         open: true,
@@ -100,6 +109,8 @@ const Students = () => {
         severity: "error",
         timestamp: Date.now(),
       });
+      setStudents([]);
+      setTotalRecords(0);
     } finally {
       setLoading(false);
     }
@@ -116,14 +127,16 @@ const Students = () => {
     }
   };
 
-  // Filter students based on search query
-  const filteredStudents = students.filter((student) =>
-    `${student.enrollmentNo || ""} ${student.firstName} ${student.lastName} ${
-      student.mobileNo
-    } ${student.city || ""}`
-      .toLowerCase()
-      .includes(searchQuery.toLowerCase())
-  );
+  // Update search handler
+  const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const value = event.target.value;
+    setSearchQuery(value);
+    setPage(0); // Reset to first page when searching
+  };
+
+  // Since search is now handled by the server, we'll use the students array directly
+  // instead of filtering locally
+  const filteredStudents = students;
 
   // Handle pagination
   const handleChangePage = (_: unknown, newPage: number) => {
@@ -134,12 +147,6 @@ const Students = () => {
     event: React.ChangeEvent<HTMLInputElement>
   ) => {
     setRowsPerPage(parseInt(event.target.value, 10));
-    setPage(0);
-  };
-
-  // Handle search
-  const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchQuery(event.target.value);
     setPage(0);
   };
 
@@ -405,6 +412,16 @@ const Students = () => {
                   <SearchIcon color="action" />
                 </InputAdornment>
               ),
+              // Replace CircularProgress with CustomSpinner
+              endAdornment: debouncedSearchQuery !== searchQuery && (
+                <InputAdornment position="end">
+                  <CustomSpinner
+                    size={20}
+                    color="rgba(0, 0, 0, 0.54)"
+                    thickness={2}
+                  />
+                </InputAdornment>
+              ),
             }}
           />
           <Box sx={{ display: "flex", gap: 1 }}>
@@ -480,7 +497,8 @@ const Students = () => {
               p: 4,
             }}
           >
-            <CircularProgress />
+            {/* Replace the main loading indicator with our custom spinner */}
+            <CustomSpinner size={40} color="#1976d2" thickness={3} />
           </Box>
         ) : error ? (
           <Box
@@ -543,165 +561,189 @@ const Students = () => {
               </TableRow>
             </TableHead>
             <TableBody>
-              {filteredStudents.map((student) => (
-                <TableRow
-                  key={student.id}
-                  hover
-                  sx={{
-                    "&:hover": {
-                      backgroundColor: "rgba(0, 0, 0, 0.02)",
-                    },
-                    transition: "none",
-                  }}
-                >
-                  <TableCell>
-                    {student.enrollmentNo ||
-                      `ST-${student.id.toString().padStart(4, "0")}`}
-                  </TableCell>
-                  <TableCell>{student.firstName || "-"}</TableCell>
-                  <TableCell>{student.lastName || "-"}</TableCell>
-                  <TableCell>
-                    {student.mobileNo || student.phoneNumber || "-"}
-                  </TableCell>
-                  <TableCell>
-                    {student.gender
-                      ? student.gender === "M"
-                        ? "Male"
-                        : "Female"
-                      : "-"}
-                  </TableCell>
-                  <TableCell>{student.city || "-"}</TableCell>
-                  <TableCell align="center">
-                    <Box sx={{ display: "flex", justifyContent: "center" }}>
-                      <Box
-                        sx={{
-                          position: "relative",
-                          display: "inline-flex",
-                          alignItems: "center",
-                        }}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={student.isActive}
-                          onChange={() =>
-                            handleToggleStatus(student.id, student.isActive)
-                          }
-                          style={{
-                            appearance: "none",
-                            WebkitAppearance: "none",
-                            MozAppearance: "none",
-                            width: "30px",
-                            height: "18px",
-                            borderRadius: "10px",
-                            background: student.isActive
-                              ? "#0cb5bf"
-                              : "#e0e0e0",
-                            outline: "none",
-                            cursor: "pointer",
+              {filteredStudents.length > 0 ? (
+                filteredStudents.map((student) => (
+                  <TableRow
+                    key={student.id}
+                    hover
+                    sx={{
+                      "&:hover": {
+                        backgroundColor: "rgba(0, 0, 0, 0.02)",
+                      },
+                      transition: "none",
+                    }}
+                  >
+                    <TableCell>
+                      {student.enrollmentNo ||
+                        `ST-${student.id.toString().padStart(4, "0")}`}
+                    </TableCell>
+                    <TableCell>{student.firstName || "-"}</TableCell>
+                    <TableCell>{student.lastName || "-"}</TableCell>
+                    <TableCell>
+                      {student.mobileNo || student.phoneNumber || "-"}
+                    </TableCell>
+                    <TableCell>
+                      {student.gender
+                        ? student.gender === "M"
+                          ? "Male"
+                          : "Female"
+                        : "-"}
+                    </TableCell>
+                    <TableCell>{student.city || "-"}</TableCell>
+                    <TableCell align="center">
+                      <Box sx={{ display: "flex", justifyContent: "center" }}>
+                        <Box
+                          sx={{
                             position: "relative",
-                            transition: "background 0.25s ease",
-                            border: "1px solid",
-                            borderColor: student.isActive
-                              ? "#0cb5bf"
-                              : "#d0d0d0",
+                            display: "inline-flex",
+                            alignItems: "center",
                           }}
-                        />
-                        <span
-                          style={{
-                            position: "absolute",
-                            left: student.isActive ? "18px" : "2px",
-                            width: "14px",
-                            height: "14px",
-                            borderRadius: "50%",
-                            background: "#ffffff",
-                            boxShadow: "0 1px 2px rgba(0,0,0,0.1)",
-                            transition: "left 0.25s ease",
-                            pointerEvents: "none",
-                            top: "50%",
-                            marginTop: "-7px",
-                          }}
-                        />
+                        >
+                          <input
+                            type="checkbox"
+                            checked={student.isActive}
+                            onChange={() =>
+                              handleToggleStatus(student.id, student.isActive)
+                            }
+                            style={{
+                              appearance: "none",
+                              WebkitAppearance: "none",
+                              MozAppearance: "none",
+                              width: "30px",
+                              height: "18px",
+                              borderRadius: "10px",
+                              background: student.isActive
+                                ? "#0cb5bf"
+                                : "#e0e0e0",
+                              outline: "none",
+                              cursor: "pointer",
+                              position: "relative",
+                              transition: "background 0.25s ease",
+                              border: "1px solid",
+                              borderColor: student.isActive
+                                ? "#0cb5bf"
+                                : "#d0d0d0",
+                            }}
+                          />
+                          <span
+                            style={{
+                              position: "absolute",
+                              left: student.isActive ? "18px" : "2px",
+                              width: "14px",
+                              height: "14px",
+                              borderRadius: "50%",
+                              background: "#ffffff",
+                              boxShadow: "0 1px 2px rgba(0,0,0,0.1)",
+                              transition: "left 0.25s ease",
+                              pointerEvents: "none",
+                              top: "50%",
+                              marginTop: "-7px",
+                            }}
+                          />
+                        </Box>
                       </Box>
-                    </Box>
-                  </TableCell>
-                  <TableCell align="center">
-                    <Box sx={{ display: "flex", justifyContent: "center" }}>
-                      <IconButton
-                        size="small"
-                        onClick={() => handleEditStudent(student)}
-                        color="primary"
-                        sx={{
-                          transition: "none",
-                          outline: "none",
-                          "&:hover": {
-                            bgcolor: "rgba(25, 118, 210, 0.04)",
-                          },
-                          "&:focus": {
+                    </TableCell>
+                    <TableCell align="center">
+                      <Box sx={{ display: "flex", justifyContent: "center" }}>
+                        <IconButton
+                          size="small"
+                          onClick={() => handleEditStudent(student)}
+                          color="primary"
+                          sx={{
+                            transition: "none",
                             outline: "none",
-                          },
-                        }}
-                      >
-                        <EditIcon fontSize="small" />
-                      </IconButton>
-                      <IconButton
-                        size="small"
-                        onClick={() => handleViewFees(student)}
-                        color="primary"
-                        sx={{
-                          transition: "none",
-                          outline: "none",
-                          "&:hover": {
-                            bgcolor: "rgba(25, 118, 210, 0.04)",
-                          },
-                          "&:focus": {
+                            "&:hover": {
+                              bgcolor: "rgba(25, 118, 210, 0.04)",
+                            },
+                            "&:focus": {
+                              outline: "none",
+                            },
+                          }}
+                        >
+                          <EditIcon fontSize="small" />
+                        </IconButton>
+                        <IconButton
+                          size="small"
+                          onClick={() => handleViewFees(student)}
+                          color="primary"
+                          sx={{
+                            transition: "none",
                             outline: "none",
-                          },
-                        }}
-                      >
-                        <PaymentsIcon fontSize="small" />
-                      </IconButton>
-                      <IconButton
-                        size="small"
-                        onClick={() => handleAddParent(student)}
-                        color="primary"
-                        sx={{
-                          transition: "none",
-                          outline: "none",
-                          "&:hover": {
-                            bgcolor: "rgba(25, 118, 210, 0.04)",
-                          },
-                          "&:focus": {
+                            "&:hover": {
+                              bgcolor: "rgba(25, 118, 210, 0.04)",
+                            },
+                            "&:focus": {
+                              outline: "none",
+                            },
+                          }}
+                        >
+                          <PaymentsIcon fontSize="small" />
+                        </IconButton>
+                        <IconButton
+                          size="small"
+                          onClick={() => handleAddParent(student)}
+                          color="primary"
+                          sx={{
+                            transition: "none",
                             outline: "none",
-                          },
-                        }}
-                      >
-                        <PersonAddIcon fontSize="small" />
-                      </IconButton>
-                      <IconButton
-                        size="small"
-                        onClick={() => handleDeleteClick(student)}
-                        color="error"
-                        sx={{
-                          transition: "none",
-                          outline: "none",
-                          "&:hover": {
-                            bgcolor: "rgba(211, 47, 47, 0.04)",
-                          },
-                          "&:focus": {
+                            "&:hover": {
+                              bgcolor: "rgba(25, 118, 210, 0.04)",
+                            },
+                            "&:focus": {
+                              outline: "none",
+                            },
+                          }}
+                        >
+                          <PersonAddIcon fontSize="small" />
+                        </IconButton>
+                        <IconButton
+                          size="small"
+                          onClick={() => handleDeleteClick(student)}
+                          color="error"
+                          sx={{
+                            transition: "none",
                             outline: "none",
-                          },
-                        }}
-                      >
-                        <DeleteIcon fontSize="small" />
-                      </IconButton>
-                    </Box>
-                  </TableCell>
-                </TableRow>
-              ))}
-              {filteredStudents.length === 0 && !loading && (
+                            "&:hover": {
+                              bgcolor: "rgba(211, 47, 47, 0.04)",
+                            },
+                            "&:focus": {
+                              outline: "none",
+                            },
+                          }}
+                        >
+                          <DeleteIcon fontSize="small" />
+                        </IconButton>
+                      </Box>
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : (
                 <TableRow>
-                  <TableCell colSpan={7} align="center" sx={{ py: 3 }}>
-                    No students found.
+                  <TableCell colSpan={8} align="center" sx={{ py: 3 }}>
+                    <Box
+                      sx={{
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "center",
+                        py: 4,
+                      }}
+                    >
+                      <Typography variant="body1" sx={{ mb: 1 }}>
+                        {debouncedSearchQuery
+                          ? `No students found matching "${debouncedSearchQuery}"`
+                          : "No students found"}
+                      </Typography>
+                      {debouncedSearchQuery && (
+                        <Button
+                          variant="text"
+                          color="primary"
+                          onClick={() => setSearchQuery("")}
+                          sx={{ mt: 1, textTransform: "none" }}
+                        >
+                          Clear search
+                        </Button>
+                      )}
+                    </Box>
                   </TableCell>
                 </TableRow>
               )}
