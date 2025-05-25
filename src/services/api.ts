@@ -7,9 +7,13 @@ import type {
   InternalAxiosRequestConfig,
 } from "axios";
 
-// Create axios instance with default config
+// Define both primary and fallback base URLs
+const PRIMARY_BASE_URL = "https://vocal-highly-firefly.ngrok-free.app/api/v1";
+const FALLBACK_BASE_URL = "https://next-hopelessly-tuna.ngrok-free.app/api/v1";
+
+// Create axios instance with primary base URL
 const api = axios.create({
-  baseURL: "https://vocal-highly-firefly.ngrok-free.app/api/v1/",
+  baseURL: PRIMARY_BASE_URL,
   headers: {
     "Content-Type": "application/json",
   },
@@ -27,6 +31,9 @@ api.interceptors.request.use(
       config.headers.Authorization = `Bearer ${token}`;
     }
 
+    // Mark this request as using the primary URL
+    config.metadata = { ...config.metadata, usingPrimaryUrl: true };
+
     // You can also add other request headers/params here
     return config;
   },
@@ -41,35 +48,41 @@ api.interceptors.response.use(
     // You can transform the response data here if needed
     return response;
   },
-  (error: AxiosError) => {
-    const { response } = error;
+  async (error: AxiosError) => {
+    // Get the original request config
+    const originalRequest = error.config;
 
-    // Handle different error statuses
-    if (response) {
-      switch (response.status) {
-        case 401: // Unauthorized
-          // Clear auth token and redirect to login
-          localStorage.removeItem("authToken");
-          // Consider redirecting to login page
-          window.location.href = "/login";
-          break;
+    // Check if we should try the fallback
+    // Only retry if:
+    // 1. The error is a network error or 5xx server error
+    // 2. We were using the primary URL
+    // 3. We haven't already retried
+    const shouldTryFallback =
+      (error.message.includes("Network Error") ||
+        (error.response && error.response.status >= 500)) &&
+      originalRequest.metadata?.usingPrimaryUrl === true &&
+      !originalRequest._retry;
 
-        case 403: // Forbidden
-          console.error("Access forbidden");
-          break;
+    if (shouldTryFallback) {
+      // Mark as retried to prevent infinite retry loops
+      originalRequest._retry = true;
+      originalRequest.metadata.usingPrimaryUrl = false;
 
-        case 404: // Not found
-          console.error("Resource not found");
-          break;
-
-        case 500: // Server error
-          console.error("Server error");
-          break;
-
-        default:
-          console.error(`Error: ${response.status}`);
-          break;
+      // Replace the base URL in the full URL
+      if (originalRequest.url) {
+        originalRequest.url = originalRequest.url.replace(
+          PRIMARY_BASE_URL,
+          FALLBACK_BASE_URL
+        );
       }
+
+      // For non-absolute URLs, set the baseURL to the fallback
+      originalRequest.baseURL = FALLBACK_BASE_URL;
+
+      console.log(`Retrying request with fallback URL: ${FALLBACK_BASE_URL}`);
+
+      // Retry the request with the fallback URL
+      return api(originalRequest);
     } else if (error.request) {
       // The request was made but no response was received
       console.error("No response received from server");
