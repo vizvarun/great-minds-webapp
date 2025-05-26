@@ -19,20 +19,28 @@ export interface Employee {
   deletedAt?: string;
 }
 
-// Updated getEmployees function to support pagination
-export const getEmployees = async (page = 0, pageSize = 10): Promise<any> => {
+// Updated getEmployees function to support pagination and search
+export const getEmployees = async (
+  page = 0,
+  pageSize = 10,
+  searchQuery: string = ""
+): Promise<any> => {
   try {
     // Get user_id and school_id from auth service
     const user_id = AuthService.getUserId() || 14; // Fallback to 14 if not available
     const school_id = AuthService.getSchoolId() || 4; // Fallback to 4 if not available
 
-    // Add page and pageSize parameters to the API request
-    const response = await api.get(
-      `/employee/list?user_id=${user_id}&school_id=${school_id}&page=${
-        page + 1
-      }&pageSize=${pageSize}`
-    );
+    // Build URL with pagination parameters
+    let url = `/employee/list?user_id=${user_id}&school_id=${school_id}&page=${
+      page + 1
+    }&pageSize=${pageSize}`;
 
+    // Add search parameter if provided
+    if (searchQuery && searchQuery.trim()) {
+      url += `&search=${encodeURIComponent(searchQuery.trim())}`;
+    }
+
+    const response = await api.get(url);
     return response.data; // Return the complete response object, including pagination metadata
   } catch (error) {
     console.error("Error fetching employees:", error);

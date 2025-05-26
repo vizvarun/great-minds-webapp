@@ -5,6 +5,7 @@ import DownloadIcon from "@mui/icons-material/Download";
 import EditIcon from "@mui/icons-material/Edit";
 import FileUploadIcon from "@mui/icons-material/FileUpload";
 import SearchIcon from "@mui/icons-material/Search";
+import ClearIcon from "@mui/icons-material/Clear";
 import {
   Alert,
   Box,
@@ -28,6 +29,7 @@ import {
 import { useState, useEffect } from "react";
 import EmployeeFormModal from "../components/EmployeeFormModal";
 import BulkUploadModal from "../components/BulkUploadModal";
+import CustomSpinner from "../components/CustomSpinner";
 import {
   getEmployees,
   createEmployee,
@@ -37,12 +39,14 @@ import {
   downloadEmployeeExcel,
   getEmployeeTemplate,
 } from "../services/employeeService";
+import { useDebounce } from "../hooks/useDebounce";
 import type { Employee } from "../services/employeeService";
 
 const Employees = () => {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [searchQuery, setSearchQuery] = useState("");
+  const debouncedSearchQuery = useDebounce(searchQuery, 500); // Debounce search query with 500ms delay
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [totalRecords, setTotalRecords] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -69,12 +73,17 @@ const Employees = () => {
   useEffect(() => {
     fetchEmployees();
     fetchTemplateUrl();
-  }, [page, rowsPerPage]);
+  }, [page, rowsPerPage, debouncedSearchQuery]); // Add debouncedSearchQuery as dependency
 
   const fetchEmployees = async () => {
     setLoading(true);
     try {
-      const response = await getEmployees(page, rowsPerPage);
+      // Pass the debounced search query to getEmployees
+      const response = await getEmployees(
+        page,
+        rowsPerPage,
+        debouncedSearchQuery
+      );
 
       if (response && response.data) {
         setEmployees(response.data);
@@ -113,13 +122,15 @@ const Employees = () => {
     }
   };
 
-  const filteredEmployees = employees.filter((employee) =>
-    `${employee.empNo || ""} ${employee.firstName || ""} ${
-      employee.lastName || ""
-    } ${employee.designation || ""} ${employee.mobileNo || ""}`
-      .toLowerCase()
-      .includes(searchQuery.toLowerCase())
-  );
+  // Update search handler
+  const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const value = event.target.value;
+    setSearchQuery(value);
+    setPage(0); // Reset to first page when searching
+  };
+
+  // Since search is now handled by the server, we use employees directly
+  const filteredEmployees = employees;
 
   const handleChangePage = (_: unknown, newPage: number) => {
     setPage(newPage);
@@ -129,11 +140,6 @@ const Employees = () => {
     event: React.ChangeEvent<HTMLInputElement>
   ) => {
     setRowsPerPage(parseInt(event.target.value, 10));
-    setPage(0);
-  };
-
-  const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchQuery(event.target.value);
     setPage(0);
   };
 
@@ -324,7 +330,7 @@ const Employees = () => {
   // Add custom CSS for tooltips
   useEffect(() => {
     // Add custom CSS to control tooltip positioning
-    const style = document.createElement('style');
+    const style = document.createElement("style");
     style.innerHTML = `
       .custom-tooltip {
         position: relative;
@@ -352,7 +358,7 @@ const Employees = () => {
       }
     `;
     document.head.appendChild(style);
-    
+
     return () => {
       document.head.removeChild(style);
     };
@@ -412,6 +418,34 @@ const Employees = () => {
                   <SearchIcon color="action" />
                 </InputAdornment>
               ),
+              // Show loading indicator when searching, or clear button when there's a search query
+              endAdornment:
+                debouncedSearchQuery !== searchQuery ? (
+                  <InputAdornment position="end">
+                    <CustomSpinner
+                      size={20}
+                      color="rgba(0, 0, 0, 0.54)"
+                      thickness={2}
+                    />
+                  </InputAdornment>
+                ) : searchQuery ? (
+                  <InputAdornment position="end">
+                    <IconButton
+                      className="custom-tooltip"
+                      data-tooltip="Clear Search"
+                      size="small"
+                      aria-label="clear search"
+                      onClick={() => setSearchQuery("")}
+                      edge="end"
+                      sx={{
+                        color: "rgba(0, 0, 0, 0.54)",
+                        p: 0.5,
+                      }}
+                    >
+                      <ClearIcon fontSize="small" />
+                    </IconButton>
+                  </InputAdornment>
+                ) : null,
             }}
           />
           <Box sx={{ display: "flex", gap: 1 }}>
@@ -508,7 +542,7 @@ const Employees = () => {
               p: 4,
             }}
           >
-            <CircularProgress />
+            <CustomSpinner size={40} color="#1976d2" thickness={3} />
           </Box>
         ) : error ? (
           <Box
@@ -557,118 +591,142 @@ const Employees = () => {
             </TableHead>
             <TableBody>
               {filteredEmployees.length > 0 ? (
-                filteredEmployees
-                  .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-                  .map((employee) => (
-                    <TableRow
-                      key={employee.empId}
-                      hover
-                      sx={{
-                        "&:hover": {
-                          backgroundColor: "rgba(0, 0, 0, 0.02)",
-                        },
-                        transition: "none",
-                      }}
-                    >
-                      <TableCell>{employee.empNo || "-"}</TableCell>
-                      <TableCell>{employee.firstName || "-"}</TableCell>
-                      <TableCell>{employee.lastName || "-"}</TableCell>
-                      <TableCell>{employee.designation || "-"}</TableCell>
-                      <TableCell>{employee.mobileNo || "-"}</TableCell>
-                      <TableCell align="center">
-                        <Box sx={{ display: "flex", justifyContent: "center" }}>
-                          <Box
-                            component="span"
-                            className="custom-tooltip"
-                            data-tooltip={employee.deletedAt === null ? "Deactivate Employee" : "Activate Employee"}
-                            sx={{
-                              position: "relative",
-                              display: "inline-flex",
-                              alignItems: "center",
-                            }}
-                          >
-                            <input
-                              type="checkbox"
-                              checked={employee.deletedAt === null}
-                              onChange={() =>
-                                handleToggleStatus(
-                                  employee.empId,
-                                  employee.deletedAt === null
-                                )
-                              }
-                              style={{
-                                appearance: "none",
-                                WebkitAppearance: "none",
-                                MozAppearance: "none",
-                                width: "30px",
-                                height: "18px",
-                                borderRadius: "10px",
-                                background:
-                                  employee.deletedAt === null
-                                    ? "#0cb5bf"
-                                    : "#e0e0e0",
-                                outline: "none",
-                                cursor: "pointer",
-                                position: "relative",
-                                transition: "background 0.25s ease",
-                                border: "1px solid",
-                                borderColor:
-                                  employee.deletedAt === null
-                                    ? "#0cb5bf"
-                                    : "#d0d0d0",
-                                pointerEvents: loading ? "none" : "auto", // Disable during loading
-                              }}
-                            />
-                            <span
-                              style={{
-                                position: "absolute",
-                                left:
-                                  employee.deletedAt === null ? "18px" : "2px",
-                                width: "14px",
-                                height: "14px",
-                                borderRadius: "50%",
-                                background: "#ffffff",
-                                boxShadow: "0 1px 2px rgba(0,0,0,0.1)",
-                                transition: "left 0.25s ease",
-                                pointerEvents: "none",
-                                top: "50%",
-                                marginTop: "-7px",
-                              }}
-                            />
-                          </Box>
-                        </Box>
-                      </TableCell>
-                      <TableCell align="center">
-                        <Box sx={{ display: "flex", justifyContent: "center" }}>
-                          <IconButton
-                            className="custom-tooltip"
-                            data-tooltip="Edit Employee"
-                            size="small"
-                            onClick={() => handleEditEmployee(employee.empId)}
-                            color="primary"
-                            sx={{
-                              transition: "none",
+                // Remove the slice() call since pagination is now server-side
+                filteredEmployees.map((employee) => (
+                  <TableRow
+                    key={employee.empId}
+                    hover
+                    sx={{
+                      "&:hover": {
+                        backgroundColor: "rgba(0, 0, 0, 0.02)",
+                      },
+                      transition: "none",
+                    }}
+                  >
+                    <TableCell>{employee.empNo || "-"}</TableCell>
+                    <TableCell>{employee.firstName || "-"}</TableCell>
+                    <TableCell>{employee.lastName || "-"}</TableCell>
+                    <TableCell>{employee.designation || "-"}</TableCell>
+                    <TableCell>{employee.mobileNo || "-"}</TableCell>
+                    <TableCell align="center">
+                      <Box sx={{ display: "flex", justifyContent: "center" }}>
+                        <Box
+                          component="span"
+                          className="custom-tooltip"
+                          data-tooltip={
+                            employee.deletedAt === null
+                              ? "Deactivate Employee"
+                              : "Activate Employee"
+                          }
+                          sx={{
+                            position: "relative",
+                            display: "inline-flex",
+                            alignItems: "center",
+                          }}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={employee.deletedAt === null}
+                            onChange={() =>
+                              handleToggleStatus(
+                                employee.empId,
+                                employee.deletedAt === null
+                              )
+                            }
+                            style={{
+                              appearance: "none",
+                              WebkitAppearance: "none",
+                              MozAppearance: "none",
+                              width: "30px",
+                              height: "18px",
+                              borderRadius: "10px",
+                              background:
+                                employee.deletedAt === null
+                                  ? "#0cb5bf"
+                                  : "#e0e0e0",
                               outline: "none",
-                              "&:hover": {
-                                bgcolor: "rgba(25, 118, 210, 0.04)",
-                              },
-                              "&:focus": {
-                                outline: "none",
-                              },
+                              cursor: "pointer",
+                              position: "relative",
+                              transition: "background 0.25s ease",
+                              border: "1px solid",
+                              borderColor:
+                                employee.deletedAt === null
+                                  ? "#0cb5bf"
+                                  : "#d0d0d0",
+                              pointerEvents: loading ? "none" : "auto", // Disable during loading
                             }}
-                          >
-                            <EditIcon fontSize="small" />
-                          </IconButton>
+                          />
+                          <span
+                            style={{
+                              position: "absolute",
+                              left:
+                                employee.deletedAt === null ? "18px" : "2px",
+                              width: "14px",
+                              height: "14px",
+                              borderRadius: "50%",
+                              background: "#ffffff",
+                              boxShadow: "0 1px 2px rgba(0,0,0,0.1)",
+                              transition: "left 0.25s ease",
+                              pointerEvents: "none",
+                              top: "50%",
+                              marginTop: "-7px",
+                            }}
+                          />
                         </Box>
-                      </TableCell>
-                    </TableRow>
-                  ))
+                      </Box>
+                    </TableCell>
+                    <TableCell align="center">
+                      <Box sx={{ display: "flex", justifyContent: "center" }}>
+                        <IconButton
+                          className="custom-tooltip"
+                          data-tooltip="Edit Employee"
+                          size="small"
+                          onClick={() => handleEditEmployee(employee.empId)}
+                          color="primary"
+                          sx={{
+                            transition: "none",
+                            outline: "none",
+                            "&:hover": {
+                              bgcolor: "rgba(25, 118, 210, 0.04)",
+                            },
+                            "&:focus": {
+                              outline: "none",
+                            },
+                          }}
+                        >
+                          <EditIcon fontSize="small" />
+                        </IconButton>
+                      </Box>
+                    </TableCell>
+                  </TableRow>
+                ))
               ) : (
                 <TableRow>
                   <TableCell colSpan={7} align="center" sx={{ py: 3 }}>
-                    {searchQuery
-                      ? "No matching employees found."
-                      : "No employees found."}
+                    <Box
+                      sx={{
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "center",
+                        py: 4,
+                      }}
+                    >
+                      <Typography variant="body1" sx={{ mb: 1 }}>
+                        {debouncedSearchQuery
+                          ? `No employees found matching "${debouncedSearchQuery}"`
+                          : "No employees found"}
+                      </Typography>
+                      {debouncedSearchQuery && (
+                        <Button
+                          variant="text"
+                          color="primary"
+                          onClick={() => setSearchQuery("")}
+                          sx={{ mt: 1, textTransform: "none" }}
+                        >
+                          Clear search
+                        </Button>
+                      )}
+                    </Box>
                   </TableCell>
                 </TableRow>
               )}
@@ -680,7 +738,7 @@ const Employees = () => {
       <TablePagination
         component="div"
         rowsPerPageOptions={[5, 10, 25]}
-        count={filteredEmployees.length}
+        count={totalRecords} // Use totalRecords instead of filteredEmployees.length
         rowsPerPage={rowsPerPage}
         page={page}
         onPageChange={handleChangePage}
