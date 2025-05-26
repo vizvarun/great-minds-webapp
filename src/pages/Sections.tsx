@@ -6,6 +6,7 @@ import EditIcon from "@mui/icons-material/Edit";
 import PeopleIcon from "@mui/icons-material/People";
 import PersonIcon from "@mui/icons-material/Person";
 import SearchIcon from "@mui/icons-material/Search";
+import ClearIcon from "@mui/icons-material/Clear";
 import {
   Alert,
   Box,
@@ -41,6 +42,8 @@ import {
   toggleSectionStatus,
   updateSection,
 } from "../services/sectionService";
+import { useDebounce } from "../hooks/useDebounce";
+import CustomSpinner from "../components/CustomSpinner";
 
 import type { SelectChangeEvent } from "@mui/material";
 import AuthService from "../services/auth";
@@ -52,6 +55,7 @@ const Sections = () => {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [searchQuery, setSearchQuery] = useState("");
+  const debouncedSearchQuery = useDebounce(searchQuery, 500); // Debounce search query
   const [selectedSection, setSelectedSection] = useState<Section | null>(null);
   const [sections, setSections] = useState<Section[]>([]);
   const [classes, setClasses] = useState<Class[]>([]);
@@ -95,14 +99,14 @@ const Sections = () => {
     });
   }, []);
 
-  // Fetch sections when page, rowsPerPage, or filterClassId changes
+  // Fetch sections when page, rowsPerPage, filterClassId, or debouncedSearchQuery changes
   useEffect(() => {
     if (filterClassId) {
       // Store the selected filter class ID in localStorage whenever it changes
       localStorage.setItem("sectionFilterClassId", filterClassId);
       fetchSections();
     }
-  }, [page, rowsPerPage, filterClassId]);
+  }, [page, rowsPerPage, filterClassId, debouncedSearchQuery]); // Add debouncedSearchQuery as dependency
 
   const fetchClasses = async () => {
     try {
@@ -128,7 +132,13 @@ const Sections = () => {
     setLoading(true);
     try {
       const classId = filterClassId ? parseInt(filterClassId) : undefined;
-      const response = await getSections(page, rowsPerPage, classId);
+      // Pass the debounced search query to getSections
+      const response = await getSections(
+        page,
+        rowsPerPage,
+        classId,
+        debouncedSearchQuery
+      );
 
       setSections(response.data || []);
       setTotalRecords(response.total_records || 0);
@@ -144,16 +154,8 @@ const Sections = () => {
     }
   };
 
-  // Filter sections based on search query
-  const filteredSections = sections.filter(
-    (section) =>
-      (section.section?.toLowerCase() || "").includes(
-        searchQuery.toLowerCase()
-      ) ||
-      (section.className || "")
-        .toLowerCase()
-        .includes(searchQuery.toLowerCase())
-  );
+  // No need to filter sections locally since we're doing it server-side
+  const filteredSections = sections;
 
   const handleChangePage = (_: unknown, newPage: number) => {
     setPage(newPage);
@@ -167,8 +169,9 @@ const Sections = () => {
   };
 
   const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchQuery(event.target.value);
-    setPage(0);
+    const value = event.target.value;
+    setSearchQuery(value);
+    setPage(0); // Reset to first page when searching
   };
 
   const handleFilterClassChange = (event: SelectChangeEvent) => {
@@ -490,7 +493,7 @@ const Sections = () => {
   // Add custom CSS for tooltips
   useEffect(() => {
     // Add custom CSS to control tooltip positioning
-    const style = document.createElement('style');
+    const style = document.createElement("style");
     style.innerHTML = `
       .custom-tooltip {
         position: relative;
@@ -518,7 +521,7 @@ const Sections = () => {
       }
     `;
     document.head.appendChild(style);
-    
+
     return () => {
       document.head.removeChild(style);
     };
@@ -579,6 +582,34 @@ const Sections = () => {
                     <SearchIcon color="action" />
                   </InputAdornment>
                 ),
+                // Show loading indicator when searching or clear button when there's search text
+                endAdornment:
+                  debouncedSearchQuery !== searchQuery ? (
+                    <InputAdornment position="end">
+                      <CustomSpinner
+                        size={20}
+                        color="rgba(0, 0, 0, 0.54)"
+                        thickness={2}
+                      />
+                    </InputAdornment>
+                  ) : searchQuery ? (
+                    <InputAdornment position="end">
+                      <IconButton
+                        className="custom-tooltip"
+                        data-tooltip="Clear Search"
+                        size="small"
+                        aria-label="clear search"
+                        onClick={() => setSearchQuery("")}
+                        edge="end"
+                        sx={{
+                          color: "rgba(0, 0, 0, 0.54)",
+                          p: 0.5,
+                        }}
+                      >
+                        <ClearIcon fontSize="small" />
+                      </IconButton>
+                    </InputAdornment>
+                  ) : null,
               }}
             />
 
@@ -652,7 +683,7 @@ const Sections = () => {
               p: 4,
             }}
           >
-            <CircularProgress />
+            <CustomSpinner size={40} color="#1976d2" thickness={3} />
           </Box>
         ) : (
           <Table stickyHeader sx={{ minWidth: 650 }}>
@@ -710,7 +741,11 @@ const Sections = () => {
                         <Box
                           component="span"
                           className="custom-tooltip"
-                          data-tooltip={section.isactive ? "Disable Section" : "Enable Section"}
+                          data-tooltip={
+                            section.isactive
+                              ? "Disable Section"
+                              : "Enable Section"
+                          }
                           sx={{
                             position: "relative",
                             display: "inline-flex",
@@ -863,7 +898,30 @@ const Sections = () => {
               ) : (
                 <TableRow>
                   <TableCell colSpan={6} align="center" sx={{ py: 3 }}>
-                    No sections found.
+                    <Box
+                      sx={{
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "center",
+                        py: 4,
+                      }}
+                    >
+                      <Typography variant="body1" sx={{ mb: 1 }}>
+                        {debouncedSearchQuery
+                          ? `No sections found matching "${debouncedSearchQuery}"`
+                          : "No sections found."}
+                      </Typography>
+                      {debouncedSearchQuery && (
+                        <Button
+                          variant="text"
+                          color="primary"
+                          onClick={() => setSearchQuery("")}
+                          sx={{ mt: 1, textTransform: "none" }}
+                        >
+                          Clear search
+                        </Button>
+                      )}
+                    </Box>
                   </TableCell>
                 </TableRow>
               )}
@@ -876,7 +934,7 @@ const Sections = () => {
       <TablePagination
         component="div"
         rowsPerPageOptions={[5, 10, 25]}
-        count={totalRecords}
+        count={totalRecords} // Make sure to use totalRecords here instead of filteredSections.length
         rowsPerPage={rowsPerPage}
         page={page}
         onPageChange={handleChangePage}

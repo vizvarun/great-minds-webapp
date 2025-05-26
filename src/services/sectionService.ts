@@ -34,22 +34,29 @@ export interface SectionResponse {
 export const getSections = async (
   page: number = 0,
   rowsPerPage: number = 10,
-  classId?: number
+  classId?: number,
+  searchQuery: string = "" // Add searchQuery parameter with default empty string
 ): Promise<{ data: Section[]; total_records: number }> => {
   try {
     const user_id = AuthService.getUserId() || 14;
     const school_id = AuthService.getSchoolId() || 4;
 
-    let url = `/sections/list?user_id=${user_id}&school_id=${school_id}`;
+    // Build base URL with required parameters
+    let url = `/sections/list?user_id=${user_id}&school_id=${school_id}&page=${
+      page + 1
+    }&pageSize=${rowsPerPage}`;
 
-    // Add class_id if provided
+    // Add classId parameter if provided
     if (classId) {
       url += `&class_id=${classId}`;
     }
 
-    // Add pagination parameters
-    url += `&page=${page + 1}&per_page=${rowsPerPage}`;
+    // Add search parameter if provided
+    if (searchQuery && searchQuery.trim()) {
+      url += `&search=${encodeURIComponent(searchQuery.trim())}`;
+    }
 
+    // Make the API call
     const response = await api.get(url);
 
     // Extract sections from the correct property in the response
