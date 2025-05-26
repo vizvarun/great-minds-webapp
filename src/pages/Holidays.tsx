@@ -175,7 +175,7 @@ const formatClasses = (classes: any[]): JSX.Element => {
 
 const Holidays = () => {
   const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [rowsPerPage, setRowsPerPage] = useState(50);
   const [searchQuery, setSearchQuery] = useState("");
   const [holidays, setHolidays] = useState<Holiday[]>([]);
   const [editHoliday, setEditHoliday] = useState<Holiday | null>(null);
@@ -200,7 +200,7 @@ const Holidays = () => {
   // Add custom CSS for tooltips
   useEffect(() => {
     // Add custom CSS to control tooltip positioning
-    const style = document.createElement('style');
+    const style = document.createElement("style");
     style.innerHTML = `
       .custom-tooltip {
         position: relative;
@@ -228,7 +228,7 @@ const Holidays = () => {
       }
     `;
     document.head.appendChild(style);
-    
+
     return () => {
       document.head.removeChild(style);
     };
@@ -679,7 +679,7 @@ const Holidays = () => {
       {/* Fixed Pagination Section */}
       <TablePagination
         component="div"
-        rowsPerPageOptions={[5, 10, 25]}
+        rowsPerPageOptions={[5, 10, 25, 50, 100]}
         count={filteredHolidays.length}
         rowsPerPage={rowsPerPage}
         page={page}

@@ -47,7 +47,7 @@ const SectionStudents = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [rowsPerPage, setRowsPerPage] = useState(100);
   const [searchQuery, setSearchQuery] = useState("");
 
   // Add students modal state
@@ -68,7 +68,7 @@ const SectionStudents = () => {
   // Add custom CSS for tooltips
   useEffect(() => {
     // Add custom CSS to control tooltip positioning
-    const style = document.createElement('style');
+    const style = document.createElement("style");
     style.innerHTML = `
       .custom-tooltip {
         position: relative;
@@ -96,7 +96,7 @@ const SectionStudents = () => {
       }
     `;
     document.head.appendChild(style);
-    
+
     return () => {
       document.head.removeChild(style);
     };
@@ -418,7 +418,11 @@ const SectionStudents = () => {
                         <Box
                           component="span"
                           className="custom-tooltip"
-                          data-tooltip={isStudentActive(student) ? "Deactivate Student" : "Activate Student"}
+                          data-tooltip={
+                            isStudentActive(student)
+                              ? "Deactivate Student"
+                              : "Activate Student"
+                          }
                           sx={{
                             position: "relative",
                             display: "inline-flex",
@@ -485,7 +489,7 @@ const SectionStudents = () => {
       {/* Pagination */}
       <TablePagination
         component="div"
-        rowsPerPageOptions={[5, 10, 25]}
+        rowsPerPageOptions={[10, 25, 50, 100, 150]}
         count={filteredStudents.length}
         rowsPerPage={rowsPerPage}
         page={page}

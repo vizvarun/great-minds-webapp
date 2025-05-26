@@ -44,7 +44,7 @@ const SectionTeachers = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [rowsPerPage, setRowsPerPage] = useState(50);
   const [searchQuery, setSearchQuery] = useState("");
 
   // Add teacher modal state
@@ -214,7 +214,7 @@ const SectionTeachers = () => {
   // Add custom CSS for tooltips
   useEffect(() => {
     // Add custom CSS to control tooltip positioning
-    const style = document.createElement('style');
+    const style = document.createElement("style");
     style.innerHTML = `
       .custom-tooltip {
         position: relative;
@@ -242,7 +242,7 @@ const SectionTeachers = () => {
       }
     `;
     document.head.appendChild(style);
-    
+
     return () => {
       document.head.removeChild(style);
     };
@@ -481,7 +481,7 @@ const SectionTeachers = () => {
       {/* Pagination */}
       <TablePagination
         component="div"
-        rowsPerPageOptions={[5, 10, 25]}
+        rowsPerPageOptions={[5, 10, 25, 50, 100]}
         count={filteredTeachers.length}
         rowsPerPage={rowsPerPage}
         page={page}

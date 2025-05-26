@@ -35,7 +35,7 @@ import type { Subject } from "../services/subjectService";
 
 const Subjects = () => {
   const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [rowsPerPage, setRowsPerPage] = useState(50);
   const [searchQuery, setSearchQuery] = useState("");
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
@@ -461,7 +461,7 @@ const Subjects = () => {
       {/* Fixed Pagination Section */}
       <TablePagination
         component="div"
-        rowsPerPageOptions={[5, 10, 25]}
+        rowsPerPageOptions={[5, 10, 25, 50, 100]}
         count={totalRecords}
         rowsPerPage={rowsPerPage}
         page={page}
