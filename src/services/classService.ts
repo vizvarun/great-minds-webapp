@@ -20,15 +20,22 @@ export interface ClassesResponse {
   status_code: number;
 }
 
-export const getClasses = async (): Promise<ClassesResponse> => {
+export const getClasses = async (
+  searchQuery: string = ""
+): Promise<ClassesResponse> => {
   try {
     const user_id = AuthService.getUserId() || 14;
     const school_id = AuthService.getSchoolId() || 4;
 
-    const response = await api.get(
-      `/classes/list?user_id=${user_id}&school_id=${school_id}`
-    );
+    // Build the URL with optional search parameter
+    let url = `/classes/list?user_id=${user_id}&school_id=${school_id}`;
 
+    // Add search parameter if provided
+    if (searchQuery && searchQuery.trim()) {
+      url += `&search=${encodeURIComponent(searchQuery.trim())}`;
+    }
+
+    const response = await api.get(url);
     return response.data;
   } catch (error) {
     console.error("Error fetching classes:", error);

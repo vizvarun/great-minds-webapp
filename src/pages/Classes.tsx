@@ -6,6 +6,7 @@ import DownloadIcon from "@mui/icons-material/Download";
 import EditIcon from "@mui/icons-material/Edit";
 import MenuBookIcon from "@mui/icons-material/MenuBook";
 import SearchIcon from "@mui/icons-material/Search";
+import ClearIcon from "@mui/icons-material/Clear";
 import {
   Box,
   Button,
@@ -41,11 +42,14 @@ import type { Class } from "../services/classService";
 import type { Subject, ClassSubjectMapping } from "../services/subjectService";
 import api from "../services/api";
 import AuthService from "../services/auth";
+import { useDebounce } from "../hooks/useDebounce";
+import CustomSpinner from "../components/CustomSpinner";
 
 const Classes = () => {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [searchQuery, setSearchQuery] = useState("");
+  const debouncedSearchQuery = useDebounce(searchQuery, 500); // Debounce search query with 500ms delay
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedClass, setSelectedClass] = useState<Class | null>(null);
   const [selectedSubjects, setSelectedSubjects] = useState<number[]>([]);
@@ -79,7 +83,7 @@ const Classes = () => {
   useEffect(() => {
     fetchClasses();
     fetchAllSubjects();
-  }, []);
+  }, [debouncedSearchQuery]); // Add debouncedSearchQuery as a dependency
 
   // Add custom CSS for tooltips
   useEffect(() => {
@@ -121,7 +125,8 @@ const Classes = () => {
   const fetchClasses = async () => {
     setLoading(true);
     try {
-      const response = await getClasses();
+      // Pass the debounced search query to getClasses
+      const response = await getClasses(debouncedSearchQuery);
       setClasses(response.data);
       setTotalRecords(response.total_records);
     } catch (error) {
@@ -131,6 +136,7 @@ const Classes = () => {
         severity: "error",
         timestamp: Date.now(),
       });
+      setClasses([]); // Set empty array on error
     } finally {
       setLoading(false);
     }
@@ -282,10 +288,15 @@ const Classes = () => {
     }
   };
 
-  // Filter classes based on search query
-  const filteredClasses = classes.filter((cls) =>
-    cls.classname.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // Update search handler to reset page when searching
+  const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const value = event.target.value;
+    setSearchQuery(value);
+    setPage(0); // Reset to first page when searching
+  };
+
+  // No need to filter classes locally since we're doing it on the server
+  const filteredClasses = classes;
 
   const handleChangePage = (_: unknown, newPage: number) => {
     setPage(newPage);
@@ -295,11 +306,6 @@ const Classes = () => {
     event: React.ChangeEvent<HTMLInputElement>
   ) => {
     setRowsPerPage(parseInt(event.target.value, 10));
-    setPage(0);
-  };
-
-  const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchQuery(event.target.value);
     setPage(0);
   };
 
@@ -607,6 +613,34 @@ const Classes = () => {
                   <SearchIcon color="action" />
                 </InputAdornment>
               ),
+              // Show loading indicator when searching, or clear button when there's a search query
+              endAdornment:
+                debouncedSearchQuery !== searchQuery ? (
+                  <InputAdornment position="end">
+                    <CustomSpinner
+                      size={20}
+                      color="rgba(0, 0, 0, 0.54)"
+                      thickness={2}
+                    />
+                  </InputAdornment>
+                ) : searchQuery ? (
+                  <InputAdornment position="end">
+                    <IconButton
+                      className="custom-tooltip"
+                      data-tooltip="Clear Search"
+                      size="small"
+                      aria-label="clear search"
+                      onClick={() => setSearchQuery("")}
+                      edge="end"
+                      sx={{
+                        color: "rgba(0, 0, 0, 0.54)",
+                        p: 0.5,
+                      }}
+                    >
+                      <ClearIcon fontSize="small" />
+                    </IconButton>
+                  </InputAdornment>
+                ) : null,
             }}
           />
           <Button
@@ -811,7 +845,30 @@ const Classes = () => {
             {filteredClasses.length === 0 && (
               <TableRow>
                 <TableCell colSpan={3} align="center" sx={{ py: 3 }}>
-                  No classes found.
+                  <Box
+                    sx={{
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "center",
+                      py: 4,
+                    }}
+                  >
+                    <Typography variant="body1" sx={{ mb: 1 }}>
+                      {debouncedSearchQuery
+                        ? `No classes found matching "${debouncedSearchQuery}"`
+                        : "No classes found"}
+                    </Typography>
+                    {debouncedSearchQuery && (
+                      <Button
+                        variant="text"
+                        color="primary"
+                        onClick={() => setSearchQuery("")}
+                        sx={{ mt: 1, textTransform: "none" }}
+                      >
+                        Clear search
+                      </Button>
+                    )}
+                  </Box>
                 </TableCell>
               </TableRow>
             )}
@@ -823,7 +880,7 @@ const Classes = () => {
       <TablePagination
         component="div"
         rowsPerPageOptions={[5, 10, 25]}
-        count={filteredClasses.length}
+        count={totalRecords} // Use totalRecords instead of filteredClasses.length
         rowsPerPage={rowsPerPage}
         page={page}
         onPageChange={handleChangePage}
