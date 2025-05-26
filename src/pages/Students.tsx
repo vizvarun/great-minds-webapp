@@ -361,7 +361,7 @@ const Students = () => {
   // Add custom CSS for tooltips
   useEffect(() => {
     // Add custom CSS to control tooltip positioning
-    const style = document.createElement('style');
+    const style = document.createElement("style");
     style.innerHTML = `
       .custom-tooltip {
         position: relative;
@@ -389,12 +389,12 @@ const Students = () => {
       }
     `;
     document.head.appendChild(style);
-    
+
     return () => {
       document.head.removeChild(style);
     };
   }, []);
-  
+
   return (
     <Paper
       elevation={0}
@@ -469,9 +469,9 @@ const Students = () => {
                       aria-label="clear search"
                       onClick={() => setSearchQuery("")}
                       edge="end"
-                      sx={{ 
-                        color: 'rgba(0, 0, 0, 0.54)',
-                        p: 0.5
+                      sx={{
+                        color: "rgba(0, 0, 0, 0.54)",
+                        p: 0.5,
                       }}
                     >
                       <ClearIcon fontSize="small" />
@@ -651,7 +651,11 @@ const Students = () => {
                         <Box
                           component="span"
                           className="custom-tooltip"
-                          data-tooltip={student.isActive ? "Deactivate Student" : "Activate Student"}
+                          data-tooltip={
+                            student.isActive
+                              ? "Deactivate Student"
+                              : "Activate Student"
+                          }
                           sx={{
                             position: "relative",
                             display: "inline-flex",
@@ -760,25 +764,6 @@ const Students = () => {
                           }}
                         >
                           <PersonAddIcon fontSize="small" />
-                        </IconButton>
-                        <IconButton
-                          className="custom-tooltip"
-                          data-tooltip="Delete Student"
-                          size="small"
-                          onClick={() => handleDeleteClick(student)}
-                          color="error"
-                          sx={{
-                            transition: "none",
-                            outline: "none",
-                            "&:hover": {
-                              bgcolor: "rgba(211, 47, 47, 0.04)",
-                            },
-                            "&:focus": {
-                              outline: "none",
-                            },
-                          }}
-                        >
-                          <DeleteIcon fontSize="small" />
                         </IconButton>
                       </Box>
                     </TableCell>
